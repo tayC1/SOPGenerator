@@ -60,7 +60,7 @@ function createStepCard(step, index) {
         </div>
         <div class="step-info-row">
           <div class="info-item">
-            <span><strong>Clicked:</strong> &lt;${tagName}&gt; ${elementText}</span>
+            <span><strong>Clicked:</strong> ${tagName} ${elementText}</span>
           </div>
         </div>
       </div>
