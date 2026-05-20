@@ -1,4 +1,4 @@
-# Scribe Clone - Chrome Extension
+# SOP Genertator
 
 A Chrome extension that records your workflow (clicks and screenshots) and generates structured SOP (Standard Operating Procedure) documents in Markdown format.
 
@@ -28,7 +28,7 @@ A Chrome extension that records your workflow (clicks and screenshots) and gener
 2. Open Chrome and navigate to `chrome://extensions/`
 3. Enable "Developer mode" (toggle in top right)
 4. Click "Load unpacked" and select the folder containing these files
-5. The Scribe Clone icon will appear in your Chrome toolbar
+5. The icon will appear in your Chrome toolbar
 
 ## Usage
 
