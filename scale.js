@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', function () {
   var _skipStorageEvent = false;
   var sopIntroEl = null;
 
+  // ── GitHub Config ──────────────────────────────────────────────────
+  var GITHUB_TOKEN = '';          // Personal Access Token (ghp_...)
+  var GITHUB_REPO  = '';          // e.g. 'taylorchristesson/codex-sops'
+  var GITHUB_DIR   = 'sops';      // directory inside the repo (no leading slash)
+  // ──────────────────────────────────────────────────────────────────
+
   function showConfirm(message, onConfirm) {
     var overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:99999;display:flex;align-items:center;justify-content:center;';
@@ -66,41 +72,108 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   var exportBtn = document.getElementById('exportBtn');
-  if (exportBtn) {
-    exportBtn.addEventListener('click', function () {
-      if (steps.length === 0) { alert('No steps to export.'); return; }
-      chrome.storage.local.get(['sopTitle', 'sopSummary'], function (res) {
-        var sopTitle = (res.sopTitle || 'SOP Guide').trim();
-        var sopSummary = (res.sopSummary || '').trim();
-        var md = '# ' + sopTitle + '\n\n';
-        if (sopSummary) md += sopSummary + '\n\n';
-        var stepNum = 0;
-        steps.forEach(function (step) {
-          if (step.type === 'warning') {
-            md += '> **Warning:** ' + (step.content || '') + '\n\n';
-          } else if (step.type === 'tip') {
-            md += '> **Tip:** ' + (step.content || '') + '\n\n';
-          } else if (step.type === 'flag') {
-            md += '> **Note:** ' + (step.content || '') + '\n\n';
-          } else {
-            stepNum++;
-            md += '## Step ' + stepNum + ': ' + (step.content || step.description || 'Untitled Step') + '\n\n';
-            if (step.screenshot) {
-              md += '![Step ' + stepNum + '](data:image/png;base64,' + step.screenshot + ')\n\n';
-            }
+  function buildMarkdown(sopTitle, sopSummary) {
+    var md = '# ' + sopTitle + '\n\n';
+    if (sopSummary) md += sopSummary + '\n\n';
+    var stepNum = 0;
+    steps.forEach(function (step) {
+      if (step.type === 'warning') {
+        md += '> **Warning:** ' + (step.content || '') + '\n\n';
+      } else if (step.type === 'tip') {
+        md += '> **Tip:** ' + (step.content || '') + '\n\n';
+      } else if (step.type === 'flag') {
+        md += '> **Note:** ' + (step.content || '') + '\n\n';
+      } else {
+        stepNum++;
+        md += '## Step ' + stepNum + ': ' + (step.content || step.description || 'Untitled Step') + '\n\n';
+        if (step.screenshot) {
+          md += '![Step ' + stepNum + '](data:image/png;base64,' + step.screenshot + ')\n\n';
+        }
+      }
+    });
+    return md;
+  }
+
+  function doExport() {
+    if (steps.length === 0) { alert('No steps to export.'); return; }
+    chrome.storage.local.get(['sopTitle', 'sopSummary'], function (res) {
+      var sopTitle  = (res.sopTitle   || 'SOP Guide').trim();
+      var sopSummary = (res.sopSummary || '').trim();
+      var md = buildMarkdown(sopTitle, sopSummary);
+      var safeTitle = sopTitle.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'SOP';
+      var blob = new Blob([md], { type: 'text/markdown' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = safeTitle + '.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  function showToast(message, isError) {
+    var toast = document.createElement('div');
+    toast.textContent = message;
+    toast.style.cssText = [
+      'position:fixed', 'bottom:28px', 'right:28px',
+      'background:' + (isError ? 'rgba(200,60,60,1)' : 'rgba(46,82,102,1)'),
+      'color:#fff', 'padding:12px 20px', 'border-radius:8px',
+      'font-family:Inter,sans-serif', 'font-size:14px', 'font-weight:600',
+      'z-index:99999', 'box-shadow:0 4px 18px rgba(0,0,0,0.22)',
+      'pointer-events:none'
+    ].join(';');
+    document.body.appendChild(toast);
+    setTimeout(function () { toast.remove(); }, 3000);
+  }
+
+  function pushToCodex() {
+    if (!GITHUB_TOKEN || !GITHUB_REPO) {
+      showToast('Set GITHUB_TOKEN and GITHUB_REPO in scale.js first.', true);
+      return;
+    }
+    chrome.storage.local.get(['sopTitle', 'sopSummary'], function (res) {
+      var sopTitle   = (res.sopTitle   || 'SOP Guide').trim();
+      var sopSummary = (res.sopSummary || '').trim();
+      var safeTitle  = sopTitle.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'sop';
+      var dir        = GITHUB_DIR.replace(/^\/|\/$/g, '');
+      var filePath   = (dir ? dir + '/' : '') + safeTitle + '.md';
+
+      showToast('Pushing…');
+
+      var md = buildMarkdown(sopTitle, sopSummary);
+      var encoded;
+      try { encoded = btoa(unescape(encodeURIComponent(md))); } catch (e) { encoded = btoa(md); }
+
+      var apiUrl = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + filePath;
+      var headers = {
+        'Authorization': 'token ' + GITHUB_TOKEN,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      };
+
+      fetch(apiUrl, { headers: headers })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (existing) {
+          var body = { message: 'Add SOP: ' + sopTitle, content: encoded };
+          if (existing && existing.sha) {
+            body.sha = existing.sha;
+            body.message = 'Update SOP: ' + sopTitle;
           }
+          return fetch(apiUrl, { method: 'PUT', headers: headers, body: JSON.stringify(body) });
+        })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (result.ok) {
+            showToast('Pushed to ' + GITHUB_REPO + '/' + filePath);
+          } else {
+            showToast('Error: ' + (result.data.message || 'push failed'), true);
+          }
+        })
+        .catch(function () {
+          showToast('Network error — check token and repo.', true);
         });
-        var safeTitle = sopTitle.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'SOP';
-        var blob = new Blob([md], { type: 'text/markdown' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = safeTitle + '.md';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
     });
   }
 
@@ -178,9 +251,40 @@ document.addEventListener('DOMContentLoaded', function () {
         exportImg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
         exportWrapper.appendChild(exportImg);
         if (exportLabel) {
-          exportLabel.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;color:rgba(255,255,255,1);font-family:Inter;font-weight:400;pointer-events:none;';
+          exportLabel.textContent = 'Export ▾';
+          exportLabel.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,1);font-family:Inter;font-weight:600;pointer-events:none;letter-spacing:0.1px;';
           exportWrapper.appendChild(exportLabel);
         }
+
+        var exportDropdown = document.createElement('div');
+        exportDropdown.style.cssText = 'position:absolute;top:calc(100% + 8px);right:0;background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,0.2);overflow:hidden;min-width:210px;display:none;z-index:9999;';
+
+        function makeExportOption(text, onClick) {
+          var opt = document.createElement('div');
+          opt.innerHTML = text;
+          opt.style.cssText = 'padding:13px 18px;font-size:14px;font-weight:600;font-family:Inter,sans-serif;color:rgba(30,30,30,1);cursor:pointer;transition:background 0.1s;white-space:nowrap;';
+          opt.addEventListener('mouseenter', function () { opt.style.background = 'rgba(46,82,102,0.07)'; });
+          opt.addEventListener('mouseleave', function () { opt.style.background = ''; });
+          opt.addEventListener('click', function (e) {
+            e.stopPropagation();
+            exportDropdown.style.display = 'none';
+            onClick();
+          });
+          return opt;
+        }
+
+        exportDropdown.appendChild(makeExportOption('&#8593;&nbsp; Push to Codex', pushToCodex));
+        exportDropdown.appendChild(makeExportOption('&#8595;&nbsp; Download as .MD', doExport));
+        exportWrapper.appendChild(exportDropdown);
+
+        exportWrapper.addEventListener('click', function (e) {
+          e.stopPropagation();
+          if (steps.length === 0) { alert('No steps to export.'); return; }
+          exportDropdown.style.display = exportDropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', function () { exportDropdown.style.display = 'none'; });
+
         rightSection.appendChild(exportWrapper);
       }
 
