@@ -3,321 +3,146 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Review Steps - Scribe Clone</title>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    html, body {
-      width: 100%;
-      height: 100%;
-      background: #f5f7fa;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: #1f2937;
-    }
-
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 32px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid #e5e7eb;
-    }
-
-    .header h1 {
-      font-size: 28px;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .header-actions {
-      display: flex;
-      gap: 12px;
-    }
-
-    button {
-      padding: 10px 16px;
-      border: none;
-      border-radius: 6px;
-      font-size: 13px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .btn-primary {
-      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-      color: white;
-    }
-
-    .btn-primary:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
-    }
-
-    .btn-secondary {
-      background: white;
-      color: #374151;
-      border: 1px solid #d1d5db;
-    }
-
-    .btn-secondary:hover {
-      background: #f9fafb;
-      border-color: #9ca3af;
-    }
-
-    .btn-danger {
-      background: #fecaca;
-      color: #991b1b;
-      border: 1px solid #fca5a5;
-    }
-
-    .btn-danger:hover {
-      background: #fca5a5;
-    }
-
-    .steps-container {
-      display: flex;
-      flex-direction: column;
-      gap: 20px;
-    }
-
-    .step-card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-      position: relative;
-      transition: all 0.2s;
-    }
-
-    .step-card:hover {
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .step-card.dragging {
-      opacity: 0.5;
-      background: #f0f9ff;
-    }
-
-    .step-header {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .drag-handle {
-      flex-shrink: 0;
-      cursor: grab;
-      font-size: 20px;
-      color: #9ca3af;
-      user-select: none;
-    }
-
-    .drag-handle:active {
-      cursor: grabbing;
-    }
-
-    .step-number {
-      flex-shrink: 0;
-      width: 32px;
-      height: 32px;
-      background: #3b82f6;
-      color: white;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .step-info {
-      flex: 1;
-    }
-
-    .step-info-row {
-      display: flex;
-      gap: 16px;
-      font-size: 12px;
-      color: #6b7280;
-      margin-bottom: 4px;
-    }
-
-    .info-item {
-      display: flex;
-      gap: 6px;
-    }
-
-    .step-controls {
-      display: flex;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-
-    .btn-small {
-      padding: 6px 10px;
-      font-size: 11px;
-      font-weight: 600;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-delete {
-      background: #fecaca;
-      color: #991b1b;
-    }
-
-    .btn-delete:hover {
-      background: #fca5a5;
-    }
-
-    .screenshot {
-      width: 100%;
-      max-height: 300px;
-      object-fit: contain;
-      border-radius: 6px;
-      margin-bottom: 16px;
-      border: 1px solid #e5e7eb;
-    }
-
-    .step-description {
-      margin-bottom: 16px;
-    }
-
-    .step-description label {
-      display: block;
-      font-size: 12px;
-      font-weight: 600;
-      color: #374151;
-      margin-bottom: 6px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-
-    .step-description textarea {
-      width: 100%;
-      min-height: 80px;
-      padding: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 13px;
-      color: #1f2937;
-      resize: vertical;
-    }
-
-    .step-description textarea:focus {
-      outline: none;
-      border-color: #3b82f6;
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
-    }
-
-    .metadata {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      font-size: 12px;
-      padding: 12px;
-      background: #f9fafb;
-      border-radius: 6px;
-      margin-bottom: 12px;
-    }
-
-    .metadata-item {
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .metadata-label {
-      font-weight: 600;
-      color: #374151;
-      text-transform: uppercase;
-      font-size: 10px;
-      letter-spacing: 0.5px;
-    }
-
-    .metadata-value {
-      color: #6b7280;
-      word-break: break-word;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 60px 20px;
-      color: #9ca3af;
-    }
-
-    .empty-state-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-    }
-
-    .empty-state p {
-      font-size: 14px;
-    }
-
-    @media (max-width: 768px) {
-      .container {
-        padding: 16px;
-      }
-
-      .header {
-        flex-direction: column;
-        gap: 16px;
-        align-items: flex-start;
-      }
-
-      .header-actions {
-        width: 100%;
-        flex-direction: column;
-      }
-
-      .header-actions button {
-        width: 100%;
-      }
-
-      .metadata {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
+  <title>Review</title>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>📋 Review Steps</h1>
-      <div class="header-actions">
-        <button class="btn-secondary" id="backBtn">← Back</button>
-        <button class="btn-primary" id="exportBtn">Export as MD</button>
+<!-- text: Back -->
+<div class="shape text back-0dfffdae89a8">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0dfffdae89a8" data-x="2024" data-y="110">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">Back</span></p>
       </div>
     </div>
-
-    <div class="steps-container" id="stepsContainer">
-      <!-- Steps will be loaded here -->
+  </div>
+</div>
+<!-- text: Step -->
+<div class="shape text step-0e029afa3f89">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0e029afa3f89" data-x="717" data-y="547">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">Step</span></p>
+      </div>
     </div>
   </div>
+</div>
+<!-- text: Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa  -->
+<div class="shape text lorem-ipsu-0e01a64febca">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0e01a64febca" data-x="1469" data-y="291">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.</span></p>
+        <p class="paragraph root-0-paragraph-set-0-paragraph-1" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-1-text-0">Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos.</span></p>
+        <p class="paragraph root-0-paragraph-set-0-paragraph-2" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-2-text-0">Lorem ipsum dolor sit amet consectetur adipiscing elit. Quisque faucibus ex sapien vitae pellentesque sem placerat. In id cursus mi pretium tellus duis convallis. Tempus leo eu aenean sed diam urna tempor. Pulvinar vivamus fringilla lacus nec metus bibendum egestas. Iaculis massa nisl malesuada lacinia integer nunc posuere. Ut hendrerit semper vel class aptent taciti sociosqu. Ad litora torquent per conubia nostra inceptos himenaeos</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- frame: Icons / Actions / More Options -->
+<div class="frame icons-ac-0e049a90a851">
 
-  <script src="review.js"></script>
+</div>
+<!-- rect: Rectangle -->
+<div class="shape rect rectangle-0dfefa8f6904">
+</div>
+<!-- group: KramerPro-Logo-KBug-White -->
+<div class="shape group kramer-pro-0dff67113949">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-a7ff279d-6989-803b-8008-0dff67113949" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- text: Export as MD -->
+<div class="shape text export-as-0e005e5459d0">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0e005e5459d0" data-x="2255" data-y="110">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">Export as MD</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- path: svg-polygon -->
+<div class="shape path svgpolygo-0dff67120876">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-a7ff279d-6989-803b-8008-0dff67120876" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- rect: 600x400 -->
+<div class="shape rect c-600x400-0e0324edc99b">
+</div>
+<!-- rect: Rectangle -->
+<div class="shape rect rectangle-0dffd996b34b">
+</div>
+<!-- text: LINK TO WEBSITE -->
+<div class="shape text l-i-n-k-t-o-w-e-0e014cb6eed7">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0e014cb6eed7" data-x="239" data-y="413">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">LINK TO WEBSITE</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- text: SOP TITLE -->
+<div class="shape text s-o-p-t-i-t-l-e-0e013b184469">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0e013b184469" data-x="239" data-y="306">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">SOP TITLE</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- rect: base-background -->
+<div class="shape rect basebackg-0dff67118bb3">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-a7ff279d-6989-803b-8008-0dff67118bb3" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- text: 1 -->
+<div class="shape text c-1-0e024cdbbf32">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0e024cdbbf32" data-x="551" data-y="532">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">1</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- rect: Rectangle -->
+<div class="shape rect rectangle-0e00fd525d32">
+</div>
+<!-- path: svg-polygon -->
+<div class="shape path svgpolygo-0dff67120878">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-a7ff279d-6989-803b-8008-0dff67120878" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- path: svg-polygon -->
+<div class="shape path svgpolygo-0dff67120877">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-a7ff279d-6989-803b-8008-0dff67120877" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- svg-raw: svg-defs -->
+<div class="shape svg-raw svgdefs-0dff6711e4dc">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-a7ff279d-6989-803b-8008-0dff6711e4dc" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- text: Review Steps -->
+<div class="shape text review-ste-0dff755cfafe">
+  <div class="text-node-html" id="html-text-node-a7ff279d-6989-803b-8008-0dff755cfafe" data-x="228" data-y="89">
+    <div class="root rich-text root-0" xmlns="http://www.w3.org/1999/xhtml">
+      <div class="paragraph-set root-0-paragraph-set-0">
+        <p class="paragraph root-0-paragraph-set-0-paragraph-0" dir="ltr"><span class="text-node root-0-paragraph-set-0-paragraph-0-text-0">Review Steps</span></p>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- rect: more -->
+<div class="shape rect more-0e04faf62695">
+</div>
+<!-- circle: Ellipse -->
+<div class="shape circle ellipse-0e023512f85d">
+</div>
+<!-- path: Union -->
+<div class="shape path union-0e049a90a852">
+  <svg width="0.01" xmlns="http://www.w3.org/2000/svg" height="0.01" id="screenshot-35181007-496d-809c-8008-0e049a90a852" viewBox="0 0 0.01 0.01" style="-webkit-print-color-adjust: exact; print-color-adjust: exact" xmlns:xlink="http://www.w3.org/1999/xlink" fill="none" version="1.1"></svg>
+</div>
+<!-- rect: Rectangle -->
+<div class="shape rect rectangle-0dffba7df552">
+</div>
+<!-- rect: Rectangle -->
+<div class="shape rect rectangle-0e01da187fe8">
+</div>
 </body>
 </html>
