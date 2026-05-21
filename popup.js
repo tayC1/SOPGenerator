@@ -28,17 +28,17 @@ function updateUI(recording, stepNum) {
     recordBtn.disabled = true;
     stopBtn.disabled = false;
     statusDot.classList.add('active');
-    statusText.textContent = 'Recording...';
+    statusText.textContent = 'Recording';
   } else {
     recordBtn.disabled = false;
     stopBtn.disabled = true;
     statusDot.classList.remove('active');
-    statusText.textContent = 'Ready to record';
+    statusText.textContent = 'Ready';
   }
-  
+
   reviewBtn.disabled = stepNum === 0;
   clearBtn.disabled = stepNum === 0;
-  stepCount.textContent = `${stepNum} step${stepNum !== 1 ? 's' : ''} captured`;
+  stepCount.textContent = stepNum;
 }
 
 // Record button

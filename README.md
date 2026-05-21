@@ -1,8 +1,8 @@
-# SOP Genertator
+# CODEX
 
 A Chrome extension that records your workflow (clicks and screenshots) and generates structured SOP (Standard Operating Procedure) documents in Markdown format.
 
-## Features
+## Features 
 
 ✅ **Record Clicks** - Automatically captures each click with metadata (element text, tag name, page title, URL)
 
@@ -34,7 +34,7 @@ A Chrome extension that records your workflow (clicks and screenshots) and gener
 
 ### Recording a Workflow
 
-1. Click the Scribe Clone extension icon to open the popup
+1. Click the CODEX extension icon to open the popup
 2. Click the **Record** button to start recording
 3. A red "Recording..." indicator will appear in the top-right corner of the page
 4. Interact with the page as you normally would - each click is captured
@@ -154,9 +154,6 @@ Potential features to add:
 - PDF export format
 - Collaborative SOP sharing
 
-## License
-
-Created as an educational project. Feel free to modify for your needs!
 
 ---
 

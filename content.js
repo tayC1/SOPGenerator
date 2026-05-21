@@ -100,20 +100,32 @@ function captureClick(e) {
   const pageTitle = document.title;
   const pageUrl = window.location.href;
 
-  // Send to background to capture screenshot
-  chrome.runtime.sendMessage({
-    action: 'captureScreenshot',
-    elementText,
-    tagName,
-    pageTitle,
-    pageUrl
-  }, (response) => {
-    if (chrome.runtime.lastError) {
-      console.log('Message sent, awaiting background response');
-    } else {
-      console.log('Step captured:', response?.stepId);
-    }
-  });
+  // Normalize click coords to 0-1 so they map onto the screenshot regardless of resolution
+  const clickX = e.clientX / window.innerWidth;
+  const clickY = e.clientY / window.innerHeight;
+
+  // Hide overlay so it doesn't appear in the screenshot
+  if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
+
+  // Wait one frame for the browser to repaint before capturing
+  setTimeout(function () {
+    chrome.runtime.sendMessage({
+      action: 'captureScreenshot',
+      elementText,
+      tagName,
+      pageTitle,
+      pageUrl,
+      clickX,
+      clickY
+    }, (response) => {
+      if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
+      if (chrome.runtime.lastError) {
+        console.log('Message sent, awaiting background response');
+      } else {
+        console.log('Step captured:', response?.stepId);
+      }
+    });
+  }, 60);
 }
 
 // Check recording status on content load

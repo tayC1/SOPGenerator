@@ -42,7 +42,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               pageTitle: request.pageTitle || '',
               pageUrl: request.pageUrl || '',
               timestamp: new Date().toISOString(),
-              description: request.elementText || `Click on ${request.tagName}`
+              description: request.elementText || `Click on ${request.tagName}`,
+              clickX: request.clickX ?? null,
+              clickY: request.clickY ?? null
             };
             
             stepsArray.push(step);
