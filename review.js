@@ -257,7 +257,7 @@ exportBtn.addEventListener('click', () => {
 });
 
 function generateMarkdown() {
-  let markdown = '# SOP Documentation\n\n';
+  let markdown = `# ${pageTitle}\n\n`;
   markdown += `*Generated on ${new Date().toLocaleString()}*\n\n`;
   markdown += `**Total Steps:** ${steps.length}\n\n`;
   markdown += '---\n\n';
@@ -269,11 +269,11 @@ function generateMarkdown() {
     markdown += `![Step ${index + 1} Screenshot](data:image/png;base64,${step.screenshot})\n\n`;
     
     // Add metadata
-    markdown += '**Details:**\n\n';
-    markdown += `- **Page Title:** ${step.pageTitle || 'Unknown'}\n`;
-    markdown += `- **URL:** ${step.pageUrl || 'N/A'}\n`;
-    markdown += `- **Element Clicked:** \`<${step.tagName}>\` - ${step.elementText || 'No text'}\n`;
-    markdown += `- **Timestamp:** ${new Date(step.timestamp).toLocaleString()}\n\n`;
+    //markdown += '**Details:**\n\n';
+    //markdown += `- **Page Title:** ${step.pageTitle || 'Unknown'}\n`;
+    //markdown += `- **URL:** ${step.pageUrl || 'N/A'}\n`;
+    //markdown += `- **Element Clicked:** \`<${step.tagName}>\` - ${step.elementText || 'No text'}\n`;
+    //markdown += `- **Timestamp:** ${new Date(step.timestamp).toLocaleString()}\n\n`;
     
     markdown += '---\n\n';
   });
