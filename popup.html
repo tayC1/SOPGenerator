@@ -4,24 +4,91 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SOP Generator</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
-      width: 360px;
-      background: rgba(221, 228, 233, 1);
       font-family: Inter, -apple-system, BlinkMacSystemFont, sans-serif;
       color: rgba(30, 30, 30, 1);
+      background: rgba(221, 228, 233, 1);
     }
 
-    /* ── Header ─────────────────────────────────── */
+    /* ── Recording dropdown view ─────────────────── */
+    #recording-view {
+      display: none;
+      width: 260px;
+      padding: 14px 16px 16px;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    body.is-recording #recording-view { display: flex; }
+    body.is-recording #idle-view      { display: none; }
+
+    .rec-header {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .rec-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: rgba(239, 68, 68, 1);
+      flex-shrink: 0;
+      animation: blink 1.2s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.25; }
+    }
+
+    .rec-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: rgba(30, 30, 30, 1);
+      letter-spacing: 0.1px;
+    }
+
+    .rec-count {
+      margin-left: auto;
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(46, 82, 102, 0.7);
+      background: rgba(46, 82, 102, 0.1);
+      border-radius: 999px;
+      padding: 2px 9px;
+      white-space: nowrap;
+    }
+
+    #stopReviewBtn {
+      width: 100%;
+      padding: 11px 0;
+      border-radius: 10px;
+      border: none;
+      background: rgba(200, 107, 102, 1);
+      color: rgba(255, 255, 255, 1);
+      font-family: Inter, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    #stopReviewBtn:active { transform: scale(0.97); opacity: 0.9; }
+
+    /* ── Idle view ───────────────────────────────── */
+    #idle-view {
+      display: flex;
+      flex-direction: column;
+      width: 360px;
+    }
+
     .header {
       background: rgba(46, 82, 102, 1);
       padding: 18px 20px 16px;
@@ -62,16 +129,6 @@
       flex-shrink: 0;
     }
 
-    .status-dot.active {
-      background: rgba(16, 185, 129, 1);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50%       { opacity: 0.4; }
-    }
-
     .status-label {
       font-size: 12px;
       font-weight: 600;
@@ -80,7 +137,6 @@
       letter-spacing: 0.1px;
     }
 
-    /* ── Content area ────────────────────────────── */
     .content {
       padding: 16px 16px 20px;
       display: flex;
@@ -88,7 +144,6 @@
       gap: 12px;
     }
 
-    /* ── Card ─────────────────────────────────────── */
     .card {
       background: rgba(255, 255, 255, 1);
       border-radius: 12px;
@@ -96,7 +151,6 @@
       overflow: hidden;
     }
 
-    /* ── Step counter inside a card ───────────────── */
     .step-counter {
       padding: 14px 18px;
       display: flex;
@@ -118,11 +172,7 @@
       color: rgba(46, 82, 102, 1);
     }
 
-    /* ── Primary action buttons ────────────────────── */
-    .btn-row {
-      display: flex;
-      gap: 10px;
-    }
+    .btn-row { display: flex; gap: 10px; }
 
     button {
       font-family: Inter, sans-serif;
@@ -131,14 +181,8 @@
       transition: opacity 0.15s, transform 0.15s;
     }
 
-    button:disabled {
-      opacity: 0.38;
-      cursor: not-allowed;
-    }
-
-    button:not(:disabled):active {
-      transform: scale(0.97);
-    }
+    button:disabled { opacity: 0.38; cursor: not-allowed; }
+    button:not(:disabled):active { transform: scale(0.97); }
 
     .btn-primary {
       flex: 1;
@@ -150,19 +194,9 @@
       letter-spacing: 0.2px;
     }
 
-    .btn-record {
-      background: rgba(16, 185, 129, 1);
-    }
+    .btn-record { background: rgba(16, 185, 129, 1); }
 
-    .btn-stop {
-      background: rgba(200, 107, 102, 1);
-    }
-
-    /* ── Secondary / action buttons ───────────────── */
-    .btn-secondary-row {
-      display: flex;
-      gap: 10px;
-    }
+    .btn-secondary-row { display: flex; gap: 10px; }
 
     .btn-secondary {
       flex: 1;
@@ -174,16 +208,13 @@
       letter-spacing: 0.1px;
     }
 
-    .btn-review {
-      background: rgba(46, 82, 102, 1);
-    }
+    .btn-review { background: rgba(46, 82, 102, 1); }
 
     .btn-clear {
       background: rgba(217, 217, 217, 1);
       color: rgba(80, 80, 80, 1);
     }
 
-    /* ── Info card ────────────────────────────────── */
     .info-card {
       background: rgba(255, 255, 255, 1);
       border-radius: 12px;
@@ -231,50 +262,58 @@
 </head>
 <body>
 
-  <div class="header">
-    <div>
-      <div class="header-title">SOP Generator</div>
-      <div class="header-sub">Record workflow to documentation</div>
+  <!-- Compact recording dropdown (shown while recording) -->
+  <div id="recording-view">
+    <div class="rec-header">
+      <div class="rec-dot"></div>
+      <span class="rec-label">Recording</span>
+      <span class="rec-count" id="recStepCount">0 steps</span>
     </div>
-    <div class="status-pill">
-      <div class="status-dot" id="statusDot"></div>
-      <span class="status-label" id="statusText">Ready</span>
-    </div>
+    <button id="stopReviewBtn">Stop &amp; Review</button>
   </div>
 
-  <div class="content">
-
-    <!-- Step counter -->
-    <div class="card">
-      <div class="step-counter">
-        <span class="step-counter-label">Steps captured</span>
-        <span class="step-counter-value" id="stepCount">0</span>
+  <!-- Full idle view (shown when not recording) -->
+  <div id="idle-view">
+    <div class="header">
+      <div>
+        <div class="header-title">SOP Generator</div>
+        <div class="header-sub">Record workflow to documentation</div>
+      </div>
+      <div class="status-pill">
+        <div class="status-dot" id="statusDot"></div>
+        <span class="status-label" id="statusText">Ready</span>
       </div>
     </div>
 
-    <!-- Record / Stop -->
-    <div class="btn-row">
-      <button class="btn-primary btn-record" id="recordBtn">Record</button>
-      <button class="btn-primary btn-stop" id="stopBtn" disabled>Stop</button>
-    </div>
+    <div class="content">
 
-    <!-- Review / Clear -->
-    <div class="btn-secondary-row">
-      <button class="btn-secondary btn-review" id="reviewBtn" disabled>Review Steps</button>
-      <button class="btn-secondary btn-clear" id="clearBtn" disabled>Clear</button>
-    </div>
+      <div class="card">
+        <div class="step-counter">
+          <span class="step-counter-label">Steps captured</span>
+          <span class="step-counter-value" id="stepCount">0</span>
+        </div>
+      </div>
 
-    <!-- How it works -->
-    <div class="info-card">
-      <div class="info-title">How it works</div>
-      <ul class="info-list">
-        <li>Click Record, then interact with the page</li>
-        <li>Each click is captured with a screenshot</li>
-        <li>Click Stop when done, then Review Steps</li>
-        <li>Edit descriptions, reorder, and export</li>
-      </ul>
-    </div>
+      <div class="btn-row">
+        <button class="btn-primary btn-record" id="recordBtn">Record</button>
+      </div>
 
+      <div class="btn-secondary-row">
+        <button class="btn-secondary btn-review" id="reviewBtn" disabled>Review Steps</button>
+        <button class="btn-secondary btn-clear" id="clearBtn" disabled>Clear</button>
+      </div>
+
+      <div class="info-card">
+        <div class="info-title">How it works</div>
+        <ul class="info-list">
+          <li>Click Record, then interact with the page</li>
+          <li>Each click and keystroke is captured with a screenshot</li>
+          <li>Click Stop &amp; Review when done</li>
+          <li>Edit descriptions, reorder, and export</li>
+        </ul>
+      </div>
+
+    </div>
   </div>
 
   <script src="popup.js"></script>

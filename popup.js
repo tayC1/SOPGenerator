@@ -1,144 +1,112 @@
-// Popup script for Scribe Clone
+// Popup script for SOP Generator
 
-const recordBtn = document.getElementById('recordBtn');
-const stopBtn = document.getElementById('stopBtn');
-const reviewBtn = document.getElementById('reviewBtn');
-const clearBtn = document.getElementById('clearBtn');
-const statusDot = document.getElementById('statusDot');
-const statusText = document.getElementById('statusText');
-const stepCount = document.getElementById('stepCount');
+const recordBtn     = document.getElementById('recordBtn');
+const stopReviewBtn = document.getElementById('stopReviewBtn');
+const reviewBtn     = document.getElementById('reviewBtn');
+const clearBtn      = document.getElementById('clearBtn');
+const statusDot     = document.getElementById('statusDot');
+const statusText    = document.getElementById('statusText');
+const stepCount     = document.getElementById('stepCount');
+const recStepCount  = document.getElementById('recStepCount');
 
 let isRecording = false;
 
-// Initialize UI state
-async function initializeUI() {
-  chrome.storage.local.get(['isRecording', 'steps'], (result) => {
-    isRecording = result.isRecording || false;
-    const steps = result.steps || [];
-    
-    updateUI(isRecording, steps.length);
-  });
-}
-
-// Update UI based on recording state
-function updateUI(recording, stepNum) {
+function updateUI(recording, count) {
   isRecording = recording;
-  
+
+  // Toggle recording view vs idle view
+  document.body.classList.toggle('is-recording', recording);
+
+  // Recording dropdown counter
+  recStepCount.textContent = count + (count === 1 ? ' step' : ' steps');
+
+  // Idle view counter + status
+  stepCount.textContent = count;
   if (recording) {
-    recordBtn.disabled = true;
-    stopBtn.disabled = false;
     statusDot.classList.add('active');
     statusText.textContent = 'Recording';
   } else {
-    recordBtn.disabled = false;
-    stopBtn.disabled = true;
     statusDot.classList.remove('active');
     statusText.textContent = 'Ready';
   }
 
-  reviewBtn.disabled = stepNum === 0;
-  clearBtn.disabled = stepNum === 0;
-  stepCount.textContent = stepNum;
+  reviewBtn.disabled = count === 0;
+  clearBtn.disabled  = count === 0;
 }
 
-// Record button
-recordBtn.addEventListener('click', async () => {
-  // Get all tabs and start recording on active tab
+async function startRecording() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  
-  if (tabs.length > 0) {
-    const activeTab = tabs[0];
-    
-    // Clear previous steps
-    chrome.storage.local.set({ steps: [], isRecording: true });
-    
-    // Send message to background
-    chrome.runtime.sendMessage({ action: 'startRecording' }, () => {
-      // Inject content script to the active tab
-      chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' }).catch(() => {
-        // If content script not loaded, inject it
-        chrome.scripting.executeScript({
-          target: { tabId: activeTab.id },
-          files: ['content.js']
-        }, () => {
-          chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' });
-        });
-      });
-    });
-    
-    updateUI(true, 0);
-  }
-});
+  if (!tabs.length) return;
+  const activeTab = tabs[0];
 
-// Stop button
-stopBtn.addEventListener('click', async () => {
-  // Get all tabs
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  
-  if (tabs.length > 0) {
-    const activeTab = tabs[0];
-    
-    // Send message to background
-    chrome.runtime.sendMessage({ action: 'stopRecording' }, () => {
-      // Send stop message to content script
-      chrome.tabs.sendMessage(activeTab.id, { action: 'stopRecording' }).catch(() => {
-        console.log('Content script not loaded');
-      });
+  chrome.storage.local.set({ steps: [], isRecording: true });
+  chrome.runtime.sendMessage({ action: 'startRecording' }, () => {
+    chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' }).catch(() => {
+      chrome.scripting.executeScript(
+        { target: { tabId: activeTab.id }, files: ['content.js'] },
+        () => chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' })
+      );
     });
-    
-    // Update UI
-    chrome.storage.local.get('steps', (result) => {
-      const steps = result.steps || [];
-      updateUI(false, steps.length);
-    });
-  }
-});
-
-// Review button
-reviewBtn.addEventListener('click', async () => {
-  chrome.storage.local.get('steps', (result) => {
-    const steps = result.steps || [];
-    
-    if (steps.length > 0) {
-      // Open review page
-      chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
-    }
   });
+
+  updateUI(true, 0);
+}
+
+async function stopAndReview() {
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  if (tabs.length) {
+    const activeTab = tabs[0];
+    chrome.runtime.sendMessage({ action: 'stopRecording' }, () => {
+      chrome.tabs.sendMessage(activeTab.id, { action: 'stopRecording' }).catch(() => {});
+    });
+  }
+
+  // Open review page — popup closes automatically when a new tab opens
+  chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+}
+
+// Record button (idle view)
+recordBtn.addEventListener('click', startRecording);
+
+// Stop & Review button (recording dropdown)
+stopReviewBtn.addEventListener('click', stopAndReview);
+
+// Review button (idle view, when steps already exist)
+reviewBtn.addEventListener('click', () => {
+  chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
 });
 
 // Clear button
 clearBtn.addEventListener('click', () => {
   if (confirm('Are you sure you want to clear all captured steps?')) {
     chrome.storage.local.set({ steps: [], isRecording: false });
-    isRecording = false;
-    updateUI(false, 0);
-    
-    // Also stop recording on active tab
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0) {
+      if (tabs.length) {
         chrome.tabs.sendMessage(tabs[0].id, { action: 'stopRecording' }).catch(() => {});
       }
     });
+    updateUI(false, 0);
   }
 });
 
-// Listen for storage changes
-chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'local') {
-    if (changes.steps) {
-      const steps = changes.steps.newValue || [];
-      chrome.storage.local.get('isRecording', (result) => {
-        updateUI(result.isRecording || false, steps.length);
-      });
-    }
-    if (changes.isRecording) {
-      const recording = changes.isRecording.newValue || false;
-      chrome.storage.local.get('steps', (result) => {
-        updateUI(recording, (result.steps || []).length);
-      });
-    }
-  }
+// Keep step counter live while recording
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local') return;
+  const stepsChange     = changes.steps;
+  const recordingChange = changes.isRecording;
+
+  const newCount     = stepsChange     ? (stepsChange.newValue     || []).length : null;
+  const newRecording = recordingChange ? (recordingChange.newValue || false)      : null;
+
+  chrome.storage.local.get(['steps', 'isRecording'], (result) => {
+    updateUI(
+      newRecording !== null ? newRecording : (result.isRecording || false),
+      newCount     !== null ? newCount     : (result.steps || []).length
+    );
+  });
 });
 
-// Initialize on popup open
-initializeUI();
+// Init
+chrome.storage.local.get(['isRecording', 'steps'], (result) => {
+  updateUI(result.isRecording || false, (result.steps || []).length);
+});

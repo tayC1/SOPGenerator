@@ -69,40 +69,38 @@ document.addEventListener('DOMContentLoaded', function () {
   if (exportBtn) {
     exportBtn.addEventListener('click', function () {
       if (steps.length === 0) { alert('No steps to export.'); return; }
-      var md = '# SOP Documentation\n\n';
-      md += '*Generated on ' + new Date().toLocaleString() + '*\n\n';
-      var procedureCount = steps.filter(function (s) { return !s.type || s.type === 'text'; }).length;
-      md += '**Total Steps:** ' + procedureCount + '\n\n---\n\n';
-      var stepNum = 0;
-      steps.forEach(function (step) {
-        if (step.type === 'warning') {
-          md += '> **⚠️ Warning:** ' + (step.content || '') + '\n\n';
-        } else if (step.type === 'tip') {
-          md += '> **💡 Tip:** ' + (step.content || '') + '\n\n';
-        } else if (step.type === 'flag') {
-          md += '> **🚩 Flag:** ' + (step.content || '') + '\n\n';
-        } else {
-          stepNum++;
-          md += '## Step ' + stepNum + ': ' + (step.content || step.description || 'Untitled Step') + '\n\n';
-          if (step.screenshot) {
-            md += '![Step ' + stepNum + '](data:image/png;base64,' + step.screenshot + ')\n\n';
+      chrome.storage.local.get(['sopTitle', 'sopSummary'], function (res) {
+        var sopTitle = (res.sopTitle || 'SOP Guide').trim();
+        var sopSummary = (res.sopSummary || '').trim();
+        var md = '# ' + sopTitle + '\n\n';
+        if (sopSummary) md += sopSummary + '\n\n';
+        var stepNum = 0;
+        steps.forEach(function (step) {
+          if (step.type === 'warning') {
+            md += '> **Warning:** ' + (step.content || '') + '\n\n';
+          } else if (step.type === 'tip') {
+            md += '> **Tip:** ' + (step.content || '') + '\n\n';
+          } else if (step.type === 'flag') {
+            md += '> **Note:** ' + (step.content || '') + '\n\n';
+          } else {
+            stepNum++;
+            md += '## Step ' + stepNum + ': ' + (step.content || step.description || 'Untitled Step') + '\n\n';
+            if (step.screenshot) {
+              md += '![Step ' + stepNum + '](data:image/png;base64,' + step.screenshot + ')\n\n';
+            }
           }
-          md += '**Details:**\n\n';
-          if (step.pageTitle) md += '- **Page Title:** ' + step.pageTitle + '\n';
-          if (step.pageUrl) md += '- **URL:** ' + step.pageUrl + '\n';
-          if (step.tagName) md += '- **Element Clicked:** `<' + step.tagName + '>` - ' + (step.elementText || 'No text') + '\n';
-          md += '- **Timestamp:** ' + new Date(step.timestamp).toLocaleString() + '\n\n---\n\n';
-        }
+        });
+        var safeTitle = sopTitle.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'SOP';
+        var blob = new Blob([md], { type: 'text/markdown' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeTitle + '.md';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
       });
-      var blob = new Blob([md], { type: 'text/markdown' });
-      var url = URL.createObjectURL(blob);
-      var a = document.createElement('a');
-      a.href = url;
-      a.download = 'SOP_' + new Date().toISOString().split('T')[0] + '.md';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
     });
   }
 
