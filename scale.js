@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', function () {
   var sopIntroEl = null;
 
   // ── GitHub Config ──────────────────────────────────────────────────
-  var GITHUB_TOKEN = '';          // Personal Access Token (ghp_...)
-  var GITHUB_REPO  = '';          // e.g. 'taylorchristesson/codex-sops'
+  var GITHUB_TOKEN = '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';          // Personal Access Token (ghp_...)
+  var GITHUB_REPO  = 'tayC1/KPCodex';          // e.g. 'taylorchristesson/codex-sops'
   var GITHUB_DIR   = 'sops';      // directory inside the repo (no leading slash)
   // ──────────────────────────────────────────────────────────────────
 
