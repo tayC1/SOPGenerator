@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "SOP Generator",
+  "name": "CODEX",
   "version": "1.0",
   "description": "Record clicks and screenshots to generate SOP documents",
   "permissions": [
@@ -18,7 +18,9 @@
   },
   "icons":{
     "16": "Icons/CODEX - 16PX.png",
-    "32": "Icons/CPDEX - 32PX.png"
+    "32": "Icons/CPDEX - 32PX.png", 
+    "48": "Icons/CODEX - 48PX.png",
+    "128": "Icons/CODEX - 128PX.png"
   },
   "action": {
     "default_popup": "popup.html",
