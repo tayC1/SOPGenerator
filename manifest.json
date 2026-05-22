@@ -18,9 +18,7 @@
   },
   "icons":{
     "16": "Icons/CODEX - 16PX.png",
-    "32": "Icons/CPDEX - 32PX.png",
-    "48": "Icons/CODEX - 48PX.png",
-  "128": "Icons/CODEX - 128PX.png"
+    "32": "Icons/CPDEX - 32PX.png"
   },
   "action": {
     "default_popup": "popup.html",
