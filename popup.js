@@ -96,7 +96,7 @@ chrome.storage.onChanged.addListener((changes, area) => {
   const recordingChange = changes.isRecording;
   const userChange      = changes.currentUser;
 
-  if (userChange) updateUserFooter(userChange.newValue || null);
+  if (userChange) renderUser(userChange.newValue || null);
 
   const newCount     = stepsChange     ? (stepsChange.newValue     || []).length : null;
   const newRecording = recordingChange ? (recordingChange.newValue || false)      : null;
@@ -109,23 +109,50 @@ chrome.storage.onChanged.addListener((changes, area) => {
   });
 });
 
-function updateUserFooter(user) {
-  const label  = document.getElementById('userLabel');
-  const action = document.getElementById('userAction');
-  if (!label || !action) return;
+function renderUser(user) {
+  const signedIn  = document.getElementById('user-signed-in');
+  const signedOut = document.getElementById('user-signed-out');
+  if (!signedIn || !signedOut) return;
+
   if (user) {
-    label.textContent  = user.name || user.email;
-    action.textContent = 'Sign out';
-    action.href        = 'https://kpcodex-production.up.railway.app/auth/logout';
+    signedOut.style.display = 'none';
+    signedIn.style.display  = 'flex';
+
+    document.getElementById('user-name').textContent  = user.name  || '';
+    document.getElementById('user-email').textContent = user.email || '';
+
+    const img      = document.getElementById('user-avatar-img');
+    const initials = document.getElementById('user-avatar-initials');
+
+    if (user.photo) {
+      img.src             = user.photo;
+      img.style.display   = 'block';
+      initials.style.display = 'none';
+    } else {
+      const letter = (user.name || user.email || '?')[0].toUpperCase();
+      initials.textContent   = letter;
+      initials.style.display = 'flex';
+      img.style.display      = 'none';
+    }
   } else {
-    label.textContent  = 'Not signed in';
-    action.textContent = 'Sign in';
-    action.href        = 'https://kpcodex-production.up.railway.app';
+    signedIn.style.display  = 'none';
+    signedOut.style.display = 'flex';
+  }
+}
+
+async function loadUser() {
+  try {
+    const res  = await fetch('https://kpcodex-production.up.railway.app/auth/me', { credentials: 'include' });
+    const { user } = await res.json();
+    chrome.storage.local.set({ currentUser: user || null });
+    renderUser(user || null);
+  } catch {
+    renderUser(null);
   }
 }
 
 // Init
-chrome.storage.local.get(['isRecording', 'steps', 'currentUser'], (result) => {
+chrome.storage.local.get(['isRecording', 'steps'], (result) => {
   updateUI(result.isRecording || false, (result.steps || []).length);
-  updateUserFooter(result.currentUser || null);
 });
+loadUser();
