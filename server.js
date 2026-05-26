@@ -10,15 +10,19 @@ const sopsRouter = require('./routes/sops');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+const isProd = process.env.NODE_ENV === 'production';
 app.use(session({
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: process.env.NODE_ENV === 'production' },
+  cookie: {
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+  },
 }));
 
 app.use(passport.initialize());

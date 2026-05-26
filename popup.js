@@ -89,11 +89,14 @@ clearBtn.addEventListener('click', () => {
   }
 });
 
-// Keep step counter live while recording
+// Keep step counter and user footer live
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   const stepsChange     = changes.steps;
   const recordingChange = changes.isRecording;
+  const userChange      = changes.currentUser;
+
+  if (userChange) updateUserFooter(userChange.newValue || null);
 
   const newCount     = stepsChange     ? (stepsChange.newValue     || []).length : null;
   const newRecording = recordingChange ? (recordingChange.newValue || false)      : null;
@@ -106,7 +109,23 @@ chrome.storage.onChanged.addListener((changes, area) => {
   });
 });
 
+function updateUserFooter(user) {
+  const label  = document.getElementById('userLabel');
+  const action = document.getElementById('userAction');
+  if (!label || !action) return;
+  if (user) {
+    label.textContent  = user.name || user.email;
+    action.textContent = 'Sign out';
+    action.href        = 'https://kpcodex-production.up.railway.app/auth/logout';
+  } else {
+    label.textContent  = 'Not signed in';
+    action.textContent = 'Sign in';
+    action.href        = 'https://kpcodex-production.up.railway.app';
+  }
+}
+
 // Init
-chrome.storage.local.get(['isRecording', 'steps'], (result) => {
+chrome.storage.local.get(['isRecording', 'steps', 'currentUser'], (result) => {
   updateUI(result.isRecording || false, (result.steps || []).length);
+  updateUserFooter(result.currentUser || null);
 });

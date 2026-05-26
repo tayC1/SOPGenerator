@@ -7,6 +7,9 @@ const backBtn = document.getElementById('backBtn');
 let steps = [];
 let draggedElement = null;
 let draggedIndex = null;
+let currentUser = null;
+
+chrome.storage.local.get('currentUser', res => { currentUser = res.currentUser || null; });
 
 // Load steps on page load
 document.addEventListener('DOMContentLoaded', loadSteps);
@@ -29,9 +32,17 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // left: header
     var left = document.createElement('div');
-    left.style.cssText = 'flex:0 1 auto;display:flex;align-items:center;gap:12px;';
+    left.style.cssText = 'flex:0 1 auto;display:flex;flex-direction:column;gap:4px;';
     headerDiv.style.cssText = 'font-size:48px;color:rgba(255,255,255,1);margin:0;';
     left.appendChild(headerDiv);
+    chrome.storage.local.get('currentUser', function(res) {
+      if (res.currentUser && (res.currentUser.name || res.currentUser.email)) {
+        var authorEl = document.createElement('div');
+        authorEl.style.cssText = 'font-size:13px;color:rgba(255,255,255,0.55);';
+        authorEl.textContent = 'by ' + (res.currentUser.name || res.currentUser.email);
+        left.appendChild(authorEl);
+      }
+    });
 
     // center: prefer the existing `headerInfo` (steps/time/last-updated) created by scale.js
     var center = document.createElement('div');
@@ -377,6 +388,7 @@ function generateMarkdown(meta) {
     title: meta ? meta.title : (steps[0]?.pageTitle || 'SOP'),
     url: steps[0]?.pageUrl || '',
     description: meta ? meta.description : '',
+    author: currentUser ? (currentUser.name || currentUser.email) : '',
     steps: steps.map((step, i) => ({
       title: step.description || step.pageTitle || `Step ${i + 1}`,
       description: step.description || '',
@@ -386,6 +398,7 @@ function generateMarkdown(meta) {
 
   fetch(`${CONFIG.API_URL}/sops`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   })
