@@ -359,37 +359,7 @@
 
     .user-signin-btn:hover { opacity: 0.88; }
 
-    .token-input {
-      background: rgba(0, 0, 0, 0.25);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 7px;
-      padding: 8px 10px;
-      color: #fff;
-      font-family: Inter, sans-serif;
-      font-size: 12px;
-      outline: none;
-      width: 100%;
-    }
-
-    .token-input::placeholder { color: rgba(255, 255, 255, 0.3); }
-
-    .token-connect-btn {
-      width: 100%;
-      background: rgba(255, 255, 255, 0.12);
-      color: rgba(255, 255, 255, 0.85);
-      border: none;
-      border-radius: 7px;
-      padding: 8px 0;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: Inter, sans-serif;
-      cursor: pointer;
-      transition: opacity 0.15s;
-    }
-
-    .token-connect-btn:hover { opacity: 0.88; }
-
-    .token-error {
+    .signin-error {
       font-size: 11px;
       color: rgba(239, 100, 100, 1);
       text-align: center;
@@ -464,9 +434,7 @@
         <div id="user-signed-out">
           <div class="user-signin-msg">Sign in to save SOPs to your account</div>
           <button id="signin-btn" class="user-signin-btn">Sign in with Google</button>
-          <input id="token-input" class="token-input" type="text" placeholder="Paste your extension token">
-          <button id="token-connect-btn" class="token-connect-btn">Connect</button>
-          <div id="token-error" class="token-error" style="display:none;">Invalid token, try again</div>
+          <div id="signin-error" class="signin-error" style="display:none;">Sign-in failed, try again</div>
         </div>
       </div>
 

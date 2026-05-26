@@ -124,8 +124,8 @@ function renderUser(user) {
     const img      = document.getElementById('user-avatar-img');
     const initials = document.getElementById('user-avatar-initials');
 
-    if (user.photo) {
-      img.src             = user.photo;
+    if (user.picture || user.photo) {
+      img.src             = user.picture || user.photo;
       img.style.display   = 'block';
       initials.style.display = 'none';
     } else {
@@ -140,59 +140,41 @@ function renderUser(user) {
   }
 }
 
-async function loadUser() {
-  try {
-    const { extensionToken } = await new Promise(resolve =>
-      chrome.storage.local.get('extensionToken', resolve)
-    );
-
-    const res = await fetch('https://kpcodex-production.up.railway.app/auth/me',
-      extensionToken
-        ? { headers: { 'Authorization': `Bearer ${extensionToken}` } }
-        : { credentials: 'include' }
-    );
-    const { user } = await res.json();
-
-    if (!user && extensionToken) {
-      chrome.storage.local.remove('extensionToken');
-    }
-
-    chrome.storage.local.set({ currentUser: user || null });
-    renderUser(user || null);
-  } catch {
-    renderUser(null);
-  }
-}
-
-async function connectWithToken() {
-  const input   = document.getElementById('token-input');
-  const errorEl = document.getElementById('token-error');
-  const token   = input.value.trim();
-  if (!token) return;
-
+function signIn() {
+  const errorEl = document.getElementById('signin-error');
   errorEl.style.display = 'none';
-  const btn = document.getElementById('token-connect-btn');
-  btn.textContent = 'Connecting…';
-  btn.disabled = true;
 
-  try {
-    const res = await fetch('https://kpcodex-production.up.railway.app/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const { user } = await res.json();
-    if (user) {
-      chrome.storage.local.set({ extensionToken: token, currentUser: user });
+  chrome.identity.getAuthToken({ interactive: true }, async (token) => {
+    if (chrome.runtime.lastError) {
+      console.error(chrome.runtime.lastError);
+      errorEl.style.display = 'block';
+      return;
+    }
+    try {
+      const res = await fetch(
+        'https://www.googleapis.com/oauth2/v1/userinfo?alt=json',
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      const user = await res.json();
+      chrome.storage.local.set({ currentUser: user });
       renderUser(user);
-    } else {
+    } catch {
       errorEl.style.display = 'block';
     }
-  } catch {
-    errorEl.textContent = 'Connection failed, try again';
-    errorEl.style.display = 'block';
-  } finally {
-    btn.textContent = 'Connect';
-    btn.disabled = false;
-  }
+  });
+}
+
+function signOut() {
+  chrome.identity.clearAllCachedAuthTokens(() => {
+    chrome.storage.local.remove('currentUser');
+    renderUser(null);
+  });
+}
+
+function loadUser() {
+  chrome.storage.local.get('currentUser', (result) => {
+    renderUser(result.currentUser || null);
+  });
 }
 
 // Init
@@ -201,14 +183,9 @@ chrome.storage.local.get(['isRecording', 'steps'], (result) => {
 });
 loadUser();
 
-document.getElementById('signin-btn').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
-});
-
-document.getElementById('token-connect-btn').addEventListener('click', connectWithToken);
+document.getElementById('signin-btn').addEventListener('click', signIn);
 
 document.getElementById('signout-link').addEventListener('click', (e) => {
   e.preventDefault();
-  chrome.storage.local.remove(['extensionToken', 'currentUser']);
-  renderUser(null);
+  signOut();
 });

@@ -1,28 +1,7 @@
-// Background Service Worker for Scribe Clone
-
-const API_URL = 'https://kpcodex-production.up.railway.app';
+// Background Service Worker for CODEX
 
 let isRecording = false;
 let steps = [];
-
-async function checkAuth() {
-  try {
-    const res = await fetch(`${API_URL}/auth/me`, { credentials: 'include' });
-    const { user } = await res.json();
-    chrome.storage.local.set({ currentUser: user || null });
-  } catch (err) {
-    console.error('Auth check failed:', err.message);
-  }
-}
-
-checkAuth();
-
-// Re-check auth whenever the user visits the Railway app (e.g. after signing in via OAuth)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(API_URL)) {
-    checkAuth();
-  }
-});
 
 // Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
@@ -36,7 +15,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'stopRecording') {
     isRecording = false;
     chrome.storage.local.set({ isRecording: false });
-    checkAuth();
     sendResponse({ status: 'recording stopped' });
   }
 
