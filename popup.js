@@ -140,20 +140,10 @@ function renderUser(user) {
   }
 }
 
-async function getAuthHeaders() {
-  return new Promise(resolve => {
-    chrome.storage.local.get('extensionToken', ({ extensionToken }) => {
-      resolve(extensionToken ? { 'Authorization': `Bearer ${extensionToken}` } : {});
-    });
-  });
-}
-
 async function loadUser() {
   try {
-    const headers = await getAuthHeaders();
     const res = await fetch('https://kpcodex-production.up.railway.app/auth/me', {
       credentials: 'include',
-      headers,
     });
     const { user } = await res.json();
     chrome.storage.local.set({ currentUser: user || null });
@@ -163,40 +153,12 @@ async function loadUser() {
   }
 }
 
-async function connectWithToken() {
-  const input = document.getElementById('token-input');
-  const errorEl = document.getElementById('token-error');
-  const token = input.value.trim();
-  if (!token) return;
-
-  errorEl.style.display = 'none';
-  const btn = document.getElementById('token-connect-btn');
-  btn.textContent = '…';
-  btn.disabled = true;
-
-  try {
-    const res = await fetch('https://kpcodex-production.up.railway.app/auth/me', {
-      headers: { 'Authorization': `Bearer ${token}` },
-    });
-    const { user } = await res.json();
-    if (user) {
-      chrome.storage.local.set({ extensionToken: token, currentUser: user });
-      renderUser(user);
-    } else {
-      errorEl.style.display = 'block';
-    }
-  } catch {
-    errorEl.style.display = 'block';
-  } finally {
-    btn.textContent = 'Connect';
-    btn.disabled = false;
-  }
-}
-
 // Init
 chrome.storage.local.get(['isRecording', 'steps'], (result) => {
   updateUI(result.isRecording || false, (result.steps || []).length);
 });
 loadUser();
 
-document.getElementById('token-connect-btn').addEventListener('click', connectWithToken);
+document.getElementById('signin-btn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/auth/google' });
+});

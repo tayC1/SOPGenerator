@@ -17,6 +17,13 @@ async function checkAuth() {
 
 checkAuth();
 
+// Re-check auth whenever the user visits the Railway app (e.g. after signing in via OAuth)
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete' && tab.url && tab.url.startsWith(API_URL)) {
+    checkAuth();
+  }
+});
+
 // Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'startRecording') {
