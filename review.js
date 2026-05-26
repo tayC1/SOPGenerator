@@ -372,6 +372,26 @@ function generateMarkdown(meta) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+
+  const payload = {
+    title: meta ? meta.title : (steps[0]?.pageTitle || 'SOP'),
+    url: steps[0]?.pageUrl || '',
+    description: meta ? meta.description : '',
+    steps: steps.map((step, i) => ({
+      title: step.description || step.pageTitle || `Step ${i + 1}`,
+      description: step.description || '',
+      screenshot_base64: step.screenshot || ''
+    }))
+  };
+
+  fetch(`${CONFIG.API_URL}/sops`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+    .then(res => res.json())
+    .then(data => console.log('SOP saved to backend, id:', data.id))
+    .catch(err => console.error('Failed to save SOP to backend:', err));
 }
 
 // Back button
