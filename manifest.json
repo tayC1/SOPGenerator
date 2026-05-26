@@ -9,8 +9,7 @@
     "scripting",
     "tabs",
     "webRequest",
-    "identity",
-    "identity.email"
+    "identity"
   ],
   "oauth2": {
     "client_id": "880617980224-gj9c0oejnkbu7sn2ksvj8ueqfdguc5cl.apps.googleusercontent.com",

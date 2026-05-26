@@ -144,6 +144,12 @@ function signIn() {
   const errorEl = document.getElementById('signin-error');
   errorEl.style.display = 'none';
 
+  if (!chrome.identity) {
+    console.error('chrome.identity not available');
+    errorEl.style.display = 'block';
+    return;
+  }
+
   chrome.identity.getAuthToken({ interactive: true }, async (token) => {
     if (chrome.runtime.lastError) {
       console.error(chrome.runtime.lastError);
