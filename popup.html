@@ -322,7 +322,10 @@
       font-size: 11px;
       font-weight: 600;
       color: rgba(234, 120, 60, 1);
-      text-decoration: none;
+      background: none;
+      border: none;
+      padding: 0;
+      cursor: pointer;
       flex-shrink: 0;
     }
 
@@ -355,6 +358,42 @@
     }
 
     .user-signin-btn:hover { opacity: 0.88; }
+
+    .token-input {
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 7px;
+      padding: 8px 10px;
+      color: #fff;
+      font-family: Inter, sans-serif;
+      font-size: 12px;
+      outline: none;
+      width: 100%;
+    }
+
+    .token-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+    .token-connect-btn {
+      width: 100%;
+      background: rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.85);
+      border: none;
+      border-radius: 7px;
+      padding: 8px 0;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: Inter, sans-serif;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+
+    .token-connect-btn:hover { opacity: 0.88; }
+
+    .token-error {
+      font-size: 11px;
+      color: rgba(239, 100, 100, 1);
+      text-align: center;
+    }
   </style>
 </head>
 <body>
@@ -419,14 +458,15 @@
             <div id="user-name" class="user-name"></div>
             <div id="user-email" class="user-email"></div>
           </div>
-          <a id="signout-link" class="user-signout-link"
-             href="https://kpcodex-production.up.railway.app/auth/logout"
-             target="_blank">Sign out</a>
+          <button id="signout-link" class="user-signout-link">Sign out</button>
         </div>
         <!-- Signed out -->
         <div id="user-signed-out">
           <div class="user-signin-msg">Sign in to save SOPs to your account</div>
           <button id="signin-btn" class="user-signin-btn">Sign in with Google</button>
+          <input id="token-input" class="token-input" type="text" placeholder="Paste your extension token">
+          <button id="token-connect-btn" class="token-connect-btn">Connect</button>
+          <div id="token-error" class="token-error" style="display:none;">Invalid token, try again</div>
         </div>
       </div>
 

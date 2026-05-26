@@ -142,14 +142,56 @@ function renderUser(user) {
 
 async function loadUser() {
   try {
-    const res = await fetch('https://kpcodex-production.up.railway.app/auth/me', {
-      credentials: 'include',
-    });
+    const { extensionToken } = await new Promise(resolve =>
+      chrome.storage.local.get('extensionToken', resolve)
+    );
+
+    const res = await fetch('https://kpcodex-production.up.railway.app/auth/me',
+      extensionToken
+        ? { headers: { 'Authorization': `Bearer ${extensionToken}` } }
+        : { credentials: 'include' }
+    );
     const { user } = await res.json();
+
+    if (!user && extensionToken) {
+      chrome.storage.local.remove('extensionToken');
+    }
+
     chrome.storage.local.set({ currentUser: user || null });
     renderUser(user || null);
   } catch {
     renderUser(null);
+  }
+}
+
+async function connectWithToken() {
+  const input   = document.getElementById('token-input');
+  const errorEl = document.getElementById('token-error');
+  const token   = input.value.trim();
+  if (!token) return;
+
+  errorEl.style.display = 'none';
+  const btn = document.getElementById('token-connect-btn');
+  btn.textContent = 'Connecting…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('https://kpcodex-production.up.railway.app/auth/me', {
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
+    const { user } = await res.json();
+    if (user) {
+      chrome.storage.local.set({ extensionToken: token, currentUser: user });
+      renderUser(user);
+    } else {
+      errorEl.style.display = 'block';
+    }
+  } catch {
+    errorEl.textContent = 'Connection failed, try again';
+    errorEl.style.display = 'block';
+  } finally {
+    btn.textContent = 'Connect';
+    btn.disabled = false;
   }
 }
 
@@ -160,5 +202,13 @@ chrome.storage.local.get(['isRecording', 'steps'], (result) => {
 loadUser();
 
 document.getElementById('signin-btn').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/auth/google' });
+  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
+});
+
+document.getElementById('token-connect-btn').addEventListener('click', connectWithToken);
+
+document.getElementById('signout-link').addEventListener('click', (e) => {
+  e.preventDefault();
+  chrome.storage.local.remove(['extensionToken', 'currentUser']);
+  renderUser(null);
 });

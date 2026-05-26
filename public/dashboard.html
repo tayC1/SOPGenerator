@@ -70,39 +70,63 @@
       margin: 0 auto 32px;
     }
     .connect-card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 20px 22px;
+      background: rgba(234,120,60,0.1);
+      border: 1px solid rgba(234,120,60,0.28);
+      border-radius: 14px;
+      padding: 24px 26px;
     }
-    .connect-card h2 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
-    .connect-card p { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 14px; line-height: 1.5; }
-    #token-area { display: none; margin-bottom: 14px; }
+    .connect-card h2 {
+      font-size: 17px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    .connect-instructions {
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .token-box-row { display: flex; gap: 10px; margin-bottom: 10px; }
     #token-value {
-      width: 100%;
-      background: rgba(0,0,0,0.3);
-      border: 1px solid rgba(255,255,255,0.15);
+      flex: 1;
+      background: rgba(0,0,0,0.35);
+      border: 1px solid rgba(255,255,255,0.13);
       border-radius: 8px;
-      padding: 9px 12px;
+      padding: 11px 14px;
       color: #fff;
       font-family: monospace;
-      font-size: 13px;
+      font-size: 14px;
+      letter-spacing: 0.5px;
       cursor: text;
+      min-width: 0;
     }
-    #token-hint { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.4); }
-    #connect-btn {
+    #copy-btn {
       background: rgba(234,120,60,1);
       color: #fff;
       border: none;
       border-radius: 8px;
-      padding: 9px 18px;
+      padding: 11px 22px;
       font-size: 13px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
       font-family: inherit;
+      white-space: nowrap;
       transition: opacity 0.15s;
+      flex-shrink: 0;
     }
-    #connect-btn:hover { opacity: 0.88; }
+    #copy-btn:hover { opacity: 0.88; }
+    #refresh-token-btn {
+      background: none;
+      border: none;
+      color: rgba(255,255,255,0.38);
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+      text-decoration: underline;
+    }
+    #refresh-token-btn:hover { color: rgba(255,255,255,0.65); }
   </style>
 </head>
 <body>
@@ -115,13 +139,13 @@
   </header>
   <div id="connect-section">
     <div class="connect-card">
-      <h2>Connect Extension</h2>
-      <p>Generate a token to link the CODEX browser extension to your account.</p>
-      <div id="token-area">
-        <input id="token-value" type="text" readonly>
-        <p id="token-hint">Paste this token into the CODEX extension popup to connect your account.</p>
+      <h2>Connect the CODEX extension</h2>
+      <p class="connect-instructions">Sign in above, then paste this token into the CODEX extension popup.</p>
+      <div class="token-box-row">
+        <input id="token-value" type="text" readonly placeholder="Loading…">
+        <button id="copy-btn">Copy</button>
       </div>
-      <button id="connect-btn">Generate Token</button>
+      <button id="refresh-token-btn">Generate new token</button>
     </div>
   </div>
 
@@ -166,21 +190,22 @@
       }
     }
 
-    async function generateToken() {
-      const btn = document.getElementById('connect-btn');
-      btn.textContent = 'Generating…';
-      btn.disabled = true;
-      try {
-        const res = await fetch('/auth/extension-token', { method: 'POST' });
-        const { token } = await res.json();
-        const input = document.getElementById('token-value');
-        input.value = token;
-        document.getElementById('token-area').style.display = 'block';
-        input.select();
-        btn.textContent = 'Regenerate Token';
-      } finally {
-        btn.disabled = false;
-      }
+    let currentToken = null;
+
+    async function copyToken() {
+      if (!currentToken) return;
+      await navigator.clipboard.writeText(currentToken);
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'Copied!';
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+    }
+
+    async function refreshToken() {
+      if (!confirm('Generate a new token? Your current token will stop working.')) return;
+      const res = await fetch('/auth/extension-token', { method: 'POST' });
+      const { token } = await res.json();
+      currentToken = token;
+      document.getElementById('token-value').value = token;
     }
 
     async function init() {
@@ -191,7 +216,12 @@
         return;
       }
       document.getElementById('user-name').textContent = user.name || user.email;
-      document.getElementById('connect-btn').addEventListener('click', generateToken);
+
+      currentToken = user.extension_token;
+      document.getElementById('token-value').value = currentToken || '';
+      document.getElementById('copy-btn').addEventListener('click', copyToken);
+      document.getElementById('refresh-token-btn').addEventListener('click', refreshToken);
+
       load();
     }
 
