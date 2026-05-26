@@ -43,8 +43,35 @@ app.get('/auth/logout', (req, res) => {
   req.session.destroy(() => res.redirect('/'));
 });
 
-app.get('/auth/me', (req, res) => {
-  res.json({ user: req.user || null });
+app.get('/auth/me', async (req, res) => {
+  if (req.user) return res.json({ user: req.user });
+
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    try {
+      const result = await db.query(
+        'SELECT * FROM users WHERE extension_token = $1',
+        [token]
+      );
+      if (result.rows.length > 0) return res.json({ user: result.rows[0] });
+    } catch (err) {
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  res.json({ user: null });
+});
+
+app.post('/auth/extension-token', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  const token = require('crypto').randomBytes(16).toString('hex');
+  try {
+    await db.query('UPDATE users SET extension_token = $1 WHERE id = $2', [token, req.user.id]);
+    res.json({ token });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // API routes

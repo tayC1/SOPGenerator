@@ -65,6 +65,44 @@
     }
     .btn-delete:hover { text-decoration: underline; }
     .empty { text-align: center; color: rgba(255,255,255,0.4); margin-top: 80px; font-size: 15px; }
+    #connect-section {
+      max-width: 800px;
+      margin: 0 auto 32px;
+    }
+    .connect-card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .connect-card h2 { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+    .connect-card p { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 14px; line-height: 1.5; }
+    #token-area { display: none; margin-bottom: 14px; }
+    #token-value {
+      width: 100%;
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 8px;
+      padding: 9px 12px;
+      color: #fff;
+      font-family: monospace;
+      font-size: 13px;
+      cursor: text;
+    }
+    #token-hint { margin-top: 8px; font-size: 12px; color: rgba(255,255,255,0.4); }
+    #connect-btn {
+      background: rgba(234,120,60,1);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: opacity 0.15s;
+    }
+    #connect-btn:hover { opacity: 0.88; }
   </style>
 </head>
 <body>
@@ -75,6 +113,18 @@
       <a class="logout" href="/auth/logout">Sign out</a>
     </div>
   </header>
+  <div id="connect-section">
+    <div class="connect-card">
+      <h2>Connect Extension</h2>
+      <p>Generate a token to link the CODEX browser extension to your account.</p>
+      <div id="token-area">
+        <input id="token-value" type="text" readonly>
+        <p id="token-hint">Paste this token into the CODEX extension popup to connect your account.</p>
+      </div>
+      <button id="connect-btn">Generate Token</button>
+    </div>
+  </div>
+
   <div id="grid"></div>
 
   <script>
@@ -116,6 +166,23 @@
       }
     }
 
+    async function generateToken() {
+      const btn = document.getElementById('connect-btn');
+      btn.textContent = 'Generating…';
+      btn.disabled = true;
+      try {
+        const res = await fetch('/auth/extension-token', { method: 'POST' });
+        const { token } = await res.json();
+        const input = document.getElementById('token-value');
+        input.value = token;
+        document.getElementById('token-area').style.display = 'block';
+        input.select();
+        btn.textContent = 'Regenerate Token';
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
     async function init() {
       const res = await fetch('/auth/me');
       const { user } = await res.json();
@@ -124,6 +191,7 @@
         return;
       }
       document.getElementById('user-name').textContent = user.name || user.email;
+      document.getElementById('connect-btn').addEventListener('click', generateToken);
       load();
     }
 

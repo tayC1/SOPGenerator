@@ -355,6 +355,54 @@
     }
 
     .user-signin-btn:hover { opacity: 0.88; }
+
+    .token-divider {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.3);
+      text-align: center;
+      margin: 2px 0;
+    }
+
+    .token-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .token-input {
+      flex: 1;
+      min-width: 0;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 7px;
+      padding: 7px 10px;
+      color: #fff;
+      font-family: monospace;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .token-input::placeholder { color: rgba(255, 255, 255, 0.3); }
+
+    .token-connect-btn {
+      background: rgba(234, 120, 60, 1);
+      color: #fff;
+      border: none;
+      border-radius: 7px;
+      padding: 7px 12px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: Inter, sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: opacity 0.15s;
+    }
+
+    .token-connect-btn:hover { opacity: 0.88; }
+
+    .token-error {
+      font-size: 11px;
+      color: rgba(239, 100, 100, 1);
+    }
   </style>
 </head>
 <body>
@@ -429,6 +477,12 @@
           <a class="user-signin-btn"
              href="https://kpcodex-production.up.railway.app"
              target="_blank">Sign in with Google</a>
+          <div class="token-divider">or paste extension token</div>
+          <div class="token-row">
+            <input id="token-input" class="token-input" type="text" placeholder="Paste token…">
+            <button id="token-connect-btn" class="token-connect-btn">Connect</button>
+          </div>
+          <div id="token-error" class="token-error" style="display:none;">Invalid token — try generating a new one.</div>
         </div>
       </div>
 
