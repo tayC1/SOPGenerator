@@ -13,6 +13,7 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use('/icons', express.static(path.join(__dirname, 'Icons')));
 
 const isProd = process.env.NODE_ENV === 'production';
 app.use(session({
