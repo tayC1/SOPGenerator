@@ -1,7 +1,10 @@
 require('dotenv').config();
 const express = require('express');
+const session = require('express-session');
 const cors = require('cors');
+const path = require('path');
 const db = require('./db');
+const passport = require('./auth');
 const sopsRouter = require('./routes/sops');
 
 const app = express();
@@ -9,7 +12,37 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
 
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'dev-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { secure: process.env.NODE_ENV === 'production' },
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Auth routes
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile', 'email'] })
+);
+
+app.get('/auth/google/callback',
+  passport.authenticate('google', { failureRedirect: '/' }),
+  (req, res) => res.redirect('/dashboard.html')
+);
+
+app.get('/auth/logout', (req, res) => {
+  req.session.destroy(() => res.redirect('/'));
+});
+
+app.get('/auth/me', (req, res) => {
+  res.json({ user: req.user || null });
+});
+
+// API routes
 app.use('/sops', sopsRouter);
 
 app.get('/health', (req, res) => {

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Browse SOPs — CODEX</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, -apple-system, sans-serif;
+      background: #0f1923;
+      color: #fff;
+      min-height: 100vh;
+      padding: 48px 24px;
+    }
+    header {
+      max-width: 800px;
+      margin: 0 auto 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 28px; font-weight: 800; }
+    header a { color: rgba(255,255,255,0.55); text-decoration: none; font-size: 14px; }
+    header a:hover { color: #fff; }
+    #grid {
+      max-width: 800px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 20px 22px;
+    }
+    .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .card p { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 14px; line-height: 1.5; }
+    .card a {
+      font-size: 13px;
+      font-weight: 600;
+      color: #7eb8d4;
+      text-decoration: none;
+    }
+    .card a:hover { text-decoration: underline; }
+    .empty { text-align: center; color: rgba(255,255,255,0.4); margin-top: 80px; font-size: 15px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Browse SOPs</h1>
+    <a href="/">← Home</a>
+  </header>
+  <div id="grid"></div>
+
+  <script>
+    async function load() {
+      const grid = document.getElementById('grid');
+      try {
+        const res = await fetch('/sops');
+        const sops = await res.json();
+        if (!sops.length) {
+          grid.innerHTML = '<p class="empty">No SOPs published yet.</p>';
+          return;
+        }
+        grid.innerHTML = sops.map(s => `
+          <div class="card">
+            <h2>${escape(s.title)}</h2>
+            <p>${escape(s.description || '')}</p>
+            <a href="/sop.html?id=${s.id}">View SOP →</a>
+          </div>
+        `).join('');
+      } catch (e) {
+        grid.innerHTML = '<p class="empty">Failed to load SOPs.</p>';
+      }
+    }
+
+    function escape(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    load();
+  </script>
+</body>
+</html>

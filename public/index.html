@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CODEX</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Inter, -apple-system, sans-serif;
+      background: #0f1923;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+    }
+    h1 { font-size: 48px; font-weight: 800; letter-spacing: -1px; margin-bottom: 8px; }
+    p { color: rgba(255,255,255,0.6); font-size: 16px; margin-bottom: 32px; }
+    .btn {
+      display: inline-block;
+      padding: 14px 32px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary { background: #2e5266; color: #fff; }
+    .btn-secondary {
+      background: transparent;
+      color: rgba(255,255,255,0.7);
+      border: 1.5px solid rgba(255,255,255,0.2);
+    }
+    .actions { display: flex; gap: 12px; }
+  </style>
+</head>
+<body>
+  <h1>CODEX</h1>
+  <p>Record, document, and share your SOPs effortlessly.</p>
+  <div class="actions">
+    <a href="/auth/google" class="btn btn-primary">Sign in with Google</a>
+    <a href="/browse.html" class="btn btn-secondary">Browse SOPs</a>
+  </div>
+</body>
+</html>
