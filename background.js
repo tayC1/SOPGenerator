@@ -1,5 +1,16 @@
 // Background Service Worker for CODEX
 
+chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  if (message.type === 'USER_SIGNED_IN') {
+    chrome.storage.local.set({ currentUser: message.user });
+    sendResponse({ received: true });
+  }
+  if (message.type === 'USER_SIGNED_OUT') {
+    chrome.storage.local.remove('currentUser');
+    sendResponse({ received: true });
+  }
+});
+
 let isRecording = false;
 let steps = [];
 

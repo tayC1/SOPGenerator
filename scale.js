@@ -220,48 +220,44 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pushToCodex() {
     if (steps.length === 0) { showToast('No steps to push.', true); return; }
-    fetch('https://kpcodex-production.up.railway.app/auth/me', { credentials: 'include' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (!data.user) { showSignInPrompt(); return; }
-        var author = data.user.name || data.user.display_name || '';
-        showExportForm(function (meta) {
-          showToast('Saving to CODEX…');
-          var payload = {
-            title: meta.title,
-            url: (steps[0] && steps[0].pageUrl) || '',
-            description: meta.description || '',
-            author: author,
-            steps: steps.map(function (step, i) {
-              return {
-                title: step.description || step.pageTitle || ('Step ' + (i + 1)),
-                description: step.description || '',
-                screenshot_base64: step.screenshot || ''
-              };
-            })
-          };
-          fetch('https://kpcodex-production.up.railway.app/sops', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+    chrome.storage.local.get('currentUser', function (result) {
+      var currentUser = result.currentUser;
+      if (!currentUser) { showSignInPrompt(); return; }
+      var author = currentUser.name || '';
+      showExportForm(function (meta) {
+        showToast('Saving to CODEX…');
+        var payload = {
+          title: meta.title,
+          url: (steps[0] && steps[0].pageUrl) || '',
+          description: meta.description || '',
+          author: author,
+          steps: steps.map(function (step, i) {
+            return {
+              title: step.description || step.pageTitle || ('Step ' + (i + 1)),
+              description: step.description || '',
+              screenshot_base64: step.screenshot || ''
+            };
           })
-            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-            .then(function (result) {
-              if (result.ok) {
-                showCodexSuccess();
-              } else {
-                showToast('Failed to save — check your connection', true);
-              }
-            })
-            .catch(function () {
+        };
+        fetch('https://kpcodex-production.up.railway.app/sops', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (result) {
+            if (result.ok) {
+              showCodexSuccess();
+            } else {
               showToast('Failed to save — check your connection', true);
-            });
-        });
-      })
-      .catch(function () {
-        showToast('Failed to check sign-in status', true);
+            }
+          })
+          .catch(function () {
+            showToast('Failed to save — check your connection', true);
+          });
       });
+    });
   }
 
   function showSignInPrompt() {

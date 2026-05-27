@@ -32,6 +32,9 @@
       "128": "Icons/CODEX - 128PX.png"
     }
   },
+  "externally_connectable": {
+    "matches": ["https://kpcodex-production.up.railway.app/*"]
+  },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],

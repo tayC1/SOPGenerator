@@ -134,7 +134,7 @@
     <h1>My SOPs</h1>
     <div class="header-right">
       <span id="user-name"></span>
-      <a class="logout" href="/auth/logout">Sign out</a>
+      <a class="logout" id="logout-link" href="/auth/logout">Sign out</a>
     </div>
   </header>
   <div id="connect-section">
@@ -221,6 +221,25 @@
       document.getElementById('token-value').value = currentToken || '';
       document.getElementById('copy-btn').addEventListener('click', copyToken);
       document.getElementById('refresh-token-btn').addEventListener('click', refreshToken);
+
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        chrome.runtime.sendMessage(
+          'dagnjdffiejgocifggmpncekpfhcfddl',
+          { type: 'USER_SIGNED_IN', user: { name: user.name, email: user.email, id: user.id } },
+          (response) => { console.log('Extension notified', response); }
+        );
+      }
+
+      document.getElementById('logout-link').addEventListener('click', (e) => {
+        if (typeof chrome !== 'undefined' && chrome.runtime) {
+          e.preventDefault();
+          chrome.runtime.sendMessage(
+            'dagnjdffiejgocifggmpncekpfhcfddl',
+            { type: 'USER_SIGNED_OUT' },
+            () => { window.location.href = '/auth/logout'; }
+          );
+        }
+      });
 
       load();
     }
