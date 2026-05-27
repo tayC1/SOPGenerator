@@ -44,7 +44,7 @@ app.get('/auth/google',
 
 app.get('/auth/google/callback',
   passport.authenticate('google', { failureRedirect: '/' }),
-  (req, res) => res.redirect('/dashboard.html')
+  (req, res) => res.redirect('/dashboard')
 );
 
 app.get('/auth/logout', (req, res) => {
@@ -80,6 +80,15 @@ app.post('/auth/extension-token', async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
+});
+
+// Page routes
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
+
+app.get('/browse', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'browse.html'));
 });
 
 // API routes
