@@ -82,11 +82,10 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok' });
 });
 
-app.listen(PORT, async () => {
-  try {
-    await db.query('SELECT 1');
-    console.log(`Server running on port ${PORT}, database connected`);
-  } catch (err) {
-    console.error('Database connection failed:', err.message);
-  }
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
+
+db.query('SELECT 1')
+  .then(() => console.log('Database connected'))
+  .catch(err => console.error('Database connection failed:', err.message));
