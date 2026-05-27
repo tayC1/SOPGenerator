@@ -93,6 +93,10 @@ app.get('/browse', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'browse.html'));
 });
 
+app.get('/sop.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sop.html'));
+});
+
 // API routes
 app.use('/sops', sopsRouter);
 
