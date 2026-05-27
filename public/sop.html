@@ -76,6 +76,11 @@
       text-decoration: none;
     }
     .meta-value a:hover { text-decoration: underline; }
+    .sop-author {
+      font-size: 13px;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 18px;
+    }
     .steps-heading {
       font-size: 11px;
       font-weight: 700;
@@ -187,7 +192,9 @@
         <div class="sop-header">
           <div class="sop-title">${escape(sop.title)}</div>
           ${sop.description ? `<div class="sop-description">${escape(sop.description)}</div>` : ''}
+          <div class="sop-author">By ${escape(sop.author || 'Unknown')}</div>
           <div class="sop-meta">
+            <div class="meta-item"><span class="meta-label">Author</span><span class="meta-value">${escape(sop.author || 'Unknown')}</span></div>
             ${date ? `<div class="meta-item"><span class="meta-label">Created</span><span class="meta-value">${date}</span></div>` : ''}
             ${sop.url ? `<div class="meta-item"><span class="meta-label">Source</span><span class="meta-value"><a href="${escape(sop.url)}" target="_blank" rel="noopener">${escape(sop.url)}</a></span></div>` : ''}
           </div>
