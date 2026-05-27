@@ -1,9 +1,11 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const pgSession = require('connect-pg-simple')(session);
 const cors = require('cors');
 const path = require('path');
 const db = require('./db');
+const { pool } = db;
 const passport = require('./auth');
 const sopsRouter = require('./routes/sops');
 
@@ -18,12 +20,17 @@ app.use('/icons', express.static(path.join(__dirname, 'Icons')));
 
 const isProd = process.env.NODE_ENV === 'production';
 app.use(session({
+  store: new pgSession({
+    pool,
+    tableName: 'session',
+  }),
   secret: process.env.SESSION_SECRET || 'dev-secret',
   resave: false,
   saveUninitialized: false,
   cookie: {
     secure: isProd,
     sameSite: isProd ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000,
   },
 }));
 
