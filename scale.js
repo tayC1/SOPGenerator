@@ -219,50 +219,68 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   function pushToCodex() {
-    if (!GITHUB_TOKEN || !GITHUB_REPO) {
-      showToast('Set GITHUB_TOKEN and GITHUB_REPO in scale.js first.', true);
-      return;
-    }
+    if (steps.length === 0) { showToast('No steps to push.', true); return; }
     showExportForm(function (meta) {
-      var safeTitle  = meta.title.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'sop';
-      var dir        = GITHUB_DIR.replace(/^\/|\/$/g, '');
-      var filePath   = (dir ? dir + '/' : '') + safeTitle + '.md';
-
-      showToast('Pushing…');
-
-      var md = buildMarkdown(meta.title, meta.description, meta);
-      var encoded;
-      try { encoded = btoa(unescape(encodeURIComponent(md))); } catch (e) { encoded = btoa(md); }
-
-      var apiUrl = 'https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + filePath;
-      var headers = {
-        'Authorization': 'token ' + GITHUB_TOKEN,
-        'Content-Type': 'application/json',
-        'Accept': 'application/vnd.github.v3+json'
-      };
-
-      fetch(apiUrl, { headers: headers })
-        .then(function (r) { return r.ok ? r.json() : null; })
-        .then(function (existing) {
-          var body = { message: 'Add SOP: ' + meta.title, content: encoded };
-          if (existing && existing.sha) {
-            body.sha = existing.sha;
-            body.message = 'Update SOP: ' + meta.title;
-          }
-          return fetch(apiUrl, { method: 'PUT', headers: headers, body: JSON.stringify(body) });
+      showToast('Saving to CODEX…');
+      var payload = {
+        title: meta.title,
+        url: (steps[0] && steps[0].pageUrl) || '',
+        description: meta.description || '',
+        steps: steps.map(function (step, i) {
+          return {
+            title: step.description || step.pageTitle || ('Step ' + (i + 1)),
+            description: step.description || '',
+            screenshot_base64: step.screenshot || ''
+          };
         })
+      };
+      fetch('https://kpcodex-production.up.railway.app/sops', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
         .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
         .then(function (result) {
           if (result.ok) {
-            showToast('Pushed to ' + GITHUB_REPO + '/' + filePath);
+            showCodexSuccess();
           } else {
-            showToast('Error: ' + (result.data.message || 'push failed'), true);
+            showToast('Failed to save — check your connection', true);
           }
         })
         .catch(function () {
-          showToast('Network error — check token and repo.', true);
+          showToast('Failed to save — check your connection', true);
         });
     });
+  }
+
+  function showCodexSuccess() {
+    var el = document.createElement('div');
+    el.style.cssText = [
+      'position:fixed', 'bottom:28px', 'right:28px',
+      'background:rgba(46,82,102,1)', 'color:#fff',
+      'padding:14px 20px', 'border-radius:10px',
+      'font-family:Inter,sans-serif', 'font-size:14px', 'font-weight:600',
+      'z-index:99999', 'box-shadow:0 4px 18px rgba(0,0,0,0.22)',
+      'display:flex', 'flex-direction:column', 'gap:8px',
+      'min-width:200px'
+    ].join(';');
+
+    var msg = document.createElement('div');
+    msg.textContent = 'Saved to CODEX ✓';
+
+    var link = document.createElement('div');
+    link.textContent = 'View in CODEX →';
+    link.style.cssText = 'font-size:13px;font-weight:500;opacity:0.85;cursor:pointer;text-decoration:underline;';
+    link.addEventListener('click', function () {
+      chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/dashboard' });
+      if (el.parentNode) el.remove();
+    });
+
+    el.appendChild(msg);
+    el.appendChild(link);
+    document.body.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 8000);
   }
 
   var wrapper = document.getElementById('scale-wrapper');
