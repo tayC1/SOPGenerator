@@ -1013,13 +1013,24 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     saveBtn.addEventListener('click', function () {
-      steps[index].screenshot = canvas.toDataURL('image/png').replace('data:image/png;base64,', '');
+      var dataUrl = canvas.toDataURL('image/png');
+      var base64 = dataUrl.replace('data:image/png;base64,', '');
+
+      steps[index].screenshot = base64;
       steps[index].clickX = markerX;
       steps[index].clickY = markerY;
+
+      var card = stepsContainer && stepsContainer.querySelector('[data-step-index="' + index + '"]');
+      if (card) {
+        var cardImg = card.querySelector('img');
+        if (cardImg) cardImg.src = dataUrl;
+      }
+
+      close();
+
       _skipStorageEvent = true;
       chrome.storage.local.set({ steps: steps }, function () {
         _skipStorageEvent = false;
-        close();
         renderSteps();
       });
     });
