@@ -14,13 +14,10 @@ let isRecording = false;
 function updateUI(recording, count) {
   isRecording = recording;
 
-  // Toggle recording view vs idle view
   document.body.classList.toggle('is-recording', recording);
 
-  // Recording dropdown counter
   recStepCount.textContent = count + (count === 1 ? ' step' : ' steps');
 
-  // Idle view counter + status
   stepCount.textContent = count;
   if (recording) {
     statusDot.classList.add('active');
@@ -61,22 +58,17 @@ async function stopAndReview() {
     });
   }
 
-  // Open review page — popup closes automatically when a new tab opens
   chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
 }
 
-// Record button (idle view)
 recordBtn.addEventListener('click', startRecording);
 
-// Stop & Review button (recording dropdown)
 stopReviewBtn.addEventListener('click', stopAndReview);
 
-// Review button (idle view, when steps already exist)
 reviewBtn.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
 });
 
-// Clear button
 clearBtn.addEventListener('click', () => {
   if (confirm('Are you sure you want to clear all captured steps?')) {
     chrome.storage.local.set({ steps: [], isRecording: false });
@@ -89,14 +81,14 @@ clearBtn.addEventListener('click', () => {
   }
 });
 
-// Keep step counter and user footer live
+document.getElementById('viewSopsBtn').addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
+});
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   const stepsChange     = changes.steps;
   const recordingChange = changes.isRecording;
-  const userChange      = changes.currentUser;
-
-  if (userChange) renderUser(userChange.newValue || null);
 
   const newCount     = stepsChange     ? (stepsChange.newValue     || []).length : null;
   const newRecording = recordingChange ? (recordingChange.newValue || false)      : null;
@@ -109,89 +101,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
   });
 });
 
-function renderUser(user) {
-  const signedIn  = document.getElementById('user-signed-in');
-  const signedOut = document.getElementById('user-signed-out');
-  if (!signedIn || !signedOut) return;
-
-  if (user) {
-    signedOut.style.display = 'none';
-    signedIn.style.display  = 'flex';
-
-    document.getElementById('user-name').textContent  = user.name  || '';
-    document.getElementById('user-email').textContent = user.email || '';
-
-    const img      = document.getElementById('user-avatar-img');
-    const initials = document.getElementById('user-avatar-initials');
-
-    if (user.picture || user.photo) {
-      img.src             = user.picture || user.photo;
-      img.style.display   = 'block';
-      initials.style.display = 'none';
-    } else {
-      const letter = (user.name || user.email || '?')[0].toUpperCase();
-      initials.textContent   = letter;
-      initials.style.display = 'flex';
-      img.style.display      = 'none';
-    }
-  } else {
-    signedIn.style.display  = 'none';
-    signedOut.style.display = 'flex';
-  }
-}
-
-function signIn() {
-  const errorEl = document.getElementById('signin-error');
-  errorEl.style.display = 'none';
-
-  if (!chrome.identity) {
-    console.error('chrome.identity not available');
-    errorEl.style.display = 'block';
-    return;
-  }
-
-  chrome.identity.getAuthToken({ interactive: true }, async (token) => {
-    if (chrome.runtime.lastError) {
-      console.error(chrome.runtime.lastError);
-      errorEl.style.display = 'block';
-      return;
-    }
-    try {
-      const res = await fetch(
-        'https://www.googleapis.com/oauth2/v1/userinfo?alt=json',
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const user = await res.json();
-      chrome.storage.local.set({ currentUser: user });
-      renderUser(user);
-    } catch {
-      errorEl.style.display = 'block';
-    }
-  });
-}
-
-function signOut() {
-  chrome.identity.clearAllCachedAuthTokens(() => {
-    chrome.storage.local.remove('currentUser');
-    renderUser(null);
-  });
-}
-
-function loadUser() {
-  chrome.storage.local.get('currentUser', (result) => {
-    renderUser(result.currentUser || null);
-  });
-}
-
-// Init
 chrome.storage.local.get(['isRecording', 'steps'], (result) => {
   updateUI(result.isRecording || false, (result.steps || []).length);
-});
-loadUser();
-
-document.getElementById('signin-btn').addEventListener('click', signIn);
-
-document.getElementById('signout-link').addEventListener('click', (e) => {
-  e.preventDefault();
-  signOut();
 });

@@ -260,109 +260,15 @@
       margin-top: 6px;
     }
 
-    /* ── User section ────────────────────────────── */
-    .user-card {
-      background: rgba(46, 82, 102, 1);
-      border-radius: 12px;
-      padding: 12px 14px;
-    }
-
-    #user-signed-in {
-      display: none;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .user-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      object-fit: cover;
-    }
-
-    .user-avatar-initials {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      background: rgba(234, 120, 60, 1);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: #fff;
-    }
-
-    .user-info {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .user-name {
+    .btn-sops {
+      background: rgba(46, 82, 102, 0.12);
+      color: rgba(46, 82, 102, 1);
+      border: 1.5px solid rgba(46, 82, 102, 0.25);
+      border-radius: 10px;
       font-size: 13px;
       font-weight: 600;
-      color: rgba(255, 255, 255, 1);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .user-email {
-      font-size: 11px;
-      color: rgba(255, 255, 255, 0.5);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-top: 1px;
-    }
-
-    .user-signout-link {
-      font-size: 11px;
-      font-weight: 600;
-      color: rgba(234, 120, 60, 1);
-      background: none;
-      border: none;
-      padding: 0;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .user-signout-link:hover { text-decoration: underline; }
-
-    #user-signed-out {
-      display: flex;
-      flex-direction: column;
-      gap: 9px;
-    }
-
-    .user-signin-msg {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.6);
-      line-height: 1.45;
-    }
-
-    .user-signin-btn {
-      display: block;
-      text-align: center;
-      background: rgba(234, 120, 60, 1);
-      color: #fff;
-      font-size: 13px;
-      font-weight: 600;
-      font-family: Inter, sans-serif;
-      border-radius: 8px;
-      padding: 8px 0;
-      text-decoration: none;
-      transition: opacity 0.15s;
-    }
-
-    .user-signin-btn:hover { opacity: 0.88; }
-
-    .signin-error {
-      font-size: 11px;
-      color: rgba(239, 100, 100, 1);
-      text-align: center;
+      padding: 10px 0;
+      width: 100%;
     }
   </style>
 </head>
@@ -419,24 +325,7 @@
         </ul>
       </div>
 
-      <div class="user-card">
-        <!-- Signed in -->
-        <div id="user-signed-in">
-          <img id="user-avatar-img" class="user-avatar" src="" alt="" style="display:none;">
-          <div id="user-avatar-initials" class="user-avatar-initials" style="display:none;"></div>
-          <div class="user-info">
-            <div id="user-name" class="user-name"></div>
-            <div id="user-email" class="user-email"></div>
-          </div>
-          <button id="signout-link" class="user-signout-link">Sign out</button>
-        </div>
-        <!-- Signed out -->
-        <div id="user-signed-out">
-          <div class="user-signin-msg">Sign in to save SOPs to your account</div>
-          <button id="signin-btn" class="user-signin-btn">Sign in with Google</button>
-          <div id="signin-error" class="signin-error" style="display:none;">Sign-in failed, try again</div>
-        </div>
-      </div>
+      <button class="btn-sops" id="viewSopsBtn">View my SOPs</button>
 
     </div>
   </div>
