@@ -18,7 +18,8 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/icons', express.static(path.join(__dirname, 'Icons')));
 
-const isProd = process.env.NODE_ENV === 'production';
+app.set('trust proxy', 1);
+
 app.use(session({
   store: new pgSession({
     pool,
@@ -28,8 +29,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: isProd,
-    sameSite: isProd ? 'none' : 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000,
   },
 }));
