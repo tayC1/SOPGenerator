@@ -220,38 +220,75 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pushToCodex() {
     if (steps.length === 0) { showToast('No steps to push.', true); return; }
-    showExportForm(function (meta) {
-      showToast('Saving to CODEX…');
-      var payload = {
-        title: meta.title,
-        url: (steps[0] && steps[0].pageUrl) || '',
-        description: meta.description || '',
-        steps: steps.map(function (step, i) {
-          return {
-            title: step.description || step.pageTitle || ('Step ' + (i + 1)),
-            description: step.description || '',
-            screenshot_base64: step.screenshot || ''
+    fetch('https://kpcodex-production.up.railway.app/auth/me', { credentials: 'include' })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.user) { showSignInPrompt(); return; }
+        var author = data.user.name || data.user.display_name || '';
+        showExportForm(function (meta) {
+          showToast('Saving to CODEX…');
+          var payload = {
+            title: meta.title,
+            url: (steps[0] && steps[0].pageUrl) || '',
+            description: meta.description || '',
+            author: author,
+            steps: steps.map(function (step, i) {
+              return {
+                title: step.description || step.pageTitle || ('Step ' + (i + 1)),
+                description: step.description || '',
+                screenshot_base64: step.screenshot || ''
+              };
+            })
           };
-        })
-      };
-      fetch('https://kpcodex-production.up.railway.app/sops', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      })
-        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-        .then(function (result) {
-          if (result.ok) {
-            showCodexSuccess();
-          } else {
-            showToast('Failed to save — check your connection', true);
-          }
-        })
-        .catch(function () {
-          showToast('Failed to save — check your connection', true);
+          fetch('https://kpcodex-production.up.railway.app/sops', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (result) {
+              if (result.ok) {
+                showCodexSuccess();
+              } else {
+                showToast('Failed to save — check your connection', true);
+              }
+            })
+            .catch(function () {
+              showToast('Failed to save — check your connection', true);
+            });
         });
+      })
+      .catch(function () {
+        showToast('Failed to check sign-in status', true);
+      });
+  }
+
+  function showSignInPrompt() {
+    var el = document.createElement('div');
+    el.style.cssText = [
+      'position:fixed', 'bottom:28px', 'right:28px',
+      'background:rgba(46,82,102,1)', 'color:#fff',
+      'padding:14px 20px', 'border-radius:10px',
+      'font-family:Inter,sans-serif', 'font-size:14px', 'font-weight:600',
+      'z-index:99999', 'box-shadow:0 4px 18px rgba(0,0,0,0.22)',
+      'display:flex', 'flex-direction:column', 'gap:8px',
+      'min-width:220px'
+    ].join(';');
+    var msg = document.createElement('div');
+    msg.textContent = 'You need to be signed in to save to CODEX.';
+    msg.style.cssText = 'font-size:13px;font-weight:500;line-height:1.4;';
+    var link = document.createElement('div');
+    link.textContent = 'Sign in →';
+    link.style.cssText = 'font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;opacity:0.9;';
+    link.addEventListener('click', function () {
+      chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
+      if (el.parentNode) el.remove();
     });
+    el.appendChild(msg);
+    el.appendChild(link);
+    document.body.appendChild(el);
+    setTimeout(function () { if (el.parentNode) el.remove(); }, 8000);
   }
 
   function showCodexSuccess() {

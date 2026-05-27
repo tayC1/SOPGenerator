@@ -4,7 +4,7 @@ const db = require('../db');
 const router = Router();
 
 router.post('/', async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
+  if (!req.user) return res.status(401).json({ error: 'You must be signed in to save SOPs' });
   const { title, url, description, steps } = req.body;
   try {
     const result = await db.query(
