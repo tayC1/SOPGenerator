@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       var topbar = document.createElement('div');
       topbar.id = 'topbar';
-      topbar.style.cssText = 'position:absolute;top:0;left:0;right:0;height:137px;pointer-events:auto;';
+      topbar.style.cssText = 'position:relative;z-index:10;height:137px;width:1440px;pointer-events:auto;';
 
       // left: start at 126px to clear the logo that occupies the left ~120px
       var leftSection = document.createElement('div');
@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', function () {
       topbar.appendChild(leftSection);
       topbar.appendChild(centerSection);
       topbar.appendChild(rightSection);
-      root.appendChild(topbar);
+      root.insertBefore(topbar, root.firstChild);
     } catch (e) {
       console.error('Topbar build error', e);
     }
