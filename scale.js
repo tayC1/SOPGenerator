@@ -312,11 +312,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
       var topbar = document.createElement('div');
       topbar.id = 'topbar';
-      topbar.style.cssText = 'position:relative;z-index:10;height:137px;width:1440px;pointer-events:auto;';
+      topbar.style.cssText = 'position:relative;z-index:10;height:137px;width:1440px;pointer-events:auto;overflow:visible;';
 
-      // left: start at 126px to clear the logo that occupies the left ~120px
+      // Find and move the logo div (position: absolute; top: 22px; left: 19px) into the topbar
+      var logoDiv = Array.from(root.querySelectorAll('div')).find(function (d) {
+        return d.style && d.style.top === '22px' && d.style.left === '19px';
+      });
+
+      // left: start at 19px (logo position) and use flex row to hold logo + title
       var leftSection = document.createElement('div');
-      leftSection.style.cssText = 'position:absolute;left:126px;top:0;bottom:0;display:flex;align-items:center;';
+      leftSection.style.cssText = 'position:absolute;left:19px;top:0;bottom:0;display:flex;align-items:center;gap:11px;overflow:visible;';
+
+      if (logoDiv) {
+        logoDiv.style.cssText = 'width:96px;height:102px;flex-shrink:0;position:relative;overflow:visible;';
+        leftSection.appendChild(logoDiv);
+      }
+
       headerDiv.style.cssText = 'font-size:48px;color:rgba(255,255,255,1);margin:0;position:static;';
       leftSection.appendChild(headerDiv);
 

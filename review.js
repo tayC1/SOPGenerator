@@ -11,64 +11,6 @@ let draggedIndex = null;
 // Load steps on page load
 document.addEventListener('DOMContentLoaded', loadSteps);
 
-// Build top bar: move existing header and back button into a flex top bar
-document.addEventListener('DOMContentLoaded', function () {
-  try {
-    var root = document.querySelector('#scale-wrapper > div');
-    if (!root) return;
-
-    // find header div that contains the exact text 'Review Steps'
-    var headerDiv = Array.from(root.querySelectorAll('div')).find(function (d) { return d.textContent && d.textContent.trim() === 'Review Steps'; });
-    var back = document.getElementById('backBtn');
-    if (!headerDiv || !back) return;
-
-    // create topbar container (tall enough to hold headerInfo)
-    var topbar = document.createElement('div');
-    topbar.id = 'topbar';
-    topbar.style.cssText = 'position:absolute;top:33px;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 40px;height:137px;pointer-events:auto;';
-
-    // left: header
-    var left = document.createElement('div');
-    left.style.cssText = 'flex:0 1 auto;display:flex;flex-direction:column;gap:4px;';
-    headerDiv.style.cssText = 'font-size:48px;color:rgba(255,255,255,1);margin:0;';
-    left.appendChild(headerDiv);
-
-    // center: prefer the existing `headerInfo` (steps/time/last-updated) created by scale.js
-    var center = document.createElement('div');
-    center.style.cssText = 'position:absolute;left:50%;top:0;bottom:0;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;';
-
-    // find headerInfo created by scale.js (identified by its assigned ID)
-    var headerInfoEl = document.getElementById('topbarHeaderInfo');
-    if (headerInfoEl) {
-      // move it into the center and ensure it centers its content
-      headerInfoEl.style.cssText = 'display:flex;align-items:center;justify-content:center;pointer-events:none;height:100%;width:100%;gap:12px;';
-      center.appendChild(headerInfoEl);
-    } else {
-      // fallback: show stored sopSummary
-      var summary = document.createElement('div');
-      summary.id = 'sopSummary';
-      summary.style.cssText = 'display:inline-block;font-size:14px;color:rgba(255,255,255,0.95);max-width:720px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;';
-      chrome.storage && chrome.storage.local && chrome.storage.local.get(['sopSummary'], function (res) {
-        summary.textContent = (res && res.sopSummary) ? res.sopSummary : '';
-      });
-      center.appendChild(summary);
-    }
-
-    // right: back button (move existing element)
-    var right = document.createElement('div');
-    right.style.cssText = 'flex:0 0 auto;display:flex;align-items:center;';
-    right.appendChild(back);
-
-    topbar.appendChild(left);
-    topbar.appendChild(center);
-    topbar.appendChild(right);
-
-    // insert topbar into root
-    root.appendChild(topbar);
-  } catch (e) {
-    console.error('Topbar build error', e);
-  }
-});
 
 function loadSteps() {
   chrome.storage.local.get('steps', (result) => {
