@@ -1,0 +1,190 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-color: #2d2b2e;
+}
+
+body {
+  background: transparent;
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(ellipse 120% 55% at 50% -10%, rgba(80, 105, 140, 0.65) 0%, transparent 70%),
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(60, 80, 115, 0.4) 0%, transparent 60%),
+    linear-gradient(to bottom, rgba(45, 55, 80, 0.5) 0%, transparent 45%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Make Figma canvas backgrounds transparent */
+div[style*="rgba(255, 255, 255, 1.00)"] {
+  background-color: transparent !important;
+}
+div[style*="rgba(45, 43, 46, 1.00)"] {
+  background-color: transparent !important;
+}
+
+.page {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 640px;
+}
+
+.logo-wrap {
+  margin-bottom: 16px;
+}
+
+.logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.title-wrap {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.title {
+  color: #ffffff;
+  font-size: 19px;
+  font-weight: 400;
+  letter-spacing: 0.38em;
+  text-indent: 0.38em;
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+.subtitle {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.cards-container {
+  display: flex;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 18px;
+  padding: 8px;
+  margin-bottom: 22px;
+  width: 100%;
+}
+
+.card {
+  flex: 1;
+  background: #0f1116;
+  border-radius: 12px;
+  padding: 26px 12px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 138px;
+  cursor: default;
+  transition: background 0.15s;
+}
+
+.card:hover {
+  background: #181b22;
+}
+
+.card-icon {
+  width: 28px;
+  height: 28px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.card-label {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.card-sub {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 11px;
+  text-align: center;
+}
+
+.btn-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 330px;
+  margin-bottom: 8px;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 11px 0;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  border: none;
+  letter-spacing: 0.01em;
+}
+
+.btn:hover {
+  opacity: 0.82;
+}
+
+.btn-signin {
+  flex: 1;
+  background: #7a3f14;
+  color: #ffffff;
+}
+
+.btn-view {
+  flex: 1;
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+}
+
+.btn-started {
+  width: 100%;
+  max-width: 330px;
+  background: #252833;
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
