@@ -116,10 +116,24 @@
       color: rgba(255,255,255,0.85);
       line-height: 1.5;
     }
+    .step-screenshot-wrap {
+      position: relative;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
     .step-screenshot {
       width: 100%;
       display: block;
-      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .step-marker {
+      position: absolute;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 3px solid #e04b2a;
+      background: rgba(224,75,42,0.25);
+      box-sizing: border-box;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
     }
     .empty {
       text-align: center;
@@ -183,7 +197,12 @@
               <span class="step-description">${escape(step.description || step.title || '')}</span>
             </div>
             ${step.screenshot_base64
-              ? `<img class="step-screenshot" src="data:image/png;base64,${step.screenshot_base64}" alt="Step ${i + 1} screenshot">`
+              ? `<div class="step-screenshot-wrap">
+                  <img class="step-screenshot" src="data:image/png;base64,${step.screenshot_base64}" alt="Step ${i + 1} screenshot">
+                  ${step.click_x != null && step.click_y != null
+                    ? `<div class="step-marker" style="left:${step.click_x * 100}%;top:${step.click_y * 100}%;"></div>`
+                    : ''}
+                </div>`
               : ''}
           </div>
         `).join('');
