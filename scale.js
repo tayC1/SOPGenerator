@@ -218,6 +218,33 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () { toast.remove(); }, 3000);
   }
 
+  // Draws the marker dot directly into the screenshot's pixels so it survives
+  // anywhere downstream that only renders the raw image (server, sop.html, exports).
+  function bakeMarker(base64, clickX, clickY) {
+    return new Promise(function (resolve) {
+      if (!base64 || clickX == null || clickY == null) { resolve(base64); return; }
+      var img = new Image();
+      img.onload = function () {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        var r = 16;
+        ctx.beginPath();
+        ctx.arc(clickX * canvas.width, clickY * canvas.height, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(224,75,42,0.25)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#e04b2a';
+        ctx.stroke();
+        resolve(canvas.toDataURL('image/png').replace('data:image/png;base64,', ''));
+      };
+      img.onerror = function () { resolve(base64); };
+      img.src = 'data:image/png;base64,' + base64;
+    });
+  }
+
   function pushToCodex() {
     if (steps.length === 0) { showToast('No steps to push.', true); return; }
     chrome.storage.local.get('currentUser', function (result) {
@@ -226,36 +253,40 @@ document.addEventListener('DOMContentLoaded', function () {
       var author = currentUser.name || '';
       showExportForm(function (meta) {
         showToast('Saving to CODEX…');
-        var payload = {
-          title: meta.title,
-          url: (steps[0] && steps[0].pageUrl) || '',
-          description: meta.description || '',
-          author: author,
-          steps: steps.map(function (step, i) {
-            return {
-              title: step.description || step.pageTitle || ('Step ' + (i + 1)),
-              description: step.description || '',
-              screenshot_base64: step.screenshot || ''
-            };
+        Promise.all(steps.map(function (step) {
+          return bakeMarker(step.screenshot, step.clickX, step.clickY);
+        })).then(function (bakedScreenshots) {
+          var payload = {
+            title: meta.title,
+            url: (steps[0] && steps[0].pageUrl) || '',
+            description: meta.description || '',
+            author: author,
+            steps: steps.map(function (step, i) {
+              return {
+                title: step.description || step.pageTitle || ('Step ' + (i + 1)),
+                description: step.description || '',
+                screenshot_base64: bakedScreenshots[i] || ''
+              };
+            })
+          };
+          fetch('https://kpcodex-production.up.railway.app/sops', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
           })
-        };
-        fetch('https://kpcodex-production.up.railway.app/sops', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-          .then(function (result) {
-            if (result.ok) {
-              showCodexSuccess();
-            } else {
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (result) {
+              if (result.ok) {
+                showCodexSuccess();
+              } else {
+                showToast('Failed to save — check your connection', true);
+              }
+            })
+            .catch(function () {
               showToast('Failed to save — check your connection', true);
-            }
-          })
-          .catch(function () {
-            showToast('Failed to save — check your connection', true);
-          });
+            });
+        });
       });
     });
   }
