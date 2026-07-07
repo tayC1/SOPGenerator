@@ -358,12 +358,7 @@
       <div class="sidebar-divider"></div>
 
       <div class="sidebar-section-label">Teams</div>
-      <nav class="team-list" id="teamList" aria-label="Teams">
-        <a class="team-item" data-team="Finance" href="/team/Finance">Finance</a>
-        <a class="team-item" data-team="Live Events" href="/team/Live%20Events">Live Events</a>
-        <a class="team-item" data-team="Integrations" href="/team/Integrations">Integrations</a>
-        <a class="team-item" data-team="Logistics" href="/team/Logistics">Logistics</a>
-      </nav>
+      <nav class="team-list" id="teamList" aria-label="Teams"></nav>
 
       <div class="sidebar-footer">
         <div class="avatar" id="userAvatar">?</div>
@@ -472,9 +467,20 @@
     function initTeamHeader() {
       document.getElementById('teamName').textContent = teamName;
       document.title = `${teamName} — CODEX`;
-      document.querySelectorAll('.team-item').forEach((el) => {
-        el.classList.toggle('active', el.dataset.team === teamName);
-      });
+    }
+
+    async function loadTeams() {
+      const teamList = document.getElementById('teamList');
+      try {
+        const res = await fetch('/departments');
+        if (!res.ok) throw new Error('Failed to load departments');
+        const departments = await res.json();
+        teamList.innerHTML = departments.map((d) => `
+          <a class="team-item${d.name === teamName ? ' active' : ''}" data-team="${escapeHtml(d.name)}" href="/team/${encodeURIComponent(d.name)}">${escapeHtml(d.name)}</a>
+        `).join('');
+      } catch (err) {
+        console.error('[teamlanding] failed to load teams:', err);
+      }
     }
 
     function sopCardHtml(sop) {
@@ -555,6 +561,7 @@
 
     initTeamHeader();
     loadUser();
+    loadTeams();
     loadSops();
   </script>
 </body>

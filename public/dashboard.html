@@ -616,11 +616,13 @@
         const sop = await res.json();
         chrome.runtime.sendMessage(EXTENSION_ID, { type: 'EDIT_SOP', sop }, (response) => {
           if (chrome.runtime.lastError) {
-            alert('Could not reach the CODEX extension. Make sure it is installed.');
+            console.error('[edit] sendMessage failed:', chrome.runtime.lastError.message);
+            alert(`Could not reach the CODEX extension: ${chrome.runtime.lastError.message}`);
             return;
           }
           if (!response || !response.received) {
-            alert('Could not open this SOP for editing.');
+            console.error('[edit] extension did not accept EDIT_SOP:', response);
+            alert(`Could not open this SOP for editing: ${(response && response.error) || 'unknown error'}`);
           }
         });
       } catch {
@@ -646,9 +648,14 @@
     document.getElementById('categoryList').addEventListener('click', (e) => {
       const btn = e.target.closest('.category-item');
       if (!btn) return;
-      activeCategory = btn.dataset.category;
-      document.querySelectorAll('.category-item').forEach((el) => el.classList.toggle('active', el === btn));
-      renderGrid();
+      const category = btn.dataset.category;
+      if (!category) {
+        activeCategory = '';
+        document.querySelectorAll('.category-item').forEach((el) => el.classList.toggle('active', el === btn));
+        renderGrid();
+        return;
+      }
+      window.location.href = `/team/${encodeURIComponent(category)}`;
     });
 
     loadUser().then(bridgeSessionToExtension);

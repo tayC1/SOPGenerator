@@ -35,8 +35,16 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
       sendResponse({ received: false, error: 'missing sop' });
       return;
     }
+    // Older saved SOPs stored the image under `screenshot_base64` instead of
+    // `screenshot` - normalize so the editor (which only reads `.screenshot`) can render them.
+    var normalizedSteps = (message.sop.steps || []).map(function (step) {
+      if (!step.screenshot && step.screenshot_base64) {
+        step = Object.assign({}, step, { screenshot: step.screenshot_base64 });
+      }
+      return step;
+    });
     chrome.storage.local.set({
-      steps: message.sop.steps || [],
+      steps: normalizedSteps,
       sopTitle: message.sop.title || '',
       sopSummary: message.sop.description || '',
       category: message.sop.category || '',
