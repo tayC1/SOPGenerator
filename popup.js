@@ -36,7 +36,7 @@ async function startRecording() {
   if (!tabs.length) return;
   const activeTab = tabs[0];
 
-  chrome.storage.local.set({ steps: [], isRecording: true });
+  chrome.storage.local.set({ steps: [], isRecording: true, editingSopId: null });
   chrome.runtime.sendMessage({ action: 'startRecording' }, () => {
     chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' }).catch(() => {
       chrome.scripting.executeScript(
@@ -58,7 +58,9 @@ async function stopAndReview() {
     });
   }
 
-  chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+  chrome.storage.local.remove('editingSopId', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+  });
 }
 
 recordBtn.addEventListener('click', startRecording);
@@ -66,7 +68,9 @@ recordBtn.addEventListener('click', startRecording);
 stopReviewBtn.addEventListener('click', stopAndReview);
 
 reviewBtn.addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+  chrome.storage.local.remove('editingSopId', () => {
+    chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+  });
 });
 
 // window.confirm()/alert()/prompt() are silently ignored inside extension

@@ -28,6 +28,31 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
     });
     return true;
   }
+
+  if (message.type === 'EDIT_SOP') {
+    if (!message.sop || message.sop.id == null) {
+      console.error('[auth-bridge] EDIT_SOP message missing sop:', message);
+      sendResponse({ received: false, error: 'missing sop' });
+      return;
+    }
+    chrome.storage.local.set({
+      steps: message.sop.steps || [],
+      sopTitle: message.sop.title || '',
+      sopSummary: message.sop.description || '',
+      category: message.sop.category || '',
+      editingSopId: message.sop.id,
+      isRecording: false
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[auth-bridge] failed to store edit session:', chrome.runtime.lastError.message);
+        sendResponse({ received: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+      sendResponse({ received: true });
+    });
+    return true;
+  }
 });
 
 // chrome.storage.local is the single source of truth for recording state.

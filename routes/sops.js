@@ -84,6 +84,27 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+router.patch('/:id', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'You must be signed in to edit SOPs' });
+  try {
+    const existing = await db.query('SELECT * FROM sops WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: 'SOP not found' });
+    if (existing.rows[0].user_id !== req.user.id) {
+      return res.status(403).json({ error: 'You can only edit your own SOPs' });
+    }
+    const { title, url, description, steps, category } = req.body;
+    const result = await db.query(
+      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5
+       WHERE id = $6
+       RETURNING *`,
+      [title, url, description, JSON.stringify(steps ?? []), category ?? null, req.params.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   try {
     await db.query('DELETE FROM sops WHERE id = $1', [req.params.id]);

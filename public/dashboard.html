@@ -538,7 +538,7 @@
           </div>
           <div class="sop-card-actions">
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
-            <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.edit} EDIT</a>
+            <button class="action-btn" type="button" data-edit="${sop.id}">${ICONS.edit} EDIT</button>
             <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
           </div>
         </article>
@@ -566,6 +566,9 @@
 
       grid.querySelectorAll('[data-export]').forEach((btn) => {
         btn.addEventListener('click', () => exportSop(btn.dataset.export));
+      });
+      grid.querySelectorAll('[data-edit]').forEach((btn) => {
+        btn.addEventListener('click', () => editSop(btn.dataset.edit));
       });
     }
 
@@ -599,6 +602,29 @@
         URL.revokeObjectURL(url);
       } catch {
         alert('Could not export this SOP right now.');
+      }
+    }
+
+    async function editSop(id) {
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        alert('The CODEX extension is required to edit a SOP. Install it, then try again.');
+        return;
+      }
+      try {
+        const res = await fetch(`/sops/${id}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Not found');
+        const sop = await res.json();
+        chrome.runtime.sendMessage(EXTENSION_ID, { type: 'EDIT_SOP', sop }, (response) => {
+          if (chrome.runtime.lastError) {
+            alert('Could not reach the CODEX extension. Make sure it is installed.');
+            return;
+          }
+          if (!response || !response.received) {
+            alert('Could not open this SOP for editing.');
+          }
+        });
+      } catch {
+        alert('Could not open this SOP for editing right now.');
       }
     }
 

@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var stepsContainer;
   var _skipStorageEvent = false;
   var sopIntroEl = null;
+  var editingSopId = null;
+  var headerDivRef = null;
+  var exportLabelRef = null;
 
   // ── GitHub Config ──────────────────────────────────────────────────
   var GITHUB_TOKEN = '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';          // Personal Access Token (ghp_...)
@@ -335,6 +338,42 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
+  function saveEditedSop() {
+    if (!editingSopId) return;
+    if (steps.length === 0) { showToast('No steps to save.', true); return; }
+    chrome.storage.local.get(['extensionToken', 'sopTitle', 'sopSummary', 'category'], function (result) {
+      var extensionToken = result.extensionToken;
+      if (!extensionToken) { showSignInPrompt(); return; }
+      showToast('Saving…');
+      var payload = {
+        title: (result.sopTitle || 'SOP Guide').trim(),
+        description: (result.sopSummary || '').trim(),
+        category: result.category || null,
+        url: (steps[0] && steps[0].pageUrl) || '',
+        steps: steps
+      };
+      fetch(CONFIG.API_URL + '/sops/' + editingSopId, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + extensionToken
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result2) {
+          if (result2.ok) {
+            showToast('Saved ✓');
+          } else {
+            showToast((result2.data && result2.data.error) || 'Failed to save — check your connection', true);
+          }
+        })
+        .catch(function () {
+          showToast('Failed to save — check your connection', true);
+        });
+    });
+  }
+
   function showSignInPrompt() {
     var el = document.createElement('div');
     el.style.cssText = [
@@ -430,6 +469,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       var backImg = document.getElementById('backBtn');
       if (!headerDiv || !backImg) return;
+      headerDivRef = headerDiv;
 
       // The "Back" label is a pointer-events:none div overlaid on the backBtn image
       var backLabel = Array.from(root.querySelectorAll('div')).find(function (d) {
@@ -479,6 +519,7 @@ document.addEventListener('DOMContentLoaded', function () {
           exportLabel.textContent = 'Export ▾';
           exportLabel.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,1);font-family:Inter;font-weight:600;pointer-events:none;letter-spacing:0.1px;';
           exportWrapper.appendChild(exportLabel);
+          exportLabelRef = exportLabel;
         }
 
         var exportDropdown = document.createElement('div');
@@ -505,6 +546,7 @@ document.addEventListener('DOMContentLoaded', function () {
         exportWrapper.addEventListener('click', function (e) {
           e.stopPropagation();
           if (steps.length === 0) { alert('No steps to export.'); return; }
+          if (editingSopId) { saveEditedSop(); return; }
           exportDropdown.style.display = exportDropdown.style.display === 'block' ? 'none' : 'block';
         });
 
@@ -531,6 +573,13 @@ document.addEventListener('DOMContentLoaded', function () {
       console.error('Topbar build error', e);
     }
   })();
+
+  chrome.storage.local.get('editingSopId', function (result) {
+    editingSopId = result.editingSopId || null;
+    if (!editingSopId) return;
+    if (headerDivRef) headerDivRef.textContent = 'Edit Steps';
+    if (exportLabelRef) exportLabelRef.textContent = 'Save';
+  });
 
   function updateHeaderInfo() {
     if (!headerInfo) return;
