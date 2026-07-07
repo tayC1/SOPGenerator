@@ -34,3 +34,15 @@ CREATE TABLE IF NOT EXISTS departments (
   lead        TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- Seed the categories already used as filters in dashboard.html, so the
+-- departments table has a row for every category SOPs can actually be
+-- tagged with. `lead` stays NULL until someone is assigned.
+INSERT INTO departments (name) VALUES
+  ('Finance'),
+  ('HR'),
+  ('Internal Ops'),
+  ('Logistics/Purchasing'),
+  ('Live Events/Rentals'),
+  ('Integrations/Sales')
+ON CONFLICT (name) DO NOTHING;

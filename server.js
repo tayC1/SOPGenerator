@@ -138,6 +138,16 @@ app.get('/team/:category', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teamlanding.html'));
 });
 
+app.get('/departments', async (req, res) => {
+  try {
+    const result = await db.query('SELECT id, name, lead FROM departments ORDER BY name');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('[departments] failed to list departments:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // API routes
 app.use('/sops', sopsRouter);
 

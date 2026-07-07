@@ -135,11 +135,47 @@ document.addEventListener('DOMContentLoaded', function () {
       return { wrapper: wrapper, input: input };
     }
 
+    function makeSelectField(label, options, selectedValue) {
+      var wrapper = document.createElement('div');
+      wrapper.style.cssText = 'margin-bottom:14px;';
+      var lbl = document.createElement('label');
+      lbl.style.cssText = 'display:block;font-size:11px;font-weight:700;color:rgba(100,100,100,1);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.6px;';
+      lbl.textContent = label;
+      var select = document.createElement('select');
+      select.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid rgba(210,210,210,1);border-radius:6px;font-size:13px;font-family:Inter,sans-serif;color:rgba(30,30,30,1);outline:none;background:#fff;cursor:pointer;';
+      var uncatOpt = document.createElement('option');
+      uncatOpt.value = '';
+      uncatOpt.textContent = 'Uncategorized';
+      select.appendChild(uncatOpt);
+      options.forEach(function (name) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      if (selectedValue && options.indexOf(selectedValue) !== -1) select.value = selectedValue;
+      select.addEventListener('focus', function () { select.style.borderColor = 'rgba(46,82,102,1)'; });
+      select.addEventListener('blur', function () { select.style.borderColor = 'rgba(210,210,210,1)'; });
+      wrapper.appendChild(lbl);
+      wrapper.appendChild(select);
+      return { wrapper: wrapper, input: select };
+    }
+
     var today = new Date().toISOString().split('T')[0];
 
-    chrome.storage.local.get(['sopTitle', 'sopSummary'], function (res) {
+    var metaPromise = new Promise(function (resolve) {
+      chrome.storage.local.get(['sopTitle', 'sopSummary', 'category'], resolve);
+    });
+    var departmentsPromise = fetch(CONFIG.API_URL + '/departments')
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function (err) { console.error('[review] failed to load departments:', err); return []; });
+
+    Promise.all([metaPromise, departmentsPromise]).then(function (results) {
+      var res = results[0];
+      var departmentNames = results[1].map(function (d) { return d.name; });
+
       var titleField    = makeField('Title',       (res.sopTitle   || 'SOP Guide').trim());
-      var categoryField = makeField('Category',    '');
+      var categoryField = makeSelectField('Category', departmentNames, res.category);
       var authorField   = makeField('Author',      '');
       var dateField     = makeField('Date',        today, 'date');
       var descField     = makeField('Description', (res.sopSummary || '').trim(), 'textarea');
@@ -157,9 +193,11 @@ document.addEventListener('DOMContentLoaded', function () {
       submitBtn.style.cssText = 'padding:8px 20px;border-radius:8px;border:none;background:rgba(46,82,102,1);color:#fff;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;';
       submitBtn.addEventListener('click', function () {
         document.body.removeChild(overlay);
+        var categoryValue = categoryField.input.value.trim();
+        chrome.storage.local.set({ category: categoryValue });
         action({
           title:       titleField.input.value.trim()    || 'SOP Guide',
-          category:    categoryField.input.value.trim(),
+          category:    categoryValue,
           author:      authorField.input.value.trim(),
           date:        dateField.input.value             || today,
           description: descField.input.value.trim()
@@ -247,40 +285,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function pushToCodex() {
     if (steps.length === 0) { showToast('No steps to push.', true); return; }
-    chrome.storage.local.get('currentUser', function (result) {
-      var currentUser = result.currentUser;
-      if (!currentUser) { showSignInPrompt(); return; }
-      var author = currentUser.name || '';
+    chrome.storage.local.get('extensionToken', function (result) {
+      var extensionToken = result.extensionToken;
+      if (!extensionToken) { showSignInPrompt(); return; }
       showExportForm(function (meta) {
         showToast('Saving to CODEX…');
         Promise.all(steps.map(function (step) {
           return bakeMarker(step.screenshot, step.clickX, step.clickY);
         })).then(function (bakedScreenshots) {
+          var bakedSteps = steps.map(function (step, i) {
+            var copy = Object.assign({}, step);
+            copy.screenshot = bakedScreenshots[i] || step.screenshot;
+            return copy;
+          });
           var payload = {
             title: meta.title,
-            url: (steps[0] && steps[0].pageUrl) || '',
             description: meta.description || '',
-            author: author,
-            steps: steps.map(function (step, i) {
-              return {
-                title: step.description || step.pageTitle || ('Step ' + (i + 1)),
-                description: step.description || '',
-                screenshot_base64: bakedScreenshots[i] || ''
-              };
-            })
+            category: meta.category || null,
+            url: (steps[0] && steps[0].pageUrl) || '',
+            steps: bakedSteps
           };
-          fetch('https://kpcodex-production.up.railway.app/sops', {
+          fetch(CONFIG.API_URL + '/sops', {
             method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + extensionToken
+            },
             body: JSON.stringify(payload)
           })
             .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
             .then(function (result) {
               if (result.ok) {
                 showCodexSuccess();
+                chrome.storage.local.set({ steps: [], isRecording: false });
+                chrome.storage.local.remove(['sopTitle', 'sopSummary', 'category']);
+                steps = [];
+                sopIntroEl = null;
+                updateHeaderInfo();
+                renderSteps();
               } else {
-                showToast('Failed to save — check your connection', true);
+                showToast((result.data && result.data.error) || 'Failed to save — check your connection', true);
               }
             })
             .catch(function () {

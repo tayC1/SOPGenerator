@@ -3,6 +3,23 @@ const db = require('../db');
 
 const router = Router();
 
+// The extension has no cookie session, only a Bearer token - resolve req.user
+// from it the same way /auth/me does, so "my SOPs" scoping works from there.
+router.use(async (req, res, next) => {
+  if (req.user) return next();
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    try {
+      const result = await db.query('SELECT * FROM users WHERE extension_token = $1', [token]);
+      if (result.rows.length > 0) req.user = result.rows[0];
+    } catch (err) {
+      console.error('[sops] bearer token lookup failed:', err.message);
+    }
+  }
+  next();
+});
+
 router.post('/', async (req, res) => {
   if (!req.user) return res.status(401).json({ error: 'You must be signed in to save SOPs' });
   const author = req.user.name ?? null;

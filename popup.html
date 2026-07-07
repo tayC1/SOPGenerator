@@ -162,6 +162,71 @@
   }
 
   .footer a:hover, .footer button.link:hover { color: #ffffff; }
+
+  .user-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 9px 12px;
+  }
+
+  .user-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .user-name { flex: 1; font-size: 13px; font-weight: 500; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .site-sops-heading {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-bottom: 8px;
+  }
+
+  .site-sops-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+  }
+
+  .site-sop-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 11px;
+    color: #ffffff;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .site-sop-item:hover { background: rgba(255, 255, 255, 0.12); }
+
+  .site-sops-empty {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 12px;
+  }
 </style>
 </head>
 <body>
@@ -175,6 +240,12 @@
         <span class="status-dot" id="statusDot"></span>
         <span id="statusText">Ready</span>
       </div>
+    </div>
+
+    <div class="user-bar" id="userBar" style="display: none;">
+      <span class="user-avatar" id="userAvatar"></span>
+      <span class="user-name" id="userNameLabel"></span>
+      <button class="link" id="signOutBtn" type="button">Sign out</button>
     </div>
 
     <div class="stat-box">
@@ -192,17 +263,23 @@
       <button class="btn-secondary danger" id="clearBtn" type="button" disabled>Clear</button>
     </div>
 
-    <div class="info-box">
+    <div class="site-sops" id="siteSops" style="display: none;">
+      <div class="site-sops-heading" id="siteSopsHeading">SOPs for this site</div>
+      <div class="site-sops-list" id="siteSopsList"></div>
+    </div>
+
+    <div class="info-box" id="howItWorks">
       <strong>How it works</strong>
       Click Record, then interact with the page like normal — each click is captured. Click Stop &amp; Review when done, edit your SOP, and publish to CODEX.
     </div>
 
     <div class="footer">
-      <a href="https://kpcodex-production.up.railway.app" target="_blank" rel="noopener">Sign in</a>
+      <a href="https://kpcodex-production.up.railway.app" target="_blank" rel="noopener" id="signInLink">Sign in</a>
       <button class="link" id="viewSopsBtn" type="button">View SOPs</button>
     </div>
   </div>
 
+  <script src="config.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

@@ -2,6 +2,11 @@
 
 const stepsContainer = document.getElementById('stepsContainer');
 const backBtn = document.getElementById('backBtn');
+const sopTitleInput = document.getElementById('sopTitle');
+const sopDescriptionInput = document.getElementById('sopDescription');
+const categorySelect = document.getElementById('categorySelect');
+const uploadBtn = document.getElementById('uploadBtn');
+const uploadStatus = document.getElementById('uploadStatus');
 
 let steps = [];
 let draggedElement = null;
@@ -9,6 +14,8 @@ let draggedIndex = null;
 
 // Load steps on page load
 document.addEventListener('DOMContentLoaded', loadSteps);
+document.addEventListener('DOMContentLoaded', loadSopMeta);
+document.addEventListener('DOMContentLoaded', loadCategoryOptions);
 
 
 function loadSteps() {
@@ -200,3 +207,115 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     renderSteps();
   }
 });
+
+// --- SOP title/description, persisted so a tab close doesn't lose them ---
+
+function loadSopMeta() {
+  chrome.storage.local.get(['sopTitle', 'sopDescription'], (result) => {
+    sopTitleInput.value = result.sopTitle || '';
+    sopDescriptionInput.value = result.sopDescription || '';
+  });
+}
+
+sopTitleInput.addEventListener('change', () => {
+  chrome.storage.local.set({ sopTitle: sopTitleInput.value });
+});
+
+sopDescriptionInput.addEventListener('change', () => {
+  chrome.storage.local.set({ sopDescription: sopDescriptionInput.value });
+});
+
+// --- Category dropdown, sourced from the departments table ---
+
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function loadCategoryOptions() {
+  chrome.storage.local.get('category', ({ category: storedCategory }) => {
+    fetch(`${CONFIG.API_URL}/departments`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`request failed: ${res.status}`);
+        return res.json();
+      })
+      .then((departments) => {
+        categorySelect.innerHTML = '<option value="">Uncategorized</option>' +
+          departments.map((d) => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`).join('');
+        if (storedCategory && departments.some((d) => d.name === storedCategory)) {
+          categorySelect.value = storedCategory;
+        }
+      })
+      .catch((err) => console.error('[review] failed to load departments:', err));
+  });
+}
+
+// --- Upload to Knowledge Base ---
+
+function setUploadStatus(message, type) {
+  uploadStatus.textContent = message;
+  uploadStatus.className = `upload-status${type ? ' ' + type : ''}`;
+}
+
+async function uploadToKnowledgeBase() {
+  const title = sopTitleInput.value.trim();
+  if (!title) {
+    setUploadStatus('Please add a title before uploading.', 'error');
+    sopTitleInput.focus();
+    return;
+  }
+
+  if (steps.length === 0) {
+    setUploadStatus('There are no steps to upload.', 'error');
+    return;
+  }
+
+  const { extensionToken } = await chrome.storage.local.get('extensionToken');
+  if (!extensionToken) {
+    setUploadStatus('Please sign in on the CODEX website before uploading.', 'error');
+    return;
+  }
+
+  uploadBtn.disabled = true;
+  uploadBtn.textContent = 'Uploading…';
+  setUploadStatus('');
+
+  try {
+    const res = await fetch(`${CONFIG.API_URL}/sops`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${extensionToken}`,
+      },
+      body: JSON.stringify({
+        title,
+        description: sopDescriptionInput.value.trim(),
+        category: categorySelect.value || null,
+        url: steps[0]?.pageUrl || null,
+        steps,
+      }),
+    });
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `request failed: ${res.status}`);
+    }
+
+    setUploadStatus('Uploaded to the knowledge base.', 'success');
+    chrome.storage.local.set({ steps: [], isRecording: false, sopTitle: '', sopDescription: '' });
+    loadSteps();
+    sopTitleInput.value = '';
+    sopDescriptionInput.value = '';
+  } catch (err) {
+    console.error('[review] upload failed:', err);
+    setUploadStatus(`Upload failed: ${err.message}`, 'error');
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.textContent = 'Upload to Knowledge Base';
+  }
+}
+
+uploadBtn.addEventListener('click', uploadToKnowledgeBase);
