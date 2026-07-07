@@ -23,17 +23,28 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
+  const { category } = req.query;
   try {
-    const result = req.user
+    // A category filter means "show this team's SOPs" (everyone's, not just
+    // the caller's own) - it takes priority over the personal user_id scope.
+    const result = category
       ? await db.query(
-          `SELECT id, title, url, description, created_at
+          `SELECT id, title, url, description, category, author, steps, created_at
+           FROM sops
+           WHERE category = $1
+           ORDER BY created_at DESC`,
+          [category]
+        )
+      : req.user
+      ? await db.query(
+          `SELECT id, title, url, description, category, author, steps, created_at
            FROM sops
            WHERE user_id = $1
            ORDER BY created_at DESC`,
           [req.user.id]
         )
       : await db.query(
-          `SELECT id, title, url, description, created_at
+          `SELECT id, title, url, description, category, author, steps, created_at
            FROM sops
            ORDER BY created_at DESC`
         );

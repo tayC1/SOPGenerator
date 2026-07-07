@@ -4,7 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   name             TEXT,
   google_id        TEXT UNIQUE,
   extension_token  TEXT,
-  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
+  department       TEXT,
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_token TEXT;
@@ -15,7 +16,15 @@ CREATE TABLE IF NOT EXISTS sops (
   title       TEXT NOT NULL,
   url         TEXT,
   description TEXT,
+  department  TEXT,
   steps       JSONB NOT NULL DEFAULT '[]',
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(), 
 );
+
+Create TABLE if NOT EXISTS departments (
+  id          SERIAL PRIMARY KEY,
+  name        TEXT UNIQUE NOT NULL,
+  lead        TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+)

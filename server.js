@@ -97,6 +97,10 @@ app.get('/sop.html', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sop.html'));
 });
 
+app.get('/team/:category', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'teamlanding.html'));
+});
+
 // API routes
 app.use('/sops', sopsRouter);
 
