@@ -11,27 +11,42 @@ chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => 
   }
 });
 
-let isRecording = false;
-let steps = [];
+// chrome.storage.local is the single source of truth for recording state.
+// The service worker is killed by Chrome after ~30s idle and any module-level
+// variable is lost on restart, so nothing about an in-progress recording may
+// live only in memory here - every read/write goes through storage.
 
 // Listen for messages from popup and content scripts
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'startRecording') {
-    isRecording = true;
-    steps = [];
-    chrome.storage.local.set({ steps: [], isRecording: true });
-    sendResponse({ status: 'recording started' });
+    chrome.storage.local.set({ steps: [], isRecording: true }, () => {
+      sendResponse({ status: 'recording started' });
+    });
+    return true;
   }
 
   if (request.action === 'stopRecording') {
-    isRecording = false;
-    chrome.storage.local.set({ isRecording: false });
-    sendResponse({ status: 'recording stopped' });
+    chrome.storage.local.set({ isRecording: false }, () => {
+      sendResponse({ status: 'recording stopped' });
+    });
+    return true;
   }
 
   if (request.action === 'captureScreenshot') {
     // Only background.js can call captureVisibleTab
-    if (isRecording && sender.tab) {
+    if (!sender.tab) {
+      sendResponse({ error: 'no sender tab' });
+      return true;
+    }
+
+    chrome.storage.local.get('isRecording', (statusResult) => {
+      if (!statusResult.isRecording) {
+        // Recording was stopped (or the worker restarted after the session
+        // ended) - do not resurrect a step for a session that's not live.
+        sendResponse({ error: 'not recording' });
+        return;
+      }
+
       chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' }, (screenshot) => {
         if (chrome.runtime.lastError) {
           console.error('Screenshot error:', chrome.runtime.lastError);
@@ -39,11 +54,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         } else {
           // Convert to base64
           const base64Screenshot = screenshot.replace('data:image/png;base64,', '');
-          
+
           // Get existing steps
           chrome.storage.local.get('steps', (result) => {
             let stepsArray = result.steps || [];
-            
+
             // Create step object with metadata from content script
             let description;
             if (request.stepType === 'keystroke') {
@@ -69,17 +84,18 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               clickX: request.clickX ?? null,
               clickY: request.clickY ?? null
             };
-            
+
             stepsArray.push(step);
-            chrome.storage.local.set({ steps: stepsArray });
-            sendResponse({ status: 'screenshot captured', stepId: step.id });
+            chrome.storage.local.set({ steps: stepsArray }, () => {
+              sendResponse({ status: 'screenshot captured', stepId: step.id });
+            });
           });
         }
       });
-      
-      // Return true to indicate we'll send response asynchronously
-      return true;
-    }
+    });
+
+    // Return true to indicate we'll send response asynchronously
+    return true;
   }
 
   if (request.action === 'getSteps') {
@@ -90,21 +106,25 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === 'updateSteps') {
-    chrome.storage.local.set({ steps: request.steps });
-    sendResponse({ status: 'steps updated' });
+    chrome.storage.local.set({ steps: request.steps }, () => {
+      sendResponse({ status: 'steps updated' });
+    });
+    return true;
   }
 
   if (request.action === 'clearRecording') {
-    chrome.storage.local.set({ steps: [], isRecording: false });
-    isRecording = false;
-    sendResponse({ status: 'recording cleared' });
+    chrome.storage.local.set({ steps: [], isRecording: false }, () => {
+      sendResponse({ status: 'recording cleared' });
+    });
+    return true;
   }
 
   if (request.action === 'stopAndReview') {
-    isRecording = false;
-    chrome.storage.local.set({ isRecording: false });
-    chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
-    sendResponse({ status: 'stopped' });
+    chrome.storage.local.set({ isRecording: false }, () => {
+      chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+      sendResponse({ status: 'stopped' });
+    });
+    return true;
   }
 
   if (request.action === 'getRecordingStatus') {
