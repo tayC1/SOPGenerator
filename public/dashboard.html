@@ -465,6 +465,10 @@
     let allSops = [];
     let activeCategory = '';
 
+    // Derived from the "key" field in the extension's manifest.json - if that
+    // keypair ever changes, this literal must be updated to match.
+    const EXTENSION_ID = 'leklkiojcckkjcgojcaalbnnagfncknm';
+
     async function loadUser() {
       try {
         const res = await fetch('/auth/me', { credentials: 'include' });
@@ -472,8 +476,46 @@
         const name = data.user?.name || 'Guest';
         document.getElementById('userName').textContent = name;
         document.getElementById('userAvatar').textContent = initials(name);
-      } catch {
+        return data.user || null;
+      } catch (err) {
+        console.error('[auth-bridge] /auth/me failed:', err);
         document.getElementById('userName').textContent = 'Guest';
+        return null;
+      }
+    }
+
+    // Hands the signed-in session off to the CODEX extension, if installed,
+    // so it can authenticate its own API calls with a Bearer token instead
+    // of relying on a browser session cookie it has no access to.
+    async function bridgeSessionToExtension(user) {
+      if (!user) {
+        console.log('[auth-bridge] no active session, skipping extension bridge');
+        return;
+      }
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        console.log('[auth-bridge] CODEX extension not installed/reachable, skipping');
+        return;
+      }
+
+      try {
+        const res = await fetch('/auth/extension-token', { method: 'POST', credentials: 'include' });
+        if (!res.ok) throw new Error(`extension-token request failed: ${res.status}`);
+        const { token } = await res.json();
+
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { type: 'USER_SIGNED_IN', token, user: { id: user.id, name: user.name, email: user.email } },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              // Expected if the extension isn't installed in this browser - not an error.
+              console.log('[auth-bridge] extension not reachable:', chrome.runtime.lastError.message);
+              return;
+            }
+            console.log('[auth-bridge] extension acknowledged sign-in:', response);
+          }
+        );
+      } catch (err) {
+        console.error('[auth-bridge] failed to bridge session to extension:', err);
       }
     }
 
@@ -583,7 +625,7 @@
       renderGrid();
     });
 
-    loadUser();
+    loadUser().then(bridgeSessionToExtension);
     loadSops();
   </script>
 </body>

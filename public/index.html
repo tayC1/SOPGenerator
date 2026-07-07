@@ -66,11 +66,25 @@
   </div>
   <div data-layer="CODEX" class="Codex" style="left: 657px; top: 215px; position: absolute; color: white; font-size: 36px; font-family: Inter; font-weight: 400; word-wrap: break-word">CODEX</div>
   <div data-layer="Your Home for KRAMER PRO SOPs" class="YourHomeForKramerProSops" style="left: 429px; top: 259px; position: absolute; color: white; font-size: 36px; font-family: Inter; font-weight: 400; word-wrap: break-word">Your Home for KRAMER PRO SOPs</div>
-  <div data-layer="Rectangle 16" class="Rectangle16" style="width: 221px; height: 80px; left: 480px; top: 703px; position: absolute; background: rgba(233, 109, 45, 0.20); box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); border-radius: 5px"></div>
-  <div data-layer="Sign in" class="SignIn" style="left: 552px; top: 729px; position: absolute; color: white; font-size: 24px; font-family: Inter; font-weight: 400; word-wrap: break-word">Sign in </div>
+  <a href="/auth/google" style="display: block; width: 221px; height: 80px; left: 480px; top: 703px; position: absolute; background: rgba(233, 109, 45, 0.20); box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); border-radius: 5px; text-decoration: none">
+    <div data-layer="Sign in" class="SignIn" style="left: 72px; top: 26px; position: absolute; color: white; font-size: 24px; font-family: Inter; font-weight: 400; word-wrap: break-word">Sign in </div>
+  </a>
   <a href="/dashboard.html" style="display: block; width: 221px; height: 80px; left: 739px; top: 703px; position: absolute; background: rgba(46, 82, 102, 0.20); box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); border-radius: 5px; text-decoration: none">
     <div data-layer="View SOPs" class="ViewSops" style="left: 49px; top: 26px; position: absolute; color: white; font-size: 24px; font-family: Inter; font-weight: 400; word-wrap: break-word">View SOPs</div>
   </a>
+  <div id="authError" style="display: none; left: 480px; top: 793px; width: 480px; position: absolute; color: #ff8080; font-size: 15px; font-family: Inter; font-weight: 400;"></div>
+  <script>
+    const params = new URLSearchParams(location.search);
+    const error = params.get('error');
+    if (error) {
+      const el = document.getElementById('authError');
+      el.textContent = error === 'workspace_required'
+        ? 'Sign-in failed: please use your kramer.pro Google account.'
+        : 'Sign-in failed: something went wrong. Please try again.';
+      el.style.display = 'block';
+      console.error('[auth] sign-in error from redirect:', error);
+    }
+  </script>
   <div data-layer="Rectangle 18" class="Rectangle18" style="width: 1387px; height: 227px; left: 29px; top: 418px; position: absolute; background: rgba(217, 217, 217, 0.20); box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); border-radius: 31px"></div>
   <div data-layer="Rectangle 19" class="Rectangle19" style="width: 379px; height: 195px; left: 80px; top: 434px; position: absolute; background: #2D2B2E; box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); border-radius: 10px"></div>
   <div data-layer="Rectangle 20" class="Rectangle20" style="width: 379px; height: 195px; left: 530px; top: 434px; position: absolute; background: #2D2B2E; box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25); border-radius: 10px"></div>

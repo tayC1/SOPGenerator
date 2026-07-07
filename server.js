@@ -40,17 +40,41 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 // Auth routes
-app.get('/auth/google',
-  passport.authenticate('google', { scope: ['profile', 'email'] })
-);
+app.get('/auth/google', (req, res, next) => {
+  console.log('[auth] starting Google OAuth flow');
+  passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    hd: passport.WORKSPACE_DOMAIN, // hints Google's account chooser; not itself a security boundary
+  })(req, res, next);
+});
 
-app.get('/auth/google/callback',
-  passport.authenticate('google', { failureRedirect: '/' }),
-  (req, res) => res.redirect('/dashboard')
-);
+app.get('/auth/google/callback', (req, res, next) => {
+  passport.authenticate('google', (err, user, info) => {
+    if (err) {
+      console.error('[auth] callback error:', err);
+      return res.redirect('/?error=server_error');
+    }
+    if (!user) {
+      console.warn('[auth] callback rejected sign-in:', info?.message);
+      return res.redirect('/?error=workspace_required');
+    }
+    req.logIn(user, (loginErr) => {
+      if (loginErr) {
+        console.error('[auth] session login error:', loginErr);
+        return res.redirect('/?error=server_error');
+      }
+      console.log(`[auth] session established for ${user.email}`);
+      res.redirect('/dashboard');
+    });
+  })(req, res, next);
+});
 
 app.get('/auth/logout', (req, res) => {
-  req.session.destroy(() => res.redirect('/'));
+  const email = req.user?.email;
+  req.session.destroy(() => {
+    console.log(`[auth] session destroyed for ${email || 'unknown user'}`);
+    res.redirect('/');
+  });
 });
 
 app.get('/auth/me', async (req, res) => {
@@ -65,7 +89,9 @@ app.get('/auth/me', async (req, res) => {
         [token]
       );
       if (result.rows.length > 0) return res.json({ user: result.rows[0] });
+      console.warn('[auth] /auth/me: no user matches provided extension token');
     } catch (err) {
+      console.error('[auth] /auth/me: token lookup failed:', err.message);
       return res.status(500).json({ error: err.message });
     }
   }
@@ -74,12 +100,23 @@ app.get('/auth/me', async (req, res) => {
 });
 
 app.post('/auth/extension-token', async (req, res) => {
-  if (!req.user) return res.status(401).json({ error: 'Not authenticated' });
-  const token = require('crypto').randomBytes(16).toString('hex');
+  if (!req.user) {
+    console.warn('[auth] /auth/extension-token: rejected, no active session');
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
   try {
+    // Reuse the existing token if there is one - this endpoint is called
+    // every time the dashboard loads, and rotating it each time would
+    // silently invalidate whatever the extension already has stored.
+    if (req.user.extension_token) {
+      return res.json({ token: req.user.extension_token });
+    }
+    const token = require('crypto').randomBytes(16).toString('hex');
     await db.query('UPDATE users SET extension_token = $1 WHERE id = $2', [token, req.user.id]);
+    console.log(`[auth] issued new extension token for ${req.user.email}`);
     res.json({ token });
   } catch (err) {
+    console.error('[auth] /auth/extension-token failed:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
