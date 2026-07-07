@@ -69,16 +69,34 @@ reviewBtn.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
 });
 
+// window.confirm()/alert()/prompt() are silently ignored inside extension
+// popups (Chrome disabled them - a popup can close while a native dialog
+// would still be blocking), so confirmation has to be done inline instead.
+let clearArmed = false;
+let clearArmedTimeout = null;
+
 clearBtn.addEventListener('click', () => {
-  if (confirm('Are you sure you want to clear all captured steps?')) {
-    chrome.storage.local.set({ steps: [], isRecording: false });
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: 'stopRecording' }).catch(() => {});
-      }
-    });
-    updateUI(false, 0);
+  if (!clearArmed) {
+    clearArmed = true;
+    clearBtn.textContent = 'Confirm clear?';
+    clearArmedTimeout = setTimeout(() => {
+      clearArmed = false;
+      clearBtn.textContent = 'Clear';
+    }, 3000);
+    return;
   }
+
+  clearTimeout(clearArmedTimeout);
+  clearArmed = false;
+  clearBtn.textContent = 'Clear';
+
+  chrome.storage.local.set({ steps: [], isRecording: false });
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    if (tabs.length) {
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'stopRecording' }).catch(() => {});
+    }
+  });
+  updateUI(false, 0);
 });
 
 document.getElementById('viewSopsBtn').addEventListener('click', () => {
