@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "CODEX",
-  "version": "1.7",
+  "version": "1.7.1",
   "description": "Record clicks and screenshots to generate SOP documents",
   "permissions": [
     "storage",
