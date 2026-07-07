@@ -247,6 +247,21 @@
 
   .link-pill:hover { background: rgba(202, 200, 188, 0.24); }
 
+  .member-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .member-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+
+  .member-name { font-size: 14px; font-weight: 600; }
+  .member-email { font-size: 12px; color: var(--text-dim); }
+
   .empty-note {
     color: var(--text-faint);
     font-size: 13px;
@@ -398,7 +413,9 @@
 
       <div class="section">
         <div class="section-heading">Team Members</div>
-        <p class="empty-note">Team member directory coming soon.</p>
+        <div id="membersList">
+          <p class="empty-note">Loading team members…</p>
+        </div>
       </div>
 
       <div class="section">
@@ -478,8 +495,39 @@
         teamList.innerHTML = departments.map((d) => `
           <a class="team-item${d.name === teamName ? ' active' : ''}" data-team="${escapeHtml(d.name)}" href="/team/${encodeURIComponent(d.name)}">${escapeHtml(d.name)}</a>
         `).join('');
+
+        const current = departments.find((d) => d.name === teamName);
+        document.getElementById('leadName').textContent = current?.lead || 'Unassigned';
+        document.getElementById('leadAvatar').textContent = initials(current?.lead);
       } catch (err) {
         console.error('[teamlanding] failed to load teams:', err);
+      }
+    }
+
+    async function loadMembers() {
+      const membersList = document.getElementById('membersList');
+      try {
+        const res = await fetch(`/users?department=${encodeURIComponent(teamName)}`);
+        if (!res.ok) throw new Error('Failed to load members');
+        const members = await res.json();
+
+        if (members.length === 0) {
+          membersList.innerHTML = `<p class="empty-note">No members assigned to ${escapeHtml(teamName)} yet.</p>`;
+          return;
+        }
+
+        membersList.innerHTML = `<div class="member-list">${members.map((m) => `
+          <div class="member-item">
+            <span class="avatar">${escapeHtml(initials(m.name))}</span>
+            <div>
+              <div class="member-name">${escapeHtml(m.name || 'Unknown')}</div>
+              <div class="member-email">${escapeHtml(m.email || '')}</div>
+            </div>
+          </div>
+        `).join('')}</div>`;
+      } catch (err) {
+        console.error('[teamlanding] failed to load members:', err);
+        membersList.innerHTML = '<p class="empty-note">Could not load team members right now.</p>';
       }
     }
 
@@ -562,6 +610,7 @@
     initTeamHeader();
     loadUser();
     loadTeams();
+    loadMembers();
     loadSops();
   </script>
 </body>

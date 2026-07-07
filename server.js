@@ -148,6 +148,19 @@ app.get('/departments', async (req, res) => {
   }
 });
 
+app.get('/users', async (req, res) => {
+  const { department } = req.query;
+  try {
+    const result = department
+      ? await db.query('SELECT id, name, email, department FROM users WHERE department = $1 ORDER BY name', [department])
+      : await db.query('SELECT id, name, email, department FROM users ORDER BY name');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('[users] failed to list users:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // API routes
 app.use('/sops', sopsRouter);
 
