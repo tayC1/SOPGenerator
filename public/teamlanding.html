@@ -59,6 +59,8 @@
     align-items: center;
     gap: 12px;
     padding: 24px 20px 20px;
+    text-decoration: none;
+    color: inherit;
   }
 
   .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
@@ -365,10 +367,18 @@
 <body>
   <div class="app">
     <aside class="sidebar">
-      <div class="sidebar-brand">
+      <a class="sidebar-brand" href="/">
         <img src="/icons/CODEX - 48PX.png" alt="">
         <span>CODEX</span>
-      </div>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section-label">Dashboard</div>
+      <nav class="team-list">
+        <a class="team-item" href="/dashboard">My Dashboard</a>
+        <button class="team-item" id="allDepartmentsBtn" type="button">All Departments</button>
+      </nav>
 
       <div class="sidebar-divider"></div>
 
@@ -465,7 +475,9 @@
 
     // The team name comes from the URL (/team/<name>), matching whatever
     // category value the SOPs were saved under - there's no teams table yet.
-    const teamName = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || 'Finance');
+    // teamName becomes null when "All Departments" is selected, meaning no
+    // category filter - every SOP/member across every team.
+    let teamName = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || 'Finance');
 
     let allSops = [];
 
@@ -482,8 +494,16 @@
     }
 
     function initTeamHeader() {
-      document.getElementById('teamName').textContent = teamName;
-      document.title = `${teamName} — CODEX`;
+      document.getElementById('teamName').textContent = teamName || 'All Departments';
+      document.getElementById('teamDesc').textContent = teamName
+        ? "This team's SOPs, members, and important links live here."
+        : 'Every SOP and member across every department, unfiltered.';
+      document.getElementById('searchInput').placeholder = teamName
+        ? "Search this team's SOPs"
+        : 'Search all SOPs';
+      document.title = `${teamName || 'All Departments'} — CODEX`;
+      document.querySelector('.team-lead-card').style.display = teamName ? 'flex' : 'none';
+      document.getElementById('allDepartmentsBtn').classList.toggle('active', !teamName);
     }
 
     async function loadTeams() {
@@ -507,12 +527,13 @@
     async function loadMembers() {
       const membersList = document.getElementById('membersList');
       try {
-        const res = await fetch(`/users?department=${encodeURIComponent(teamName)}`);
+        const url = teamName ? `/users?department=${encodeURIComponent(teamName)}` : '/users';
+        const res = await fetch(url);
         if (!res.ok) throw new Error('Failed to load members');
         const members = await res.json();
 
         if (members.length === 0) {
-          membersList.innerHTML = `<p class="empty-note">No members assigned to ${escapeHtml(teamName)} yet.</p>`;
+          membersList.innerHTML = `<p class="empty-note">No members assigned to ${escapeHtml(teamName || 'any department')} yet.</p>`;
           return;
         }
 
@@ -536,7 +557,7 @@
       return `
         <article class="sop-card">
           <div class="sop-tags">
-            <span class="tag">${escapeHtml(sop.category || teamName)}</span>
+            <span class="tag">${escapeHtml(sop.category || teamName || 'Uncategorized')}</span>
           </div>
           <h2 class="sop-title">${escapeHtml(sop.title)}</h2>
           <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
@@ -565,7 +586,9 @@
         || sop.description?.toLowerCase().includes(term));
 
       if (filtered.length === 0) {
-        grid.innerHTML = `<p class="empty-state">No SOPs for ${escapeHtml(teamName)} match your search yet.</p>`;
+        grid.innerHTML = teamName
+          ? `<p class="empty-state">No SOPs for ${escapeHtml(teamName)} match your search yet.</p>`
+          : '<p class="empty-state">No SOPs match your search yet.</p>';
         return;
       }
 
@@ -596,16 +619,31 @@
     async function loadSops() {
       const grid = document.getElementById('grid');
       try {
-        const res = await fetch(`/sops?category=${encodeURIComponent(teamName)}`, { credentials: 'include' });
+        // No category means "All Departments" - omit credentials so the
+        // server doesn't narrow it down to just the caller's own SOPs and
+        // returns every SOP instead (see routes/sops.js's GET / scoping).
+        const res = teamName
+          ? await fetch(`/sops?category=${encodeURIComponent(teamName)}`, { credentials: 'include' })
+          : await fetch('/sops', { credentials: 'omit' });
         if (!res.ok) throw new Error('Failed to load');
         allSops = await res.json();
         renderGrid();
       } catch {
-        grid.innerHTML = '<p class="empty-state">Failed to load this team\'s SOPs.</p>';
+        grid.innerHTML = '<p class="empty-state">Failed to load SOPs.</p>';
       }
     }
 
+    function showAllDepartments() {
+      teamName = null;
+      initTeamHeader();
+      document.querySelectorAll('#teamList .team-item').forEach((el) => el.classList.remove('active'));
+      loadTeams();
+      loadMembers();
+      loadSops();
+    }
+
     document.getElementById('searchInput').addEventListener('input', renderGrid);
+    document.getElementById('allDepartmentsBtn').addEventListener('click', showAllDepartments);
 
     initTeamHeader();
     loadUser();
