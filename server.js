@@ -126,6 +126,10 @@ app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
 
+app.get('/welcome', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
+});
+
 app.get('/browse', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'browse.html'));
 });
