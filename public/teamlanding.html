@@ -430,11 +430,8 @@
 
       <div class="section">
         <div class="section-heading">Important Links</div>
-        <div class="links-row">
-          <a class="link-pill" href="#" target="_blank" rel="noopener">finance.kramer.pro</a>
-          <a class="link-pill" href="#" target="_blank" rel="noopener">data.kramer.pro</a>
-          <a class="link-pill" href="#" target="_blank" rel="noopener">Ramp</a>
-          <a class="link-pill" href="#" target="_blank" rel="noopener">Paycom</a>
+        <div class="links-row" id="linksRow">
+          <p class="empty-note">No links added for this team yet.</p>
         </div>
       </div>
 
@@ -519,6 +516,16 @@
         const current = departments.find((d) => d.name === teamName);
         document.getElementById('leadName').textContent = current?.lead || 'Unassigned';
         document.getElementById('leadAvatar').textContent = initials(current?.lead);
+
+        if (current?.description) {
+          document.getElementById('teamDesc').textContent = current.description;
+        }
+
+        const linksRow = document.getElementById('linksRow');
+        const links = teamName && Array.isArray(current?.links) ? current.links : [];
+        linksRow.innerHTML = links.length > 0
+          ? links.map((link) => `<a class="link-pill" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join('')
+          : `<p class="empty-note">No links added for ${escapeHtml(teamName || 'any team')} yet.</p>`;
       } catch (err) {
         console.error('[teamlanding] failed to load teams:', err);
       }

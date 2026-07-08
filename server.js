@@ -130,6 +130,10 @@ app.get('/welcome', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'welcome.html'));
 });
 
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'admin.html'));
+});
+
 app.get('/browse', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'browse.html'));
 });
@@ -142,12 +146,49 @@ app.get('/team/:category', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teamlanding.html'));
 });
 
+// Admin-only mutations resolve req.user from either the cookie session (used
+// by admin.html) or a Bearer token, then require is_admin - same shape as the
+// Bearer fallback already used in routes/sops.js.
+async function requireAdmin(req, res, next) {
+  if (!req.user) {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      try {
+        const result = await db.query('SELECT * FROM users WHERE extension_token = $1', [authHeader.slice(7)]);
+        if (result.rows.length > 0) req.user = result.rows[0];
+      } catch (err) {
+        console.error('[admin] bearer token lookup failed:', err.message);
+      }
+    }
+  }
+  if (!req.user) return res.status(401).json({ error: 'You must be signed in' });
+  if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
+  next();
+}
+
 app.get('/departments', async (req, res) => {
   try {
-    const result = await db.query('SELECT id, name, lead FROM departments ORDER BY name');
+    const result = await db.query('SELECT id, name, lead, description, links FROM departments ORDER BY name');
     res.json(result.rows);
   } catch (err) {
     console.error('[departments] failed to list departments:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/departments/:id', requireAdmin, async (req, res) => {
+  try {
+    const { lead, description, links } = req.body;
+    const result = await db.query(
+      `UPDATE departments SET lead = $1, description = $2, links = $3
+       WHERE id = $4
+       RETURNING id, name, lead, description, links`,
+      [lead ?? null, description ?? null, JSON.stringify(links ?? []), req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Department not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[departments] failed to update department:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
@@ -161,6 +202,21 @@ app.get('/users', async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error('[users] failed to list users:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/users/:id', requireAdmin, async (req, res) => {
+  try {
+    const { department } = req.body;
+    const result = await db.query(
+      'UPDATE users SET department = $1 WHERE id = $2 RETURNING id, name, email, department',
+      [department || null, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[users] failed to update user:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

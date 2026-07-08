@@ -139,6 +139,7 @@
     padding: 9px 12px;
     font-size: 14px;
     color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
     cursor: pointer;
   }
 
@@ -388,6 +389,8 @@
         <button class="category-item" type="button" data-category="Integrations/Sales">Integrations/Sales</button>
       </div>
 
+      <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
+
       <div class="sidebar-footer">
         <div class="avatar" id="userAvatar">?</div>
         <span class="user-name" id="userName">Loading…</span>
@@ -478,6 +481,7 @@
         const name = data.user?.name || 'Guest';
         document.getElementById('userName').textContent = name;
         document.getElementById('userAvatar').textContent = initials(name);
+        document.getElementById('adminLink').style.display = data.user?.is_admin ? 'block' : 'none';
         return data.user || null;
       } catch (err) {
         console.error('[auth-bridge] /auth/me failed:', err);

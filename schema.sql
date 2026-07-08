@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_token TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS sops (
   id            SERIAL PRIMARY KEY,
@@ -34,6 +35,9 @@ CREATE TABLE IF NOT EXISTS departments (
   lead        TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS description TEXT;
+ALTER TABLE departments ADD COLUMN IF NOT EXISTS links JSONB NOT NULL DEFAULT '[]';
 
 -- Seed the categories already used as filters in dashboard.html, so the
 -- departments table has a row for every category SOPs can actually be
