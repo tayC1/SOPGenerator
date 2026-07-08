@@ -12,8 +12,17 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_token TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS department TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
+
+-- A user can belong to more than one team, so department membership is a
+-- join table keyed on department name (matching how sops.category and the
+-- old users.department column already referenced departments by name
+-- rather than id).
+CREATE TABLE IF NOT EXISTS user_departments (
+  user_id         INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  department_name TEXT NOT NULL,
+  PRIMARY KEY (user_id, department_name)
+);
 
 CREATE TABLE IF NOT EXISTS sops (
   id            SERIAL PRIMARY KEY,

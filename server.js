@@ -196,9 +196,27 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
 app.get('/users', async (req, res) => {
   const { department } = req.query;
   try {
+    // departments comes back as a real array per user (aggregated from the
+    // join table) - a user can now be on more than one team.
     const result = department
-      ? await db.query('SELECT id, name, email, department FROM users WHERE department = $1 ORDER BY name', [department])
-      : await db.query('SELECT id, name, email, department FROM users ORDER BY name');
+      ? await db.query(
+          `SELECT u.id, u.name, u.email,
+                  COALESCE(array_agg(ud2.department_name) FILTER (WHERE ud2.department_name IS NOT NULL), '{}') AS departments
+           FROM users u
+           JOIN user_departments ud ON ud.user_id = u.id AND ud.department_name = $1
+           LEFT JOIN user_departments ud2 ON ud2.user_id = u.id
+           GROUP BY u.id
+           ORDER BY u.name`,
+          [department]
+        )
+      : await db.query(
+          `SELECT u.id, u.name, u.email,
+                  COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
+           FROM users u
+           LEFT JOIN user_departments ud ON ud.user_id = u.id
+           GROUP BY u.id
+           ORDER BY u.name`
+        );
     res.json(result.rows);
   } catch (err) {
     console.error('[users] failed to list users:', err.message);
@@ -207,17 +225,31 @@ app.get('/users', async (req, res) => {
 });
 
 app.patch('/users/:id', requireAdmin, async (req, res) => {
+  const departments = Array.isArray(req.body.departments) ? req.body.departments : [];
+  const client = await pool.connect();
   try {
-    const { department } = req.body;
-    const result = await db.query(
-      'UPDATE users SET department = $1 WHERE id = $2 RETURNING id, name, email, department',
-      [department || null, req.params.id]
-    );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'User not found' });
-    res.json(result.rows[0]);
+    await client.query('BEGIN');
+    const userCheck = await client.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    if (userCheck.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'User not found' });
+    }
+    await client.query('DELETE FROM user_departments WHERE user_id = $1', [req.params.id]);
+    for (const name of departments) {
+      await client.query(
+        'INSERT INTO user_departments (user_id, department_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [req.params.id, name]
+      );
+    }
+    await client.query('COMMIT');
+    const result = await db.query('SELECT id, name, email FROM users WHERE id = $1', [req.params.id]);
+    res.json({ ...result.rows[0], departments });
   } catch (err) {
-    console.error('[users] failed to update user:', err.message);
+    await client.query('ROLLBACK');
+    console.error('[users] failed to update user departments:', err.message);
     res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
