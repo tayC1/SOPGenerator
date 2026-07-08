@@ -153,7 +153,12 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
   }
+
+  .sidebar-footer:hover { background: rgba(255, 255, 255, 0.05); }
 
   .avatar {
     width: 32px;
@@ -391,10 +396,10 @@
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
 
-      <div class="sidebar-footer">
+      <a class="sidebar-footer" href="/settings">
         <div class="avatar" id="userAvatar">?</div>
         <span class="user-name" id="userName">Loading…</span>
-      </div>
+      </a>
     </aside>
 
     <main class="main">

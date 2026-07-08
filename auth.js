@@ -48,6 +48,26 @@ passport.use(new GoogleStrategy(
         return done(null, existing.rows[0]);
       }
 
+      // No account linked to this Google ID yet - but someone may have
+      // pre-provisioned this email via the Settings page's "Invite by
+      // email" flow (a placeholder row with no google_id). Claim that row
+      // instead of inserting a new one, or the unique email constraint
+      // would reject the insert below.
+      const placeholder = await db.query(
+        'SELECT * FROM users WHERE email = $1 AND google_id IS NULL',
+        [email]
+      );
+      if (placeholder.rows.length > 0) {
+        console.log(`[auth] claiming invited placeholder account for ${email}`);
+        const claimed = await db.query(
+          `UPDATE users SET google_id = $1, name = COALESCE(name, $2), extension_token = COALESCE(extension_token, $3)
+           WHERE id = $4
+           RETURNING *`,
+          [profile.id, name, generateToken(), placeholder.rows[0].id]
+        );
+        return done(null, claimed.rows[0]);
+      }
+
       console.log(`[auth] creating new user record for ${email}`);
       const created = await db.query(
         `INSERT INTO users (email, name, google_id, extension_token)

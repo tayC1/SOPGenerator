@@ -77,8 +77,16 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
+async function getUserDepartments(userId) {
+  const result = await db.query('SELECT department_name FROM user_departments WHERE user_id = $1 ORDER BY department_name', [userId]);
+  return result.rows.map((r) => r.department_name);
+}
+
 app.get('/auth/me', async (req, res) => {
-  if (req.user) return res.json({ user: req.user });
+  if (req.user) {
+    const departments = await getUserDepartments(req.user.id);
+    return res.json({ user: { ...req.user, departments } });
+  }
 
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -88,7 +96,10 @@ app.get('/auth/me', async (req, res) => {
         'SELECT * FROM users WHERE extension_token = $1',
         [token]
       );
-      if (result.rows.length > 0) return res.json({ user: result.rows[0] });
+      if (result.rows.length > 0) {
+        const departments = await getUserDepartments(result.rows[0].id);
+        return res.json({ user: { ...result.rows[0], departments } });
+      }
       console.warn('[auth] /auth/me: no user matches provided extension token');
     } catch (err) {
       console.error('[auth] /auth/me: token lookup failed:', err.message);
@@ -134,6 +145,10 @@ app.get('/admin', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'admin.html'));
 });
 
+app.get('/settings', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'settings.html'));
+});
+
 app.get('/browse', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'browse.html'));
 });
@@ -146,21 +161,30 @@ app.get('/team/:category', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teamlanding.html'));
 });
 
-// Admin-only mutations resolve req.user from either the cookie session (used
-// by admin.html) or a Bearer token, then require is_admin - same shape as the
-// Bearer fallback already used in routes/sops.js.
-async function requireAdmin(req, res, next) {
-  if (!req.user) {
-    const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      try {
-        const result = await db.query('SELECT * FROM users WHERE extension_token = $1', [authHeader.slice(7)]);
-        if (result.rows.length > 0) req.user = result.rows[0];
-      } catch (err) {
-        console.error('[admin] bearer token lookup failed:', err.message);
-      }
+// Resolves req.user from either the cookie session or a Bearer token - same
+// fallback shape used throughout (routes/sops.js, /auth/me).
+async function resolveUser(req) {
+  if (req.user) return req.user;
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      const result = await db.query('SELECT * FROM users WHERE extension_token = $1', [authHeader.slice(7)]);
+      if (result.rows.length > 0) return result.rows[0];
+    } catch (err) {
+      console.error('[auth] bearer token lookup failed:', err.message);
     }
   }
+  return null;
+}
+
+async function requireAuth(req, res, next) {
+  req.user = await resolveUser(req);
+  if (!req.user) return res.status(401).json({ error: 'You must be signed in' });
+  next();
+}
+
+async function requireAdmin(req, res, next) {
+  req.user = await resolveUser(req);
   if (!req.user) return res.status(401).json({ error: 'You must be signed in' });
   if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
   next();
@@ -221,6 +245,66 @@ app.get('/users', async (req, res) => {
   } catch (err) {
     console.error('[users] failed to list users:', err.message);
     res.status(500).json({ error: err.message });
+  }
+});
+
+// NOTE: registered before /users/:id - Express would otherwise match "me"
+// as the :id param and route self-service requests into the admin-only handler.
+app.patch('/users/me', requireAuth, async (req, res) => {
+  try {
+    const { first_name, last_name, display_name, title, default_category } = req.body;
+    const result = await db.query(
+      `UPDATE users SET first_name = $1, last_name = $2, display_name = $3, title = $4, default_category = $5
+       WHERE id = $6
+       RETURNING id, name, email, first_name, last_name, display_name, title, default_category`,
+      [first_name || null, last_name || null, display_name || null, title || null, default_category || null, req.user.id]
+    );
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[users] failed to update own profile:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/users/invite', requireAuth, async (req, res) => {
+  const email = (req.body.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+  if (!email.endsWith(`@${passport.WORKSPACE_DOMAIN}`)) {
+    return res.status(400).json({ error: `Invites are limited to @${passport.WORKSPACE_DOMAIN} addresses` });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    // name stays NULL until they actually sign in - auth.js's claim step
+    // fills it in via COALESCE(name, realGoogleName), which would never
+    // fire if a placeholder name were written here now.
+    let invited = await client.query('SELECT id FROM users WHERE email = $1', [email]);
+    if (invited.rows.length === 0) {
+      invited = await client.query('INSERT INTO users (email) VALUES ($1) RETURNING id', [email]);
+    }
+    const invitedId = invited.rows[0].id;
+
+    // Pre-assign the inviter's own teams so the invitee shows up as a
+    // teammate right away - they inherit real access once they sign in
+    // with Google, which claims this row via the email match in auth.js.
+    const inviterDepartments = await client.query('SELECT department_name FROM user_departments WHERE user_id = $1', [req.user.id]);
+    for (const row of inviterDepartments.rows) {
+      await client.query(
+        'INSERT INTO user_departments (user_id, department_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+        [invitedId, row.department_name]
+      );
+    }
+
+    await client.query('COMMIT');
+    res.json({ invited: true, email });
+  } catch (err) {
+    await client.query('ROLLBACK');
+    console.error('[users] failed to invite user:', err.message);
+    res.status(500).json({ error: err.message });
+  } finally {
+    client.release();
   }
 });
 
