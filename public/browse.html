@@ -1,89 +1,262 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Browse SOPs — CODEX</title>
-  <link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Inter, -apple-system, sans-serif;
-      background: #0f1923;
-      color: #fff;
-      min-height: 100vh;
-      padding: 48px 24px;
-    }
-    header {
-      max-width: 800px;
-      margin: 0 auto 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    header h1 { font-size: 28px; font-weight: 800; }
-    header a { color: rgba(255,255,255,0.55); text-decoration: none; font-size: 14px; }
-    header a:hover { color: #fff; }
-    #grid {
-      max-width: 800px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 20px 22px;
-    }
-    .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .card p { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 14px; line-height: 1.5; }
-    .card a {
-      font-size: 13px;
-      font-weight: 600;
-      color: #7eb8d4;
-      text-decoration: none;
-    }
-    .card a:hover { text-decoration: underline; }
-    .empty { text-align: center; color: rgba(255,255,255,0.4); margin-top: 80px; font-size: 15px; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Browse SOPs — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #2d2b2e;
+    --border: rgba(255, 255, 255, 0.12);
+    --text-dim: rgba(255, 255, 255, 0.55);
+    --text-faint: rgba(255, 255, 255, 0.35);
+    --accent: #2e5266;
+    --tag: #e96d2d;
+    --card-bg: #cac8bc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: #ffffff;
+    min-height: 100vh;
+    padding: 36px 40px 56px;
+  }
+
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  .icon { width: 14px; height: 14px; flex-shrink: 0; }
+  .icon svg { width: 100%; height: 100%; }
+
+  header {
+    max-width: 1280px;
+    margin: 0 auto 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+  }
+
+  .brand img { width: 32px; height: 32px; object-fit: contain; }
+  .brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .header-actions { display: flex; align-items: center; gap: 10px; }
+
+  .btn-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    border: none;
+  }
+
+  .btn-home { background: rgba(255, 255, 255, 0.08); color: #fff; }
+  .btn-home:hover { background: rgba(255, 255, 255, 0.14); }
+
+  .btn-signin { background: var(--accent); color: #fff; }
+  .btn-signin:hover { opacity: 0.88; }
+
+  .page-title { max-width: 1280px; margin: 0 auto 28px; font-size: 28px; font-weight: 600; }
+
+  .sop-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 18px;
+  }
+
+  .sop-card {
+    background: var(--card-bg);
+    color: #1e1e1e;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--tag);
+    color: #1e1e1e;
+  }
+
+  .sop-title { font-size: 15px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
+
+  .sop-desc {
+    font-size: 12px;
+    color: #555555;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    flex: 1;
+  }
+
+  .sop-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding-top: 10px;
+    margin-bottom: 12px;
+  }
+
+  .avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #d4d4d4;
+    color: #1e1e1e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .sop-author { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .sop-author span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sop-steps { flex-shrink: 0; color: var(--accent); font-weight: 600; }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    background: rgba(45, 43, 46, 0.45);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
+
+  .empty-state {
+    max-width: 1280px;
+    margin: 0 auto;
+    text-align: center;
+    color: var(--text-faint);
+    padding: 60px 0;
+    font-size: 14px;
+  }
+
+  @media (max-width: 600px) {
+    body { padding: 28px 20px 48px; }
+    header { flex-direction: column; align-items: flex-start; }
+  }
+</style>
 </head>
 <body>
   <header>
-    <h1>Browse SOPs</h1>
-    <a href="/">← Home</a>
+    <a class="brand" href="/">
+      <img src="/icons/CODEX - 48PX.png" alt="">
+      <span>CODEX</span>
+    </a>
+    <div class="header-actions">
+      <a class="btn-header btn-home" href="/">Home</a>
+      <a class="btn-header btn-signin" href="/auth/google">Sign In</a>
+    </div>
   </header>
-  <div id="grid"></div>
+
+  <h1 class="page-title">Browse SOPs</h1>
+
+  <div id="grid">
+    <p class="empty-state">Loading SOPs…</p>
+  </div>
 
   <script>
-    async function load() {
-      const grid = document.getElementById('grid');
-      try {
-        const res = await fetch('/sops');
-        const sops = await res.json();
-        if (!sops.length) {
-          grid.innerHTML = '<p class="empty">No SOPs published yet.</p>';
-          return;
-        }
-        grid.innerHTML = sops.map(s => `
-          <div class="card">
-            <h2>${escape(s.title)}</h2>
-            <p>${escape(s.description || '')}</p>
-            <a href="/sop.html?id=${s.id}">View SOP →</a>
-          </div>
-        `).join('');
-      } catch (e) {
-        grid.innerHTML = '<p class="empty">Failed to load SOPs.</p>';
-      }
-    }
-
-    function escape(str) {
-      return String(str)
+    function escapeHtml(str) {
+      return String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    function initials(name) {
+      const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+    }
+
+    function formatDate(value) {
+      if (!value) return '';
+      return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    function sopCardHtml(sop) {
+      const stepCount = Array.isArray(sop.steps) ? sop.steps.length : null;
+      return `
+        <article class="sop-card">
+          <div class="sop-tags">
+            <span class="tag">${escapeHtml(sop.category || 'Uncategorized')}</span>
+          </div>
+          <h2 class="sop-title">${escapeHtml(sop.title)}</h2>
+          <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
+          <div class="sop-meta">
+            <div class="sop-author">
+              <span class="avatar">${escapeHtml(initials(sop.author))}</span>
+              <span>${escapeHtml(sop.author || 'Unknown')} · ${formatDate(sop.created_at)}</span>
+            </div>
+            ${stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
+          </div>
+          <a class="action-btn" href="/sop.html?id=${sop.id}">View SOP</a>
+        </article>
+      `;
+    }
+
+    async function load() {
+      const grid = document.getElementById('grid');
+      try {
+        // Deliberately no credentials - this is the public, unfiltered view
+        // of every SOP, not the caller's own (see routes/sops.js's GET /
+        // scoping: no category + no resolved req.user = everything).
+        const res = await fetch('/sops', { credentials: 'omit' });
+        if (!res.ok) throw new Error('Failed to load');
+        const sops = await res.json();
+
+        if (sops.length === 0) {
+          grid.innerHTML = '<p class="empty-state">No SOPs published yet.</p>';
+          return;
+        }
+
+        grid.innerHTML = `<div class="sop-grid">${sops.map(sopCardHtml).join('')}</div>`;
+      } catch {
+        grid.innerHTML = '<p class="empty-state">Failed to load SOPs.</p>';
+      }
     }
 
     load();
