@@ -1,34 +1,44 @@
 # CODEX
 
-A full featured Knowledge Base/SOP builder, directly engineered and designed to tie into KRAMER PRO's internal tools.This tool is designed to help teams streamline documentation that they build, to help ensure consistency across processes. 
+A full-featured Knowledge Base/SOP builder built for Kramer Pro. CODEX has two halves that work together:
+
+- **A Chrome Extension** that records clicks and screenshots as you work, then lets you turn that recording into a polished, editable SOP.
+- **A web app** (hosted on Railway) where signed-in teammates browse the knowledge base, view SOPs by team, manage their profile, and — for admins — assign departments and edit team pages.
+
+Signing in (via Google, restricted to `kramer.pro` Workspace accounts) links the two together: SOPs you record and publish from the extension show up on the website under your account and your team's page, and vice versa.
 
 ## Features
 
-✅ **Click recording** - Automatically captures every click, along with metadata (element text, tag name, page title, URL)
+**Recording (extension)**
+- ✅ Click recording with metadata (element text, tag, page title, URL)
+- ✅ Screenshot after every click, with a visual "Recording…" indicator while active
+- ✅ Recording state survives the browser killing the extension's service worker mid-session — nothing is lost to Chrome's idle timeout
+- ✅ Rich review/edit UI — reorder, delete, insert warnings/tips/flags/manual steps anywhere, auto-generated title & summary
+- ✅ Built-in screenshot editor — redact, blur, crop, or reposition the click marker before publishing
+- ✅ Publish straight to the knowledge base, or export as a standalone Markdown file
 
-✅ **Screenshots** - Takes a screenshot after each click and stores it as base64
+**Knowledge base (website)**
+- ✅ Google Workspace sign-in (`kramer.pro` accounts only), bridged automatically into the extension
+- ✅ Dashboard of your own SOPs, filterable by category
+- ✅ Per-team pages: description, important links, team lead, member list, and that team's SOPs
+- ✅ Public "Browse" gallery of every SOP, no sign-in required
+- ✅ A given SOP can be edited later (steps, screenshots, title, category) and re-saved in place
+- ✅ Settings page: edit your profile, set a default category, see your teammates, invite new people by email
+- ✅ Admin portal: assign users to (multiple) departments, edit each team's lead/description/links
 
-✅ **Live recording indicator** - Visual overlay confirms recording is active
+## Getting Started (for beta testers)
 
-✅ **Review & edit** - Step through everything captured and edit descriptions as needed
+1. **Confirm you have a `kramer.pro` Google account.** Sign-in is restricted to the Workspace domain — a personal Gmail account will be rejected.
+2. **Load the extension:**
+   - Clone or download this repository
+   - Go to `chrome://extensions/`
+   - Enable **Developer mode** (top-right toggle)
+   - Click **Load unpacked** and select the repo folder
+   - The CODEX icon appears in your toolbar
+3. **Sign in on the website:** visit [kpcodex-production.up.railway.app](https://kpcodex-production.up.railway.app) and sign in with Google. This automatically links your session to the extension — you don't sign in separately inside the extension itself.
+4. You're set up. The extension talks to the same hosted backend everyone else uses, so there's no local server to run and no config to edit.
 
-✅ **Reorder steps** - Drag and drop to reorganize out-of-sequence steps
-
-✅ **Delete steps** - Remove unwanted or accidental steps before export
-
-✅ **Export to Markdown** - Generates a clean SOP document with screenshots embedded inline
-
-✅ **No external dependencies** - Vanilla JavaScript, nothing else to install or maintain
-
-✅ **Manifest V3** - Built to the current Chrome extension standard
-
-## Installation
-
-1. Clone or download this repository
-2. Navigate to `chrome://extensions/`
-3. Enable "Developer mode" (top right toggle)
-4. Click "Load unpacked" and select the folder
-5. The extension icon will appear in your toolbar
+> Note: since this isn't published to the Chrome Web Store, Chrome will show a permanent "Developer mode extensions" banner and a broad site-access permission prompt on install. Both are expected for a sideloaded extension and not a sign of anything being broken.
 
 ## Usage
 
@@ -36,121 +46,107 @@ A full featured Knowledge Base/SOP builder, directly engineered and designed to 
 
 1. Click the CODEX icon to open the popup
 2. Click **Record** to begin
-3. A red "Recording..." indicator appears in the top-right corner
+3. A red "Recording…" indicator appears in the top-right corner
 4. Proceed through the workflow as normal — each click is captured
-5. Click **Stop** when finished
+5. Click **Stop & Review** when finished
 
-### Reviewing steps
+### Reviewing and editing
 
-1. Click **Review Steps** after stopping the recording
-2. A new tab opens with all captured steps
-3. Each step displays:
-   - The screenshot taken immediately after the click
-   - Page title, URL, and the clicked element
-   - An editable description field
+A new tab opens with every captured step. From there you can:
+- Edit the auto-generated title/summary, or regenerate them from the current steps
+- Edit any step's description inline
+- Insert a warning, tip, flag, or manual step at any point (hover the thin line between steps)
+- Open the screenshot editor on any step to redact, blur, crop, or move the click marker
+- Delete steps you don't want
 
-### Editing steps
+### Publishing to the knowledge base
 
-**Edit description:** Click into the description field under any step and update the text
+From the Export ▾ menu, choose **Push to Codex** — pick a category, and it uploads to the backend under your account, tagged to that team. You need to be signed in on the website first (see Getting Started); if you're not, you'll get a prompt to sign in instead.
 
-**Reorder:** Drag the ⋮⋮ handle to move a step
+Prefer a plain file instead? **Download as .MD** exports a standalone Markdown file with screenshots embedded inline — nothing is uploaded.
 
-**Delete:** Click "Delete" to remove a step
+### Editing a published SOP
 
-### Exporting to Markdown
+From your dashboard, click **EDIT** on any SOP you own. It reopens the same rich editor (now titled "Edit Steps") with that SOP's existing steps loaded — the Export menu is replaced with a single **Save** button that updates that SOP in place instead of creating a new one.
 
-1. From the Review tab, click **Export as MD**
-2. A markdown file downloads
-3. The export includes:
-   - All steps numbered with descriptions
-   - Screenshots embedded as base64 images
-   - Metadata (page title, URL, clicked element, timestamp)
+### Browsing the knowledge base
 
-## File structure
+- **My Dashboard** — your own SOPs, filterable by category
+- **Team pages** (`/team/<name>`) — a given team's description, links, lead, members, and SOPs
+- **Browse** — every published SOP, publicly viewable, no sign-in required
+- **Settings** — your profile, default category, teammates, and invites
+- **Admin Portal** (admins only) — assign departments to users, edit team descriptions/leads/links
 
-- **manifest.json** - Extension configuration (Manifest V3)
-- **background.js** - Service worker handling screenshot capture and storage
-- **content.js** - Content script handling click detection and the recording overlay
-- **popup.html** - Popup UI for record/stop controls
-- **popup.js** - Popup logic and storage management
-- **review.html** - Review page UI
-- **review.js** - Review page logic (edit, reorder, delete, export)
+## Architecture
 
-## How it works
+```
+Extension                          Backend (Railway)
+├── manifest.json                  ├── server.js       (Express, routes, sessions)
+├── background.js  (service worker)├── auth.js          (Google OAuth, Workspace-restricted)
+├── content.js      (click capture)├── db.js            (Postgres connection)
+├── popup.html/js   (record UI)    ├── schema.sql       (idempotent migrations)
+├── review.html                    ├── routes/sops.js   (SOP CRUD)
+├── scale.js        (review/edit UI, screenshot editor, publish/save)
+└── config.js        (points at the hosted backend URL)
 
-1. **Recording** - Clicking Record triggers content.js to begin listening for clicks on the page
-2. **Click detection** - Each click captures element text, tag name, page title, and URL
-3. **Screenshot capture** - background.js receives the click data and calls `chrome.tabs.captureVisibleTab()`
-4. **Storage** - Steps (screenshots + metadata) are saved to `chrome.storage.local`
-5. **Review** - review.html loads steps from storage and displays them
-6. **Export** - Steps are converted to Markdown with base64-encoded images
+Website (public/)                  Admin tooling
+├── index.html       (landing / sign-in)
+├── welcome.html      (post-sign-in onboarding)
+├── dashboard.html    (My SOPs)
+├── teamlanding.html  (per-team page)
+├── sop.html          (single SOP view)
+├── browse.html       (public gallery)
+├── settings.html     (profile / teammates / invites)
+└── admin.html         (department + team page management)   scripts/import-google-users.js
+                                                                (one-off Workspace directory import)
+```
 
-## Technical notes
+### How sign-in reaches the extension
 
-- `captureVisibleTab()` is called exclusively from the background.js service worker, in line with security best practices
-- Content script is dynamically injected if not already loaded
-- Each step object in storage follows this structure:
-  ```json
-  {
-    "id": "timestamp",
-    "screenshot": "base64_string",
-    "elementText": "clicked text",
-    "tagName": "button|a|div|etc",
-    "pageTitle": "page title",
-    "pageUrl": "https://...",
-    "timestamp": "ISO_string",
-    "description": "user_entered_description"
-  }
-  ```
+The extension has no sign-in UI of its own. Instead: you sign in on the website via Google OAuth (session cookie), the website requests a token via `/auth/extension-token`, then hands it to the extension with `chrome.runtime.sendMessage` (allowed via `externally_connectable` in `manifest.json`, scoped to the production domain). The extension stores that token and attaches it as a Bearer token on every API call from then on. Signing out on the website also tells the extension to forget it.
 
 ## Troubleshooting
+
+**Sign-in fails with "workspace_required"**
+- You need a `kramer.pro` Google Workspace account — personal Gmail accounts are rejected by design.
+
+**Extension shows "Please sign in" when trying to publish**
+- Sign in on the website first (see Getting Started) — the extension picks up the session automatically. If you were already signed in and it's still not picking it up, try reloading the extension at `chrome://extensions`.
 
 **Recording isn't working**
 - Confirm the extension has permission to run on the site
 - Try refreshing the page after clicking Record
-- Check the developer console for errors
+- Check the page's developer console for errors
 
 **Screenshots are black or blank**
-- This can occur on protected pages (banking sites, etc.) due to Chrome's screenshot restrictions
+- Can happen on protected pages (banking sites, etc.) due to Chrome's screenshot restrictions
 
 **Review page won't open**
 - Confirm at least one step has been captured
 - Check that pop-ups aren't blocked for the extension
 
-**Export file is empty**
-- Allow a moment after stopping recording for steps to finish saving
-- Confirm steps are present in the Review tab before exporting
-
-## Tips
-
-- Click on meaningful buttons/links so element text is descriptive
-- Refine descriptions in the Review tab for clarity in the final SOP
-- Reorder steps to correct sequencing issues
-- Remove accidental clicks before exporting
-
 ## Security & privacy
 
-- All data is stored locally via `chrome.storage.local` — nothing is sent externally
-- Screenshots are limited to tabs under your own control
-- Data can be cleared at any time using the Clear button in the popup
+- Sign-in is restricted to `kramer.pro` Google Workspace accounts
+- Recorded steps and screenshots are stored locally in `chrome.storage.local` until you publish — publishing sends them to the hosted backend under your account, where they're stored in Postgres and become visible per the SOP's team/category
+- The extension only ever captures tabs you're actively recording in, never in the background
+- You can clear an in-progress recording at any time from the popup
 
 ## Limitations
 
 - Cannot record clicks on Chrome UI elements or other extensions
 - Sites with strict CSP (Content Security Policy) may block recording
 - Screenshot capture is subject to Chrome's built-in restrictions
-- Storage capacity depends on your Chrome profile settings (typically 10MB+)
+- Not published to the Chrome Web Store yet — install via "Load unpacked"
 
 ## Future enhancements
 
 Planned or potential additions:
 - Pause/resume recording
 - Keyboard input recording
-- Form field detection and auto-fill suggestions
-- Multiple workflow templates
-- Optional cloud sync
+- Chrome Web Store distribution
 - PDF export format
-- Collaborative SOP sharing
+- iPad/warehouse-floor support
 
 ---
 
@@ -158,4 +154,4 @@ Planned or potential additions:
 
 ## Copyright
 
-© 2026 Taylor Giba. All rights reserved. 
+© 2026 Taylor Giba. All rights reserved.
