@@ -158,4 +158,4 @@ Planned or potential additions:
 
 ## Copyright
 
-© 2026 Taylor Giba. All rights reserved.
+© 2026 Taylor Giba. All rights reserved. 

@@ -15,7 +15,10 @@ const PORT = process.env.PORT || 3000;
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+// index: false - "/" needs custom logic (redirect signed-in users straight
+// to /dashboard) below, so it can't be auto-served by static before that
+// route (and before passport has even populated req.user) runs.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 app.use('/icons', express.static(path.join(__dirname, 'Icons')));
 
 app.set('trust proxy', 1);
@@ -133,6 +136,13 @@ app.post('/auth/extension-token', async (req, res) => {
 });
 
 // Page routes
+app.get('/', (req, res) => {
+  // Signed-in visitors (including anyone clicking a logo/"Home" link, which
+  // all point here) skip the marketing landing page and go straight into the app.
+  if (req.user) return res.redirect('/dashboard');
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
 app.get('/dashboard', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
 });
