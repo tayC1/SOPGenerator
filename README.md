@@ -1,5 +1,7 @@
 # CODEX
 
+**Live site:** [kpcodex-production.up.railway.app](https://kpcodex-production.up.railway.app)
+
 A full-featured Knowledge Base/SOP builder built for Kramer Pro. CODEX has two halves that work together:
 
 - **A Chrome Extension** that records clicks and screenshots as you work, then lets you turn that recording into a polished, editable SOP.
