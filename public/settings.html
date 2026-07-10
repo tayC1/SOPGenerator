@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #2d2b2e;
+    --border: rgba(255, 255, 255, 0.12);
+    --text-dim: rgba(255, 255, 255, 0.55);
+    --text-faint: rgba(255, 255, 255, 0.35);
+    --accent: #2e5266;
+    --tag: #e96d2d;
+    --card-bg: #cac8bc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: #ffffff;
+    min-height: 100vh;
+    padding: 36px 40px 56px;
+  }
+
+  a { color: inherit; }
+  button, input, textarea, select { font-family: inherit; }
+
+  header {
+    max-width: 760px;
+    margin: 0 auto 36px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand img { width: 32px; height: 32px; object-fit: contain; }
+  .brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .btn-home {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+  }
+  .btn-home:hover { background: rgba(255, 255, 255, 0.14); }
+
+  main { max-width: 760px; margin: 0 auto; }
+
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 24px;
+    margin-bottom: 32px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .avatar {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  .profile-name { font-size: 22px; font-weight: 700; }
+  .profile-title { font-size: 14px; color: var(--tag); font-weight: 600; margin: 3px 0; }
+  .profile-email { font-size: 13px; color: var(--text-dim); }
+
+  .section { margin-bottom: 40px; }
+
+  .section-heading {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 16px;
+  }
+
+  .card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 14px;
+  }
+
+  .field input:focus, .field select:focus { outline: 1.5px solid var(--accent); }
+  .field select { cursor: pointer; }
+
+  .form-footer { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+
+  .btn-save {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-save:hover { opacity: 0.88; }
+
+  .save-state { font-size: 12.5px; color: var(--text-faint); }
+  .save-state.ok { color: #7fc98f; }
+  .save-state.err { color: #e08080; }
+
+  .member-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+
+  .member-card {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .member-card .avatar { width: 36px; height: 36px; font-size: 13px; }
+  .member-card .member-name { font-size: 13.5px; font-weight: 600; }
+
+  .btn-invite {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    background: none;
+    border: 1px dashed var(--border);
+    color: var(--text-dim);
+    border-radius: 10px;
+    padding: 12px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  .btn-invite:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+
+  .invite-form { display: none; gap: 8px; margin-top: 14px; }
+  .invite-form.open { display: flex; }
+  .invite-form input {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 14px;
+  }
+  .invite-form input:focus { outline: 1.5px solid var(--accent); }
+  .invite-form button {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 0 18px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .empty-note {
+    color: var(--text-faint);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .signout-row { text-align: center; margin-top: 8px; }
+  .signout-row a { color: #e08080; font-size: 13.5px; text-decoration: underline; }
+  .signout-row a:hover { color: #ff9a9a; }
+
+  .denied { max-width: 760px; margin: 60px auto; text-align: center; color: var(--text-faint); font-size: 14px; }
+  .denied a { color: #7eb8d4; text-decoration: underline; }
+
+  @media (max-width: 560px) {
+    .field-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a class="brand" href="/">
+      <img src="/icons/CODEX - 48PX.png" alt="">
+      <span>CODEX</span>
+    </a>
+    <a class="btn-home" href="/dashboard">My Dashboard</a>
+  </header>
+
+  <main id="main">
+    <p class="empty-note">Loading…</p>
+  </main>
+
+  <script>
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function initials(name) {
+      const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+    }
+
+    let currentUser = null;
+
+    function displayName(user) {
+      return user.display_name || user.name || user.email;
+    }
+
+    function renderPage() {
+      const main = document.getElementById('main');
+      const departments = currentUser.departments || [];
+
+      main.innerHTML = `
+        <div class="profile-header">
+          <div class="avatar">${escapeHtml(initials(displayName(currentUser)))}</div>
+          <div>
+            <div class="profile-name">${escapeHtml(displayName(currentUser))}</div>
+            ${currentUser.title ? `<div class="profile-title">${escapeHtml(currentUser.title)}</div>` : ''}
+            <div class="profile-email">${escapeHtml(currentUser.email)}</div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-heading">Account Information</div>
+          <div class="card">
+            <div class="field-row">
+              <div class="field">
+                <label>First Name</label>
+                <input type="text" id="firstName" value="${escapeHtml(currentUser.first_name)}">
+              </div>
+              <div class="field">
+                <label>Last Name</label>
+                <input type="text" id="lastName" value="${escapeHtml(currentUser.last_name)}">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Display Name</label>
+                <input type="text" id="displayNameInput" placeholder="${escapeHtml(currentUser.name)}" value="${escapeHtml(currentUser.display_name)}">
+              </div>
+              <div class="field">
+                <label>Default Category</label>
+                <select id="defaultCategory" ${departments.length === 0 ? 'disabled' : ''}>
+                  ${departments.length === 0
+                    ? '<option value="">No teams assigned yet</option>'
+                    : ['<option value="">None</option>'].concat(
+                        departments.map((d) => `<option value="${escapeHtml(d)}"${d === currentUser.default_category ? ' selected' : ''}>${escapeHtml(d)}</option>`)
+                      ).join('')}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Title</label>
+              <input type="text" id="titleInput" placeholder="e.g. Manager, Finance" value="${escapeHtml(currentUser.title)}">
+            </div>
+
+            <div class="form-footer">
+              <button class="btn-save" id="saveBtn" type="button">Save Changes</button>
+              <span class="save-state" id="saveState"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-heading">Team Members</div>
+          <div id="membersSection">
+            <p class="empty-note">Loading…</p>
+          </div>
+          <button class="btn-invite" id="inviteBtn" type="button">+ Invite by email</button>
+          <div class="invite-form" id="inviteForm">
+            <input type="email" id="inviteEmail" placeholder="teammate@kramer.pro">
+            <button type="button" id="inviteSubmit">Send</button>
+          </div>
+          <p class="save-state" id="inviteState" style="margin-top: 8px;"></p>
+        </div>
+
+        <div class="signout-row">
+          <a href="/auth/logout">Sign out</a>
+        </div>
+      `;
+
+      document.getElementById('saveBtn').addEventListener('click', saveProfile);
+      document.getElementById('inviteBtn').addEventListener('click', () => {
+        document.getElementById('inviteForm').classList.toggle('open');
+      });
+      document.getElementById('inviteSubmit').addEventListener('click', sendInvite);
+
+      loadTeamMembers(departments);
+    }
+
+    async function saveProfile() {
+      const stateEl = document.getElementById('saveState');
+      stateEl.textContent = 'Saving…';
+      stateEl.className = 'save-state';
+      try {
+        const res = await fetch('/users/me', {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            first_name: document.getElementById('firstName').value.trim(),
+            last_name: document.getElementById('lastName').value.trim(),
+            display_name: document.getElementById('displayNameInput').value.trim(),
+            title: document.getElementById('titleInput').value.trim(),
+            default_category: document.getElementById('defaultCategory').value,
+          }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+        const updated = await res.json();
+        currentUser = { ...currentUser, ...updated };
+        stateEl.textContent = 'Saved ✓';
+        stateEl.className = 'save-state ok';
+        // Re-render so the header (name/title) reflects the change immediately.
+        renderPage();
+      } catch (err) {
+        stateEl.textContent = err.message;
+        stateEl.className = 'save-state err';
+      }
+    }
+
+    async function loadTeamMembers(departments) {
+      const section = document.getElementById('membersSection');
+      if (departments.length === 0) {
+        section.innerHTML = '<p class="empty-note">Join a team to see your teammates here.</p>';
+        return;
+      }
+
+      try {
+        const responses = await Promise.all(
+          departments.map((d) => fetch(`/users?department=${encodeURIComponent(d)}`).then((r) => r.json()))
+        );
+        const seen = new Map();
+        responses.flat().forEach((u) => {
+          if (u.id !== currentUser.id) seen.set(u.id, u);
+        });
+        const peers = [...seen.values()];
+
+        if (peers.length === 0) {
+          section.innerHTML = '<p class="empty-note">No other members on your teams yet.</p>';
+          return;
+        }
+
+        section.innerHTML = `<div class="member-grid">${peers.map((u) => `
+          <div class="member-card">
+            <div class="avatar">${escapeHtml(initials(u.name))}</div>
+            <span class="member-name">${escapeHtml(u.name || u.email)}</span>
+          </div>
+        `).join('')}</div>`;
+      } catch (err) {
+        console.error('[settings] failed to load team members:', err);
+        section.innerHTML = '<p class="empty-note">Could not load team members right now.</p>';
+      }
+    }
+
+    async function sendInvite() {
+      const stateEl = document.getElementById('inviteState');
+      const email = document.getElementById('inviteEmail').value.trim();
+      if (!email) return;
+
+      stateEl.textContent = 'Sending…';
+      stateEl.className = 'save-state';
+      try {
+        const res = await fetch('/users/invite', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Invite failed');
+        stateEl.textContent = `${email} added — they'll get full access once they sign in with Google.`;
+        stateEl.className = 'save-state ok';
+        document.getElementById('inviteEmail').value = '';
+        loadTeamMembers(currentUser.departments || []);
+      } catch (err) {
+        stateEl.textContent = err.message;
+        stateEl.className = 'save-state err';
+      }
+    }
+
+    async function init() {
+      const main = document.getElementById('main');
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        currentUser = data.user;
+      } catch {
+        currentUser = null;
+      }
+
+      if (!currentUser) {
+        main.innerHTML = `
+          <div class="denied">
+            <p>You need to be signed in to view settings.</p>
+            <p style="margin-top: 8px;"><a href="/">Go home to sign in</a></p>
+          </div>
+        `;
+        return;
+      }
+
+      renderPage();
+    }
+
+    init();
+  </script>
+</body>
+</html>

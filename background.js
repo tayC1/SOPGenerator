@@ -1,13 +1,65 @@
 // Background Service Worker for CODEX
 
 chrome.runtime.onMessageExternal.addListener((message, sender, sendResponse) => {
+  console.log(`[auth-bridge] external message "${message.type}" from ${sender.origin}`);
+
   if (message.type === 'USER_SIGNED_IN') {
-    chrome.storage.local.set({ currentUser: message.user });
-    sendResponse({ received: true });
+    if (!message.token || !message.user) {
+      console.error('[auth-bridge] USER_SIGNED_IN message missing token or user:', message);
+      sendResponse({ received: false, error: 'missing token or user' });
+      return;
+    }
+    chrome.storage.local.set({ extensionToken: message.token, currentUser: message.user }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[auth-bridge] failed to store session:', chrome.runtime.lastError.message);
+        sendResponse({ received: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      console.log(`[auth-bridge] stored session for ${message.user.email}`);
+      sendResponse({ received: true });
+    });
+    return true;
   }
+
   if (message.type === 'USER_SIGNED_OUT') {
-    chrome.storage.local.remove('currentUser');
-    sendResponse({ received: true });
+    chrome.storage.local.remove(['currentUser', 'extensionToken'], () => {
+      console.log('[auth-bridge] cleared stored session');
+      sendResponse({ received: true });
+    });
+    return true;
+  }
+
+  if (message.type === 'EDIT_SOP') {
+    if (!message.sop || message.sop.id == null) {
+      console.error('[auth-bridge] EDIT_SOP message missing sop:', message);
+      sendResponse({ received: false, error: 'missing sop' });
+      return;
+    }
+    // Older saved SOPs stored the image under `screenshot_base64` instead of
+    // `screenshot` - normalize so the editor (which only reads `.screenshot`) can render them.
+    var normalizedSteps = (message.sop.steps || []).map(function (step) {
+      if (!step.screenshot && step.screenshot_base64) {
+        step = Object.assign({}, step, { screenshot: step.screenshot_base64 });
+      }
+      return step;
+    });
+    chrome.storage.local.set({
+      steps: normalizedSteps,
+      sopTitle: message.sop.title || '',
+      sopSummary: message.sop.description || '',
+      category: message.sop.category || '',
+      editingSopId: message.sop.id,
+      isRecording: false
+    }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('[auth-bridge] failed to store edit session:', chrome.runtime.lastError.message);
+        sendResponse({ received: false, error: chrome.runtime.lastError.message });
+        return;
+      }
+      chrome.tabs.create({ url: chrome.runtime.getURL('review.html') });
+      sendResponse({ received: true });
+    });
+    return true;
   }
 });
 

@@ -3,6 +3,9 @@ document.addEventListener('DOMContentLoaded', function () {
   var stepsContainer;
   var _skipStorageEvent = false;
   var sopIntroEl = null;
+  var editingSopId = null;
+  var headerDivRef = null;
+  var exportLabelRef = null;
 
   // ── GitHub Config ──────────────────────────────────────────────────
   var GITHUB_TOKEN = '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';          // Personal Access Token (ghp_...)
@@ -176,11 +179,47 @@ document.addEventListener('DOMContentLoaded', function () {
       return { wrapper: wrapper, input: input };
     }
 
+    function makeSelectField(label, options, selectedValue) {
+      var wrapper = document.createElement('div');
+      wrapper.style.cssText = 'margin-bottom:14px;';
+      var lbl = document.createElement('label');
+      lbl.style.cssText = 'display:block;font-size:11px;font-weight:700;color:rgba(100,100,100,1);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.6px;';
+      lbl.textContent = label;
+      var select = document.createElement('select');
+      select.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;border:1.5px solid rgba(210,210,210,1);border-radius:6px;font-size:13px;font-family:Inter,sans-serif;color:rgba(30,30,30,1);outline:none;background:#fff;cursor:pointer;';
+      var uncatOpt = document.createElement('option');
+      uncatOpt.value = '';
+      uncatOpt.textContent = 'Uncategorized';
+      select.appendChild(uncatOpt);
+      options.forEach(function (name) {
+        var opt = document.createElement('option');
+        opt.value = name;
+        opt.textContent = name;
+        select.appendChild(opt);
+      });
+      if (selectedValue && options.indexOf(selectedValue) !== -1) select.value = selectedValue;
+      select.addEventListener('focus', function () { select.style.borderColor = 'rgba(46,82,102,1)'; });
+      select.addEventListener('blur', function () { select.style.borderColor = 'rgba(210,210,210,1)'; });
+      wrapper.appendChild(lbl);
+      wrapper.appendChild(select);
+      return { wrapper: wrapper, input: select };
+    }
+
     var today = new Date().toISOString().split('T')[0];
 
-    chrome.storage.local.get(['sopTitle', 'sopSummary'], function (res) {
+    var metaPromise = new Promise(function (resolve) {
+      chrome.storage.local.get(['sopTitle', 'sopSummary', 'category'], resolve);
+    });
+    var departmentsPromise = fetch(CONFIG.API_URL + '/departments')
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .catch(function (err) { console.error('[review] failed to load departments:', err); return []; });
+
+    Promise.all([metaPromise, departmentsPromise]).then(function (results) {
+      var res = results[0];
+      var departmentNames = results[1].map(function (d) { return d.name; });
+
       var titleField    = makeField('Title',       (res.sopTitle   || 'SOP Guide').trim());
-      var categoryField = makeField('Category',    '');
+      var categoryField = makeSelectField('Category', departmentNames, res.category);
       var authorField   = makeField('Author',      '');
       var dateField     = makeField('Date',        today, 'date');
       var descField     = makeField('Description', (res.sopSummary || '').trim(), 'textarea');
@@ -198,9 +237,11 @@ document.addEventListener('DOMContentLoaded', function () {
       submitBtn.style.cssText = 'padding:8px 20px;border-radius:8px;border:none;background:rgba(46,82,102,1);color:#fff;font-size:14px;font-weight:600;font-family:Inter,sans-serif;cursor:pointer;';
       submitBtn.addEventListener('click', function () {
         document.body.removeChild(overlay);
+        var categoryValue = categoryField.input.value.trim();
+        chrome.storage.local.set({ category: categoryValue });
         action({
           title:       titleField.input.value.trim()    || 'SOP Guide',
-          category:    categoryField.input.value.trim(),
+          category:    categoryValue,
           author:      authorField.input.value.trim(),
           date:        dateField.input.value             || today,
           description: descField.input.value.trim()
@@ -261,47 +302,118 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () { toast.remove(); }, 3000);
   }
 
+  // Draws the marker dot directly into the screenshot's pixels so it survives
+  // anywhere downstream that only renders the raw image (server, sop.html, exports).
+  function bakeMarker(base64, clickX, clickY) {
+    return new Promise(function (resolve) {
+      if (!base64 || clickX == null || clickY == null) { resolve(base64); return; }
+      var img = new Image();
+      img.onload = function () {
+        var canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        var r = 16;
+        ctx.beginPath();
+        ctx.arc(clickX * canvas.width, clickY * canvas.height, r, 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(224,75,42,0.25)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#e04b2a';
+        ctx.stroke();
+        resolve(canvas.toDataURL('image/png').replace('data:image/png;base64,', ''));
+      };
+      img.onerror = function () { resolve(base64); };
+      img.src = 'data:image/png;base64,' + base64;
+    });
+  }
+
   function pushToCodex() {
     if (steps.length === 0) { showToast('No steps to push.', true); return; }
-    chrome.storage.local.get('currentUser', function (result) {
-      var currentUser = result.currentUser;
-      if (!currentUser) { showSignInPrompt(); return; }
-      var author = currentUser.name || '';
+    chrome.storage.local.get('extensionToken', function (result) {
+      var extensionToken = result.extensionToken;
+      if (!extensionToken) { showSignInPrompt(); return; }
       showExportForm(function (meta) {
         showToast('Saving to CODEX…');
-        var payload = {
-          title: meta.title,
-          url: (steps[0] && steps[0].pageUrl) || '',
-          description: meta.description || '',
-          author: author,
-          steps: steps.map(function (step, i) {
-            return {
-              title: step.description || step.pageTitle || ('Step ' + (i + 1)),
-              description: step.description || '',
-              screenshot_base64: step.screenshot || '',
-              click_x: step.clickX != null ? step.clickX : null,
-              click_y: step.clickY != null ? step.clickY : null
-            };
-          })
-        };
-        fetch('https://kpcodex-production.up.railway.app/sops', {
-          method: 'POST',
-          credentials: 'include',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        })
-          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-          .then(function (result) {
-            if (result.ok) {
-              showCodexSuccess();
-            } else {
-              showToast('Failed to save — check your connection', true);
-            }
-          })
-          .catch(function () {
-            showToast('Failed to save — check your connection', true);
+        Promise.all(steps.map(function (step) {
+          return bakeMarker(step.screenshot, step.clickX, step.clickY);
+        })).then(function (bakedScreenshots) {
+          var bakedSteps = steps.map(function (step, i) {
+            var copy = Object.assign({}, step);
+            copy.screenshot = bakedScreenshots[i] || step.screenshot;
+            return copy;
           });
+          var payload = {
+            title: meta.title,
+            description: meta.description || '',
+            category: meta.category || null,
+            url: (steps[0] && steps[0].pageUrl) || '',
+            steps: bakedSteps
+          };
+          fetch(CONFIG.API_URL + '/sops', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + extensionToken
+            },
+            body: JSON.stringify(payload)
+          })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+            .then(function (result) {
+              if (result.ok) {
+                showCodexSuccess();
+                chrome.storage.local.set({ steps: [], isRecording: false });
+                chrome.storage.local.remove(['sopTitle', 'sopSummary', 'category']);
+                steps = [];
+                sopIntroEl = null;
+                updateHeaderInfo();
+                renderSteps();
+              } else {
+                showToast((result.data && result.data.error) || 'Failed to save — check your connection', true);
+              }
+            })
+            .catch(function () {
+              showToast('Failed to save — check your connection', true);
+            });
+        });
       });
+    });
+  }
+
+  function saveEditedSop() {
+    if (!editingSopId) return;
+    if (steps.length === 0) { showToast('No steps to save.', true); return; }
+    chrome.storage.local.get(['extensionToken', 'sopTitle', 'sopSummary', 'category'], function (result) {
+      var extensionToken = result.extensionToken;
+      if (!extensionToken) { showSignInPrompt(); return; }
+      showToast('Saving…');
+      var payload = {
+        title: (result.sopTitle || 'SOP Guide').trim(),
+        description: (result.sopSummary || '').trim(),
+        category: result.category || null,
+        url: (steps[0] && steps[0].pageUrl) || '',
+        steps: steps
+      };
+      fetch(CONFIG.API_URL + '/sops/' + editingSopId, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + extensionToken
+        },
+        body: JSON.stringify(payload)
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result2) {
+          if (result2.ok) {
+            showToast('Saved ✓');
+          } else {
+            showToast((result2.data && result2.data.error) || 'Failed to save — check your connection', true);
+          }
+        })
+        .catch(function () {
+          showToast('Failed to save — check your connection', true);
+        });
     });
   }
 
@@ -400,6 +512,7 @@ document.addEventListener('DOMContentLoaded', function () {
       });
       var backImg = document.getElementById('backBtn');
       if (!headerDiv || !backImg) return;
+      headerDivRef = headerDiv;
 
       // The "Back" label is a pointer-events:none div overlaid on the backBtn image
       var backLabel = Array.from(root.querySelectorAll('div')).find(function (d) {
@@ -449,6 +562,7 @@ document.addEventListener('DOMContentLoaded', function () {
           exportLabel.textContent = 'Export ▾';
           exportLabel.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:18px;color:rgba(255,255,255,1);font-family:Inter;font-weight:600;pointer-events:none;letter-spacing:0.1px;';
           exportWrapper.appendChild(exportLabel);
+          exportLabelRef = exportLabel;
         }
 
         var exportDropdown = document.createElement('div');
@@ -475,6 +589,7 @@ document.addEventListener('DOMContentLoaded', function () {
         exportWrapper.addEventListener('click', function (e) {
           e.stopPropagation();
           if (steps.length === 0) { alert('No steps to export.'); return; }
+          if (editingSopId) { saveEditedSop(); return; }
           exportDropdown.style.display = exportDropdown.style.display === 'block' ? 'none' : 'block';
         });
 
@@ -501,6 +616,13 @@ document.addEventListener('DOMContentLoaded', function () {
       console.error('Topbar build error', e);
     }
   })();
+
+  chrome.storage.local.get('editingSopId', function (result) {
+    editingSopId = result.editingSopId || null;
+    if (!editingSopId) return;
+    if (headerDivRef) headerDivRef.textContent = 'Edit Steps';
+    if (exportLabelRef) exportLabelRef.textContent = 'Save';
+  });
 
   function updateHeaderInfo() {
     if (!headerInfo) return;

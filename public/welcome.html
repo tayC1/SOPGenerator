@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Welcome — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #2d2b2e;
+    --accent: #2e5266;
+    --tag: #e96d2d;
+    --text-dim: rgba(255, 255, 255, 0.55);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: #ffffff;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+  }
+
+  .welcome-card {
+    width: 100%;
+    max-width: 560px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .brand-icon { width: 88px; height: 88px; object-fit: contain; margin-bottom: 28px; }
+
+  h1 { font-size: 28px; font-weight: 600; margin-bottom: 6px; }
+
+  .subtitle { font-size: 15px; color: var(--text-dim); margin-bottom: 36px; }
+
+  .action-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .action-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    padding: 18px 24px;
+    border-radius: 10px;
+    border: none;
+    text-decoration: none;
+    color: #ffffff;
+    font-family: inherit;
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s, box-shadow 0.15s;
+    backdrop-filter: blur(16px) saturate(150%);
+    -webkit-backdrop-filter: blur(16px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+      0 8px 24px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  }
+
+  .action-btn:hover {
+    opacity: 0.88;
+    box-shadow:
+      0 10px 28px rgba(0, 0, 0, 0.4),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+
+  .action-btn.primary { background: #e96c2d42; }
+  .action-btn.secondary { background: #ab8e6237; }
+  .action-btn.tertiary { background: #cac8bc36; }
+
+  .action-icon { width: 22px; height: 22px; flex-shrink: 0; }
+  .action-icon svg { width: 100%; height: 100%; }
+
+  .action-label { flex: 1; text-align: left; }
+
+  .action-arrow { width: 20px; height: 20px; flex-shrink: 0; opacity: 0.85; }
+  .action-arrow svg { width: 100%; height: 100%; }
+
+  .browse-link {
+    font-size: 14px;
+    color: var(--text-dim);
+    text-decoration: underline;
+  }
+
+  .browse-link:hover { color: #ffffff; }
+</style>
+</head>
+<body>
+  <div class="welcome-card">
+    <a href="/"><img class="brand-icon" src="/icons/CODEX - 128PX.png" alt="CODEX"></a>
+    <h1 id="welcomeHeading">Welcome</h1>
+    <p class="subtitle">get set up in 2 minutes</p>
+
+    <div class="action-list">
+      <a class="action-btn primary" href="/extension/codex.crx" download id="installExtensionBtn">
+        <span class="action-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+        </span>
+        <span class="action-label">Install Chrome Extension</span>
+        <span class="action-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </span>
+      </a>
+
+      <a class="action-btn secondary" href="#" id="installDesktopBtn">
+        <span class="action-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+        </span>
+        <span class="action-label">Install Desktop App</span>
+        <span class="action-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </span>
+      </a>
+
+      <a class="action-btn tertiary" href="/dashboard">
+        <span class="action-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+        </span>
+        <span class="action-label">Go to my dashboard</span>
+        <span class="action-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </span>
+      </a>
+    </div>
+
+    <a class="browse-link" href="/browse">Just need to view SOPs? Click here</a>
+  </div>
+
+  <script>
+    // Placeholder until there's an actual desktop app to link to -
+    // everything else on this page is wired live.
+    document.getElementById('installDesktopBtn').addEventListener('click', (e) => {
+      e.preventDefault();
+      alert('The desktop app is not available yet.');
+    });
+
+    async function loadUser() {
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        const firstName = (data.user?.name || '').split(' ')[0];
+        document.getElementById('welcomeHeading').textContent = firstName ? `Welcome, ${firstName}` : 'Welcome';
+      } catch {
+        document.getElementById('welcomeHeading').textContent = 'Welcome';
+      }
+    }
+
+    loadUser();
+  </script>
+</body>
+</html>

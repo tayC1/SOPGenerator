@@ -1,250 +1,676 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard — CODEX</title>
-  <link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
-  <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: Inter, -apple-system, sans-serif;
-      background: #0f1923;
-      color: #fff;
-      min-height: 100vh;
-      padding: 48px 24px;
-    }
-    header {
-      max-width: 800px;
-      margin: 0 auto 40px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-    header h1 { font-size: 28px; font-weight: 800; }
-    .header-right { display: flex; align-items: center; gap: 16px; }
-    #user-name { font-size: 14px; color: rgba(255,255,255,0.55); }
-    a.logout {
-      font-size: 13px;
-      color: rgba(255,255,255,0.45);
-      text-decoration: none;
-    }
-    a.logout:hover { color: #fff; }
-    #grid {
-      max-width: 800px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 20px 22px;
-    }
-    .card h2 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-    .card p { font-size: 13px; color: rgba(255,255,255,0.55); margin-bottom: 14px; line-height: 1.5; }
-    .card-actions { display: flex; gap: 10px; }
-    .card-actions a {
-      font-size: 13px;
-      font-weight: 600;
-      color: #7eb8d4;
-      text-decoration: none;
-    }
-    .card-actions a:hover { text-decoration: underline; }
-    .btn-delete {
-      font-size: 13px;
-      font-weight: 600;
-      color: #e07070;
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-      font-family: inherit;
-    }
-    .btn-delete:hover { text-decoration: underline; }
-    .empty { text-align: center; color: rgba(255,255,255,0.4); margin-top: 80px; font-size: 15px; }
-    #connect-section {
-      max-width: 800px;
-      margin: 0 auto 32px;
-    }
-    .connect-card {
-      background: rgba(234,120,60,0.1);
-      border: 1px solid rgba(234,120,60,0.28);
-      border-radius: 14px;
-      padding: 24px 26px;
-    }
-    .connect-card h2 {
-      font-size: 17px;
-      font-weight: 800;
-      margin-bottom: 8px;
-      color: #fff;
-    }
-    .connect-instructions {
-      font-size: 13px;
-      color: rgba(255,255,255,0.6);
-      margin-bottom: 18px;
-      line-height: 1.5;
-    }
-    .token-box-row { display: flex; gap: 10px; margin-bottom: 10px; }
-    #token-value {
-      flex: 1;
-      background: rgba(0,0,0,0.35);
-      border: 1px solid rgba(255,255,255,0.13);
-      border-radius: 8px;
-      padding: 11px 14px;
-      color: #fff;
-      font-family: monospace;
-      font-size: 14px;
-      letter-spacing: 0.5px;
-      cursor: text;
-      min-width: 0;
-    }
-    #copy-btn {
-      background: rgba(234,120,60,1);
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      padding: 11px 22px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-      font-family: inherit;
-      white-space: nowrap;
-      transition: opacity 0.15s;
-      flex-shrink: 0;
-    }
-    #copy-btn:hover { opacity: 0.88; }
-    #refresh-token-btn {
-      background: none;
-      border: none;
-      color: rgba(255,255,255,0.38);
-      font-size: 12px;
-      cursor: pointer;
-      font-family: inherit;
-      padding: 0;
-      text-decoration: underline;
-    }
-    #refresh-token-btn:hover { color: rgba(255,255,255,0.65); }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My SOPs — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #2d2b2e;
+    --sidebar-bg: rgba(0, 0, 0, 0.24);
+    --border: rgba(255, 255, 255, 0.12);
+    --text-dim: rgba(255, 255, 255, 0.55);
+    --text-faint: rgba(255, 255, 255, 0.35);
+    --accent: #2e5266;
+    --tag: #e96d2d;
+    --card-bg: #cac8bc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { background: var(--bg); }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #ffffff;
+    min-height: 100vh;
+  }
+
+  a { color: inherit; }
+
+  button { font-family: inherit; }
+
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .icon svg { width: 100%; height: 100%; }
+
+  /* ---------- layout ---------- */
+  .dashboard {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 252px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 20px 20px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
+  .sidebar-brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 0 20px; }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+  .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .nav-item[aria-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--text-faint);
+  }
+  .nav-item[aria-disabled="true"]:hover { background: none; }
+
+  .nav-soon {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 7px;
+  }
+
+  .sidebar-section-label {
+    padding: 18px 20px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px;
+  }
+
+  .category-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .category-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .sidebar-footer:hover { background: rgba(255, 255, 255, 0.05); }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 14px; font-weight: 500; }
+
+  /* ---------- main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 36px 40px 56px;
+    max-width: 1280px;
+  }
+
+  .main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+
+  .page-title { font-size: 26px; font-weight: 600; }
+
+  .btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .btn-create:hover { opacity: 0.88; }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+
+  .stat-card {
+    background: rgba(217, 217, 217, 0.08);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .stat-label { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+  .stat-value { font-size: 34px; font-weight: 600; line-height: 1; margin-bottom: 6px; }
+  .stat-sub { font-size: 12px; color: var(--text-faint); }
+
+  .toolbar { margin-bottom: 24px; }
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    max-width: 420px;
+  }
+
+  .search-input-wrap .icon { color: rgba(0, 0, 0, 0.45); }
+
+  .search-input-wrap input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e1e1e;
+  }
+
+  .section-heading {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .sop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 18px;
+  }
+
+  .sop-card {
+    background: var(--card-bg);
+    color: #1e1e1e;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+
+  .tag-solid { background: var(--tag); color: #1e1e1e; }
+  .tag-outline { border: 1px solid var(--tag); color: #2d2b2e; }
+
+  .sop-title { font-size: 15px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
+
+  .sop-desc {
+    font-size: 12px;
+    color: #555555;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    flex: 1;
+  }
+
+  .sop-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding-top: 10px;
+    margin-bottom: 12px;
+  }
+
+  .sop-author { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .sop-author .avatar { width: 20px; height: 20px; font-size: 10px; background: #d4d4d4; color: #1e1e1e; }
+  .sop-author span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sop-steps { flex-shrink: 0; color: var(--accent); font-weight: 600; }
+
+  .sop-card-actions { display: flex; gap: 8px; }
+
+  .action-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(45, 43, 46, 0.45);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .action-btn .icon { width: 12px; height: 12px; flex-shrink: 0; }
+  .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-faint);
+    padding: 60px 0;
+    font-size: 14px;
+  }
+
+  @media (max-width: 860px) {
+    .dashboard { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { padding: 28px 20px 48px; }
+  }
+</style>
 </head>
 <body>
-  <header>
-    <h1>My SOPs</h1>
-    <div class="header-right">
-      <span id="user-name"></span>
-      <a class="logout" id="logout-link" href="/auth/logout">Sign out</a>
-    </div>
-  </header>
-  <div id="connect-section">
-    <div class="connect-card">
-      <h2>Connect the CODEX extension</h2>
-      <p class="connect-instructions">Sign in above, then paste this token into the CODEX extension popup.</p>
-      <div class="token-box-row">
-        <input id="token-value" type="text" readonly placeholder="Loading…">
-        <button id="copy-btn">Copy</button>
+  <div class="dashboard">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">
+        <img src="/icons/CODEX - 48PX.png" alt="">
+        <span>CODEX</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a class="nav-item active" href="/dashboard">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          Dashboard
+        </a>
+        <a class="nav-item" href="/browse">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3" y2="6"></line><line x1="3" y1="12" x2="3" y2="12"></line><line x1="3" y1="18" x2="3" y2="18"></line></svg>
+          </span>
+          All SOPs
+        </a>
+        <button class="nav-item" type="button" aria-disabled="true" disabled>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+          </span>
+          Saved
+          <span class="nav-soon">Soon</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-section-label">Categories</div>
+      <div class="category-list" id="categoryList" role="group" aria-label="Filter by category">
+        <button class="category-item active" type="button" data-category="">All categories</button>
+        <button class="category-item" type="button" data-category="Finance">Finance</button>
+        <button class="category-item" type="button" data-category="HR">HR</button>
+        <button class="category-item" type="button" data-category="Internal Ops">Internal Ops</button>
+        <button class="category-item" type="button" data-category="Logistics/Purchasing">Logistics/Purchasing</button>
+        <button class="category-item" type="button" data-category="Live Events/Rentals">Live Events/Rentals</button>
+        <button class="category-item" type="button" data-category="Integrations/Sales">Integrations/Sales</button>
       </div>
-      <button id="refresh-token-btn">Generate new token</button>
-    </div>
+
+      <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
+
+      <a class="sidebar-footer" href="/settings">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Loading…</span>
+      </a>
+    </aside>
+
+    <main class="main">
+      <div class="main-header">
+        <h1 class="page-title">My SOPs</h1>
+        <a class="btn-create" href="/">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </span>
+          Create SOP
+        </a>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total SOPs</div>
+          <div class="stat-value" id="statTotal">—</div>
+          <div class="stat-sub" id="statTotalSub">&nbsp;</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Categories</div>
+          <div class="stat-value" id="statCategories">—</div>
+          <div class="stat-sub">Across your SOPs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Added this month</div>
+          <div class="stat-value" id="statMonth">—</div>
+          <div class="stat-sub">&nbsp;</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <div class="search-input-wrap">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="search" id="searchInput" placeholder="Search your SOPs" aria-label="Search your SOPs">
+        </div>
+      </div>
+
+      <div id="grid">
+        <p class="empty-state">Loading your SOPs…</p>
+      </div>
+    </main>
   </div>
 
-  <div id="grid"></div>
-
   <script>
-    function escape(str) {
-      return String(str)
+    const ICONS = {
+      eye: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+      edit: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+      download: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+    };
+
+    function escapeHtml(str) {
+      return String(str ?? '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
     }
 
-    async function deleteSop(id) {
-      if (!confirm('Delete this SOP?')) return;
-      await fetch(`/sops/${id}`, { method: 'DELETE' });
-      load();
+    function initials(name) {
+      const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
     }
 
-    async function load() {
-      const grid = document.getElementById('grid');
+    function formatDate(value) {
+      if (!value) return '';
+      return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    let allSops = [];
+    let activeCategory = '';
+
+    // Derived from the "key" field in the extension's manifest.json - if that
+    // keypair ever changes, this literal must be updated to match.
+    const EXTENSION_ID = 'leklkiojcckkjcgojcaalbnnagfncknm';
+
+    async function loadUser() {
       try {
-        const res = await fetch('/sops');
-        const sops = await res.json();
-        if (!sops.length) {
-          grid.innerHTML = '<p class="empty">No SOPs yet — export one from the extension.</p>';
-          return;
-        }
-        grid.innerHTML = sops.map(s => `
-          <div class="card">
-            <h2>${escape(s.title)}</h2>
-            <p>${escape(s.description || '')}</p>
-            <div class="card-actions">
-              <a href="/sop.html?id=${s.id}">View →</a>
-              <button class="btn-delete" onclick="deleteSop(${s.id})">Delete</button>
-            </div>
-          </div>
-        `).join('');
-      } catch (e) {
-        grid.innerHTML = '<p class="empty">Failed to load SOPs.</p>';
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        const name = data.user?.name || 'Guest';
+        document.getElementById('userName').textContent = name;
+        document.getElementById('userAvatar').textContent = initials(name);
+        document.getElementById('adminLink').style.display = data.user?.is_admin ? 'block' : 'none';
+        return data.user || null;
+      } catch (err) {
+        console.error('[auth-bridge] /auth/me failed:', err);
+        document.getElementById('userName').textContent = 'Guest';
+        return null;
       }
     }
 
-    let currentToken = null;
-
-    async function copyToken() {
-      if (!currentToken) return;
-      await navigator.clipboard.writeText(currentToken);
-      const btn = document.getElementById('copy-btn');
-      btn.textContent = 'Copied!';
-      setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
-    }
-
-    async function refreshToken() {
-      if (!confirm('Generate a new token? Your current token will stop working.')) return;
-      const res = await fetch('/auth/extension-token', { method: 'POST' });
-      const { token } = await res.json();
-      currentToken = token;
-      document.getElementById('token-value').value = token;
-    }
-
-    async function init() {
-      const res = await fetch('/auth/me');
-      const { user } = await res.json();
+    // Hands the signed-in session off to the CODEX extension, if installed,
+    // so it can authenticate its own API calls with a Bearer token instead
+    // of relying on a browser session cookie it has no access to.
+    async function bridgeSessionToExtension(user) {
       if (!user) {
-        window.location.href = '/';
+        console.log('[auth-bridge] no active session, skipping extension bridge');
         return;
       }
-      document.getElementById('user-name').textContent = user.name || user.email;
-
-      currentToken = user.extension_token;
-      document.getElementById('token-value').value = currentToken || '';
-      document.getElementById('copy-btn').addEventListener('click', copyToken);
-      document.getElementById('refresh-token-btn').addEventListener('click', refreshToken);
-
-      if (typeof chrome !== 'undefined' && chrome.runtime) {
-        chrome.runtime.sendMessage(
-          'dagnjdffiejgocifggmpncekpfhcfddl',
-          { type: 'USER_SIGNED_IN', user: { name: user.name, email: user.email, id: user.id } },
-          (response) => { console.log('Extension notified', response); }
-        );
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        console.log('[auth-bridge] CODEX extension not installed/reachable, skipping');
+        return;
       }
 
-      document.getElementById('logout-link').addEventListener('click', (e) => {
-        if (typeof chrome !== 'undefined' && chrome.runtime) {
-          e.preventDefault();
-          chrome.runtime.sendMessage(
-            'dagnjdffiejgocifggmpncekpfhcfddl',
-            { type: 'USER_SIGNED_OUT' },
-            () => { window.location.href = '/auth/logout'; }
-          );
-        }
-      });
+      try {
+        const res = await fetch('/auth/extension-token', { method: 'POST', credentials: 'include' });
+        if (!res.ok) throw new Error(`extension-token request failed: ${res.status}`);
+        const { token } = await res.json();
 
-      load();
+        chrome.runtime.sendMessage(
+          EXTENSION_ID,
+          { type: 'USER_SIGNED_IN', token, user: { id: user.id, name: user.name, email: user.email } },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              // Expected if the extension isn't installed in this browser - not an error.
+              console.log('[auth-bridge] extension not reachable:', chrome.runtime.lastError.message);
+              return;
+            }
+            console.log('[auth-bridge] extension acknowledged sign-in:', response);
+          }
+        );
+      } catch (err) {
+        console.error('[auth-bridge] failed to bridge session to extension:', err);
+      }
     }
 
-    init();
+    function sopCardHtml(sop) {
+      const category = sop.category || 'Uncategorized';
+      const stepCount = Array.isArray(sop.steps) ? sop.steps.length : (sop.step_count ?? null);
+      return `
+        <article class="sop-card">
+          <div class="sop-tags">
+            <span class="tag tag-solid">${escapeHtml(category)}</span>
+          </div>
+          <h2 class="sop-title">${escapeHtml(sop.title)}</h2>
+          <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
+          <div class="sop-meta">
+            <div class="sop-author">
+              <span class="avatar">${escapeHtml(initials(sop.author))}</span>
+              <span>${escapeHtml(sop.author || 'Unknown')} · ${formatDate(sop.created_at)}</span>
+            </div>
+            ${stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
+          </div>
+          <div class="sop-card-actions">
+            <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
+            <button class="action-btn" type="button" data-edit="${sop.id}">${ICONS.edit} EDIT</button>
+            <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('grid');
+      const term = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      const filtered = allSops.filter((sop) => {
+        const matchesCategory = !activeCategory || (sop.category || '') === activeCategory;
+        const matchesTerm = !term
+          || sop.title?.toLowerCase().includes(term)
+          || sop.description?.toLowerCase().includes(term);
+        return matchesCategory && matchesTerm;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = '<p class="empty-state">No SOPs match your filters yet.</p>';
+        return;
+      }
+
+      grid.innerHTML = `<div class="sop-grid">${filtered.map(sopCardHtml).join('')}</div>`;
+
+      grid.querySelectorAll('[data-export]').forEach((btn) => {
+        btn.addEventListener('click', () => exportSop(btn.dataset.export));
+      });
+      grid.querySelectorAll('[data-edit]').forEach((btn) => {
+        btn.addEventListener('click', () => editSop(btn.dataset.edit));
+      });
+    }
+
+    function renderStats() {
+      const total = allSops.length;
+      const categories = new Set(allSops.map((s) => s.category || 'Uncategorized'));
+      const now = new Date();
+      const addedThisMonth = allSops.filter((s) => {
+        if (!s.created_at) return false;
+        const d = new Date(s.created_at);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      }).length;
+
+      document.getElementById('statTotal').textContent = total;
+      document.getElementById('statTotalSub').textContent = `${addedThisMonth} added this month`;
+      document.getElementById('statCategories').textContent = total === 0 ? 0 : categories.size;
+      document.getElementById('statMonth').textContent = addedThisMonth;
+    }
+
+    async function exportSop(id) {
+      try {
+        const res = await fetch(`/sops/${id}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Not found');
+        const sop = await res.json();
+        const blob = new Blob([JSON.stringify(sop, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(sop.title || 'sop').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        alert('Could not export this SOP right now.');
+      }
+    }
+
+    async function editSop(id) {
+      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+        alert('The CODEX extension is required to edit a SOP. Install it, then try again.');
+        return;
+      }
+      try {
+        const res = await fetch(`/sops/${id}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Not found');
+        const sop = await res.json();
+        chrome.runtime.sendMessage(EXTENSION_ID, { type: 'EDIT_SOP', sop }, (response) => {
+          if (chrome.runtime.lastError) {
+            console.error('[edit] sendMessage failed:', chrome.runtime.lastError.message);
+            alert(`Could not reach the CODEX extension: ${chrome.runtime.lastError.message}`);
+            return;
+          }
+          if (!response || !response.received) {
+            console.error('[edit] extension did not accept EDIT_SOP:', response);
+            alert(`Could not open this SOP for editing: ${(response && response.error) || 'unknown error'}`);
+          }
+        });
+      } catch {
+        alert('Could not open this SOP for editing right now.');
+      }
+    }
+
+    async function loadSops() {
+      const grid = document.getElementById('grid');
+      try {
+        const res = await fetch('/sops', { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to load');
+        allSops = await res.json();
+        renderStats();
+        renderGrid();
+      } catch {
+        grid.innerHTML = '<p class="empty-state">Failed to load your SOPs.</p>';
+      }
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderGrid);
+
+    document.getElementById('categoryList').addEventListener('click', (e) => {
+      const btn = e.target.closest('.category-item');
+      if (!btn) return;
+      const category = btn.dataset.category;
+      if (!category) {
+        activeCategory = '';
+        document.querySelectorAll('.category-item').forEach((el) => el.classList.toggle('active', el === btn));
+        renderGrid();
+        return;
+      }
+      window.location.href = `/team/${encodeURIComponent(category)}`;
+    });
+
+    loadUser().then(bridgeSessionToExtension);
+    loadSops();
   </script>
 </body>
 </html>

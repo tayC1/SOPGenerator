@@ -1,2 +1,6 @@
 .env
 node_modules/
+extension-key.pem
+google-admin-token.json
+.extension-build/
+dist/

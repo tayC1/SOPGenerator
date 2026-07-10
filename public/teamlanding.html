@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #2d2b2e;
+    --sidebar-bg: rgba(0, 0, 0, 0.24);
+    --border: rgba(255, 255, 255, 0.12);
+    --text-dim: rgba(255, 255, 255, 0.55);
+    --text-faint: rgba(255, 255, 255, 0.35);
+    --accent: #2e5266;
+    --tag: #e96d2d;
+    --card-bg: #cac8bc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { background: var(--bg); }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #ffffff;
+    min-height: 100vh;
+  }
+
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .icon svg { width: 100%; height: 100%; }
+
+  /* ---------- layout ---------- */
+  .app {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 252px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 20px 20px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
+  .sidebar-brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 0 20px; }
+
+  .sidebar-section-label {
+    padding: 18px 20px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .team-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px;
+  }
+
+  .team-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .team-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .team-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; }
+
+  .team-item-count {
+    font-size: 11px;
+    color: var(--text-faint);
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 1px 7px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 14px; font-weight: 500; }
+
+  /* ---------- main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 36px 40px 56px;
+    max-width: 1280px;
+  }
+
+  .main-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+  }
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    flex: 1;
+    max-width: 420px;
+  }
+
+  .search-input-wrap .icon { color: rgba(0, 0, 0, 0.45); }
+
+  .search-input-wrap input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e1e1e;
+  }
+
+  .btn-create {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 11px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .btn-create:hover { opacity: 0.88; }
+
+  .team-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 32px;
+    padding-bottom: 28px;
+    margin-bottom: 28px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .team-intro { flex: 2; min-width: 260px; }
+
+  .page-title { font-size: 30px; font-weight: 600; margin-bottom: 12px; }
+
+  .team-desc { color: var(--text-dim); font-size: 15px; line-height: 1.6; }
+
+  .team-lead-card {
+    flex: 1;
+    min-width: 220px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .team-lead-card .avatar { width: 54px; height: 54px; font-size: 20px; }
+  .team-lead-name { font-size: 16px; font-weight: 600; }
+  .team-lead-title { font-size: 13px; color: var(--text-dim); }
+
+  .section { margin-bottom: 32px; }
+
+  .section-heading {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 14px;
+  }
+
+  .links-row { display: flex; flex-wrap: wrap; gap: 12px; }
+
+  .link-pill {
+    background: rgba(202, 200, 188, 0.14);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 14px;
+    text-decoration: none;
+    color: #fff;
+  }
+
+  .link-pill:hover { background: rgba(202, 200, 188, 0.24); }
+
+  .member-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .member-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+  }
+
+  .member-name { font-size: 14px; font-weight: 600; }
+  .member-email { font-size: 12px; color: var(--text-dim); }
+
+  .empty-note {
+    color: var(--text-faint);
+    font-size: 13px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .sop-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    gap: 18px;
+  }
+
+  .sop-card {
+    background: var(--card-bg);
+    color: #1e1e1e;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+
+  .tag {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: 20px;
+    background: var(--tag);
+    color: #1e1e1e;
+  }
+
+  .sop-title { font-size: 15px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
+
+  .sop-desc {
+    font-size: 12px;
+    color: #555555;
+    line-height: 1.5;
+    margin-bottom: 14px;
+    flex: 1;
+  }
+
+  .sop-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    padding-top: 10px;
+    margin-bottom: 12px;
+  }
+
+  .sop-author { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .sop-author .avatar { width: 20px; height: 20px; font-size: 10px; background: #d4d4d4; color: #1e1e1e; }
+  .sop-author span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sop-steps { flex-shrink: 0; color: var(--accent); font-weight: 600; }
+
+  .sop-card-actions { display: flex; gap: 8px; }
+
+  .action-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(45, 43, 46, 0.45);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 0;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .action-btn .icon { width: 12px; height: 12px; flex-shrink: 0; }
+  .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-faint);
+    padding: 60px 0;
+    font-size: 14px;
+  }
+
+  @media (max-width: 860px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { padding: 28px 20px 48px; }
+    .main-header { flex-direction: column; align-items: stretch; }
+    .search-input-wrap { max-width: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">
+        <img src="/icons/CODEX - 48PX.png" alt="">
+        <span>CODEX</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section-label">Dashboard</div>
+      <nav class="team-list">
+        <a class="team-item" href="/dashboard">My Dashboard</a>
+        <button class="team-item" id="allDepartmentsBtn" type="button">All Departments</button>
+      </nav>
+
+      <div class="sidebar-divider"></div>
+
+      <div class="sidebar-section-label">Teams</div>
+      <nav class="team-list" id="teamList" aria-label="Teams"></nav>
+
+      <div class="sidebar-footer">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Loading…</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="main-header">
+        <div class="search-input-wrap">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="search" id="searchInput" placeholder="Search this team's SOPs" aria-label="Search this team's SOPs">
+        </div>
+        <a class="btn-create" href="/">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </span>
+          Create SOP
+        </a>
+      </div>
+
+      <div class="team-header">
+        <div class="team-intro">
+          <h1 class="page-title" id="teamName">Team</h1>
+          <p class="team-desc" id="teamDesc">This team's SOPs, members, and important links live here.</p>
+        </div>
+        <div class="team-lead-card">
+          <div class="avatar" id="leadAvatar">?</div>
+          <div>
+            <div class="team-lead-name" id="leadName">Unassigned</div>
+            <div class="team-lead-title" id="leadTitle">Team lead</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-heading">Team Members</div>
+        <div id="membersList">
+          <p class="empty-note">Loading team members…</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-heading">Important Links</div>
+        <div class="links-row" id="linksRow">
+          <p class="empty-note">No links added for this team yet.</p>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-heading">SOPs</div>
+        <div id="grid">
+          <p class="empty-state">Loading SOPs…</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const ICONS = {
+      eye: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+      edit: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
+      download: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+    };
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function initials(name) {
+      const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+    }
+
+    function formatDate(value) {
+      if (!value) return '';
+      return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+
+    // The team name comes from the URL (/team/<name>), matching whatever
+    // category value the SOPs were saved under - there's no teams table yet.
+    // teamName becomes null when "All Departments" is selected, meaning no
+    // category filter - every SOP/member across every team.
+    let teamName = decodeURIComponent(location.pathname.split('/').filter(Boolean).pop() || 'Finance');
+
+    let allSops = [];
+
+    async function loadUser() {
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        const name = data.user?.name || 'Guest';
+        document.getElementById('userName').textContent = name;
+        document.getElementById('userAvatar').textContent = initials(name);
+      } catch {
+        document.getElementById('userName').textContent = 'Guest';
+      }
+    }
+
+    function initTeamHeader() {
+      document.getElementById('teamName').textContent = teamName || 'All Departments';
+      document.getElementById('teamDesc').textContent = teamName
+        ? "This team's SOPs, members, and important links live here."
+        : 'Every SOP and member across every department, unfiltered.';
+      document.getElementById('searchInput').placeholder = teamName
+        ? "Search this team's SOPs"
+        : 'Search all SOPs';
+      document.title = `${teamName || 'All Departments'} — CODEX`;
+      document.querySelector('.team-lead-card').style.display = teamName ? 'flex' : 'none';
+      document.getElementById('allDepartmentsBtn').classList.toggle('active', !teamName);
+    }
+
+    async function loadTeams() {
+      const teamList = document.getElementById('teamList');
+      try {
+        const res = await fetch('/departments');
+        if (!res.ok) throw new Error('Failed to load departments');
+        const departments = await res.json();
+        teamList.innerHTML = departments.map((d) => `
+          <a class="team-item${d.name === teamName ? ' active' : ''}" data-team="${escapeHtml(d.name)}" href="/team/${encodeURIComponent(d.name)}">${escapeHtml(d.name)}</a>
+        `).join('');
+
+        const current = departments.find((d) => d.name === teamName);
+        document.getElementById('leadName').textContent = current?.lead || 'Unassigned';
+        document.getElementById('leadAvatar').textContent = initials(current?.lead);
+
+        if (current?.description) {
+          document.getElementById('teamDesc').textContent = current.description;
+        }
+
+        const linksRow = document.getElementById('linksRow');
+        const links = teamName && Array.isArray(current?.links) ? current.links : [];
+        linksRow.innerHTML = links.length > 0
+          ? links.map((link) => `<a class="link-pill" href="${escapeHtml(link.url)}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join('')
+          : `<p class="empty-note">No links added for ${escapeHtml(teamName || 'any team')} yet.</p>`;
+      } catch (err) {
+        console.error('[teamlanding] failed to load teams:', err);
+      }
+    }
+
+    async function loadMembers() {
+      const membersList = document.getElementById('membersList');
+      try {
+        const url = teamName ? `/users?department=${encodeURIComponent(teamName)}` : '/users';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('Failed to load members');
+        const members = await res.json();
+
+        if (members.length === 0) {
+          membersList.innerHTML = `<p class="empty-note">No members assigned to ${escapeHtml(teamName || 'any department')} yet.</p>`;
+          return;
+        }
+
+        membersList.innerHTML = `<div class="member-list">${members.map((m) => `
+          <div class="member-item">
+            <span class="avatar">${escapeHtml(initials(m.name))}</span>
+            <div>
+              <div class="member-name">${escapeHtml(m.name || 'Unknown')}</div>
+              <div class="member-email">${escapeHtml(m.email || '')}</div>
+            </div>
+          </div>
+        `).join('')}</div>`;
+      } catch (err) {
+        console.error('[teamlanding] failed to load members:', err);
+        membersList.innerHTML = '<p class="empty-note">Could not load team members right now.</p>';
+      }
+    }
+
+    function sopCardHtml(sop) {
+      const stepCount = Array.isArray(sop.steps) ? sop.steps.length : null;
+      return `
+        <article class="sop-card">
+          <div class="sop-tags">
+            <span class="tag">${escapeHtml(sop.category || teamName || 'Uncategorized')}</span>
+          </div>
+          <h2 class="sop-title">${escapeHtml(sop.title)}</h2>
+          <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
+          <div class="sop-meta">
+            <div class="sop-author">
+              <span class="avatar">${escapeHtml(initials(sop.author))}</span>
+              <span>${escapeHtml(sop.author || 'Unknown')} · ${formatDate(sop.created_at)}</span>
+            </div>
+            ${stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
+          </div>
+          <div class="sop-card-actions">
+            <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
+            <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.edit} EDIT</a>
+            <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('grid');
+      const term = document.getElementById('searchInput').value.trim().toLowerCase();
+
+      const filtered = allSops.filter((sop) => !term
+        || sop.title?.toLowerCase().includes(term)
+        || sop.description?.toLowerCase().includes(term));
+
+      if (filtered.length === 0) {
+        grid.innerHTML = teamName
+          ? `<p class="empty-state">No SOPs for ${escapeHtml(teamName)} match your search yet.</p>`
+          : '<p class="empty-state">No SOPs match your search yet.</p>';
+        return;
+      }
+
+      grid.innerHTML = `<div class="sop-grid">${filtered.map(sopCardHtml).join('')}</div>`;
+
+      grid.querySelectorAll('[data-export]').forEach((btn) => {
+        btn.addEventListener('click', () => exportSop(btn.dataset.export));
+      });
+    }
+
+    async function exportSop(id) {
+      try {
+        const res = await fetch(`/sops/${id}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Not found');
+        const sop = await res.json();
+        const blob = new Blob([JSON.stringify(sop, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${(sop.title || 'sop').replace(/[^a-z0-9]+/gi, '-').toLowerCase()}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch {
+        alert('Could not export this SOP right now.');
+      }
+    }
+
+    async function loadSops() {
+      const grid = document.getElementById('grid');
+      try {
+        // No category means "All Departments" - omit credentials so the
+        // server doesn't narrow it down to just the caller's own SOPs and
+        // returns every SOP instead (see routes/sops.js's GET / scoping).
+        const res = teamName
+          ? await fetch(`/sops?category=${encodeURIComponent(teamName)}`, { credentials: 'include' })
+          : await fetch('/sops', { credentials: 'omit' });
+        if (!res.ok) throw new Error('Failed to load');
+        allSops = await res.json();
+        renderGrid();
+      } catch {
+        grid.innerHTML = '<p class="empty-state">Failed to load SOPs.</p>';
+      }
+    }
+
+    function showAllDepartments() {
+      teamName = null;
+      initTeamHeader();
+      document.querySelectorAll('#teamList .team-item').forEach((el) => el.classList.remove('active'));
+      loadTeams();
+      loadMembers();
+      loadSops();
+    }
+
+    document.getElementById('searchInput').addEventListener('input', renderGrid);
+    document.getElementById('allDepartmentsBtn').addEventListener('click', showAllDepartments);
+
+    initTeamHeader();
+    loadUser();
+    loadTeams();
+    loadMembers();
+    loadSops();
+  </script>
+</body>
+</html>

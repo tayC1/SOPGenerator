@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
   "name": "CODEX",
-  "version": "1.7.1",
+  "version": "2.0.1",
+  "version_name": "2.0.1b",
   "description": "Record clicks and screenshots to generate SOP documents",
+  "update_url": "https://kpcodex-production.up.railway.app/extension/updates.xml",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAuBaKOrwxMruNh60RYE4aB8WRKCp4N82yWjgR7Z4Gxh1kqjrpLTJCH/HFVtFghHjmtXprul4W/Wm05r6yqP6042ONhQ3PTxdCNyTiqxxXTB/QyPyBnfOJh/ae3wt/WoimMQ6DZ3a4RSYBn6qVDScEXdTOd2Xa+uG3Z1ku0mS+S/3NBrmkaZXHwZwYcgPHzxQRs/yiaACf+lNd5idGvbQgt0EW8hiKS2LbnvK+WQkG17QcF5Kowyp25+cmAq7+hFPbBITpOcxN7lzg05BTs+Jr+qISmQxc3qdZ4iNRQqaqVZxMS9OYL/pcwZqQX0b/jAd5GyQEv2ozXJJUsB6XRfawDQIDAQAB",
   "permissions": [
     "storage",
     "activeTab",
@@ -18,7 +21,7 @@
   },
   "icons":{
     "16": "Icons/CODEX - 16PX.png",
-    "32": "Icons/CPDEX - 32PX.png", 
+    "32": "Icons/CODEX - 32PX.png", 
     "48": "Icons/CODEX - 48PX.png",
     "128": "Icons/CODEX - 128PX.png"
   },
@@ -27,7 +30,7 @@
     "default_title": "SOP Generator",
     "default_icon": {
       "16": "Icons/CODEX - 16PX.png",
-      "32": "Icons/CPDEX - 32PX.png",
+      "32": "Icons/CODEX - 32PX.png",
       "48": "Icons/CODEX - 48PX.png",
       "128": "Icons/CODEX - 128PX.png"
     }
