@@ -75,48 +75,7 @@ document.addEventListener('DOMContentLoaded', function () {
   }
 
   var exportBtn = document.getElementById('exportBtn');
-  function bakeMarkerIntoScreenshot(base64, clickX, clickY) {
-    return new Promise(function (resolve) {
-      var img = new Image();
-      img.onload = function () {
-        var canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-
-        var r = Math.max(14, Math.round(canvas.width * 0.016));
-        ctx.beginPath();
-        ctx.arc(clickX * canvas.width, clickY * canvas.height, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(224,75,42,0.25)';
-        ctx.fill();
-        ctx.lineWidth = Math.max(2, Math.round(r * 0.18));
-        ctx.strokeStyle = '#e04b2a';
-        ctx.stroke();
-
-        resolve(canvas.toDataURL('image/png').replace('data:image/png;base64,', ''));
-      };
-      img.onerror = function () { resolve(base64); };
-      img.src = 'data:image/png;base64,' + base64;
-    });
-  }
-
-  function bakeAllMarkers(stepsList) {
-    return Promise.all(stepsList.map(function (step) {
-      if (!step.screenshot || step.clickX == null || step.clickY == null) {
-        return Promise.resolve(step);
-      }
-      return bakeMarkerIntoScreenshot(step.screenshot, step.clickX, step.clickY)
-        .then(function (baked) {
-          var copy = Object.assign({}, step);
-          copy.screenshot = baked;
-          return copy;
-        });
-    }));
-  }
-
-  function buildMarkdown(sopTitle, sopSummary, meta, stepsList) {
-    stepsList = stepsList || steps;
+  function buildMarkdown(sopTitle, sopSummary, meta) {
     var md = '';
     if (meta) {
       var q = function(s) { return '"' + (s || '').replace(/"/g, '\\"') + '"'; };
@@ -131,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
     md += '# ' + sopTitle + '\n\n';
     if (sopSummary) md += sopSummary + '\n\n';
     var stepNum = 0;
-    stepsList.forEach(function (step) {
+    steps.forEach(function (step) {
       if (step.type === 'warning') {
         md += '> **Warning:** ' + (step.content || '') + '\n\n';
       } else if (step.type === 'tip') {
@@ -271,19 +230,17 @@ document.addEventListener('DOMContentLoaded', function () {
   function doExport() {
     if (steps.length === 0) { alert('No steps to export.'); return; }
     showExportForm(function (meta) {
-      bakeAllMarkers(steps).then(function (bakedSteps) {
-        var md = buildMarkdown(meta.title, meta.description, meta, bakedSteps);
-        var safeTitle = meta.title.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'SOP';
-        var blob = new Blob([md], { type: 'text/markdown' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = safeTitle + '.md';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      });
+      var md = buildMarkdown(meta.title, meta.description, meta);
+      var safeTitle = meta.title.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '') || 'SOP';
+      var blob = new Blob([md], { type: 'text/markdown' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url;
+      a.download = safeTitle + '.md';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     });
   }
 
