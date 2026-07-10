@@ -189,8 +189,8 @@
               <span class="step-number">Step ${i + 1}</span>
               <span class="step-description">${escape(step.description || step.title || '')}</span>
             </div>
-            ${step.screenshot_base64
-              ? `<img class="step-screenshot" src="data:image/png;base64,${step.screenshot_base64}" alt="Step ${i + 1} screenshot">`
+            ${step.screenshot || step.screenshot_base64
+              ? `<img class="step-screenshot" src="data:image/png;base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">`
               : ''}
           </div>
         `).join('');
