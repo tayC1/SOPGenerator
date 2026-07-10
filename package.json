@@ -4,7 +4,8 @@
   "description": "Backend API server for the CODEX Chrome extension",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "build": "node scripts/pack-extension.js"
   },
   "dependencies": {
     "connect-pg-simple": "^10.0.0",
@@ -16,5 +17,8 @@
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "crx": "^5.0.1"
   }
 }

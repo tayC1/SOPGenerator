@@ -4,6 +4,7 @@ const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const db = require('./db');
 const { pool } = db;
 const passport = require('./auth');
@@ -169,6 +170,23 @@ app.get('/sop.html', (req, res) => {
 
 app.get('/team/:category', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teamlanding.html'));
+});
+
+// Self-hosted extension distribution: `npm run build` (wired into the
+// Railway build step via package.json's "build" script) regenerates these
+// two files fresh on every deploy - see scripts/pack-extension.js. Nothing
+// here needs a persistent volume; if dist/ is missing (e.g. local dev
+// without having run the build), these just 404 instead of crashing.
+app.get('/extension/updates.xml', (req, res) => {
+  const file = path.join(__dirname, 'dist', 'updates.xml');
+  if (!fs.existsSync(file)) return res.status(404).send('Run `npm run build` to generate the update manifest.');
+  res.type('application/xml').sendFile(file);
+});
+
+app.get('/extension/codex.crx', (req, res) => {
+  const file = path.join(__dirname, 'dist', 'codex.crx');
+  if (!fs.existsSync(file)) return res.status(404).send('Run `npm run build` to generate the packed extension.');
+  res.type('application/x-chrome-extension').sendFile(file);
 });
 
 // Resolves req.user from either the cookie session or a Bearer token - same
