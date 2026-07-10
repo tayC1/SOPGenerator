@@ -109,7 +109,7 @@
     <p class="subtitle">get set up in 2 minutes</p>
 
     <div class="action-list">
-      <a class="action-btn primary" href="#" id="installExtensionBtn">
+      <a class="action-btn primary" href="/extension/codex.crx" download id="installExtensionBtn">
         <span class="action-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
         </span>
@@ -144,12 +144,8 @@
   </div>
 
   <script>
-    // Placeholders until there's a published Chrome Web Store listing / a
-    // desktop app to link to - everything else on this page is wired live.
-    document.getElementById('installExtensionBtn').addEventListener('click', (e) => {
-      e.preventDefault();
-      alert('Chrome Web Store listing coming soon - for now, load the extension unpacked from the CODEX repo.');
-    });
+    // Placeholder until there's an actual desktop app to link to -
+    // everything else on this page is wired live.
     document.getElementById('installDesktopBtn').addEventListener('click', (e) => {
       e.preventDefault();
       alert('The desktop app is not available yet.');

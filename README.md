@@ -29,16 +29,29 @@ Signing in (via Google, restricted to `kramer.pro` Workspace accounts) links the
 ## Getting Started (for beta testers)
 
 1. **Confirm you have a `kramer.pro` Google account.** Sign-in is restricted to the Workspace domain — a personal Gmail account will be rejected.
-2. **Load the extension:**
-   - Clone or download this repository
+2. **Install the extension:**
+   - Download **[codex.crx](https://kpcodex-production.up.railway.app/extension/codex.crx)**
    - Go to `chrome://extensions/`
-   - Enable **Developer mode** (top-right toggle)
-   - Click **Load unpacked** and select the repo folder
+   - Enable **Developer mode** (top-right toggle) — required to sideload a `.crx` that isn't from the Chrome Web Store
+   - Drag the downloaded `codex.crx` file onto the `chrome://extensions/` page and confirm **Add extension** when prompted
    - The CODEX icon appears in your toolbar
 3. **Sign in on the website:** visit [kpcodex-production.up.railway.app](https://kpcodex-production.up.railway.app) and sign in with Google. This automatically links your session to the extension — you don't sign in separately inside the extension itself.
 4. You're set up. The extension talks to the same hosted backend everyone else uses, so there's no local server to run and no config to edit.
 
-> Note: since this isn't published to the Chrome Web Store, Chrome will show a permanent "Developer mode extensions" banner and a broad site-access permission prompt on install. Both are expected for a sideloaded extension and not a sign of anything being broken.
+**Updates happen automatically.** The extension is built with `update_url` pointing at our hosted update manifest, so Chrome periodically checks it in the background and pulls new versions on its own — no manual re-download or reload needed. Chrome's check interval isn't instant (typically a few hours), so if you need a specific fix *right now*, you can force it: `chrome://extensions/` → enable Developer mode → **Update** button at the top of the page.
+
+> If your organization has CODEX force-installed via Google Admin Console instead, none of the above applies to you — it's already installed and stays updated automatically, with no Developer Mode banner at all.
+
+> Note: since this isn't published to the Chrome Web Store, Chrome will show a permanent "Developer mode extensions" banner and a broad site-access permission prompt on install. This is expected for a sideloaded extension and not a sign of anything being broken.
+
+## Beta
+
+CODEX is in active beta — things will change, and you may run into rough edges. If you hit a bug, something looks broken, or a feature doesn't behave the way you'd expect:
+
+- Open an issue on the [GitHub Issues page](https://github.com/tayC1/SOPGenerator/issues)
+- Include what you were doing, what you expected to happen, and what actually happened — a screenshot helps a lot
+
+That's the one place to report anything, big or small.
 
 ## Usage
 
@@ -137,7 +150,7 @@ The extension has no sign-in UI of its own. Instead: you sign in on the website 
 - Cannot record clicks on Chrome UI elements or other extensions
 - Sites with strict CSP (Content Security Policy) may block recording
 - Screenshot capture is subject to Chrome's built-in restrictions
-- Not published to the Chrome Web Store yet — install via "Load unpacked"
+- Not published to the Chrome Web Store yet — install by sideloading the packed `.crx` (see Getting Started)
 
 ## Future enhancements
 
