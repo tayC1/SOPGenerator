@@ -300,6 +300,8 @@
   }
 
   .sop-title { font-size: 15px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
+  .sop-title a { color: inherit; text-decoration: none; }
+  .sop-title a:hover { text-decoration: underline; }
 
   .sop-desc {
     font-size: 12px;
@@ -566,7 +568,7 @@
           <div class="sop-tags">
             <span class="tag">${escapeHtml(sop.category || teamName || 'Uncategorized')}</span>
           </div>
-          <h2 class="sop-title">${escapeHtml(sop.title)}</h2>
+          <h2 class="sop-title"><a href="/sop.html?id=${sop.id}">${escapeHtml(sop.title)}</a></h2>
           <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
           <div class="sop-meta">
             <div class="sop-author">
