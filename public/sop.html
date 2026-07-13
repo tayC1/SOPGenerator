@@ -165,7 +165,9 @@
 
       let sop;
       try {
-        const res = await fetch(`/sops/${id}`);
+        let res = await fetch(`/sops/${id}`);
+        // Anonymous visitor (no session) - fall back to the public-only view.
+        if (res.status === 401) res = await fetch(`/sops/public/${id}`, { credentials: 'omit' });
         if (!res.ok) throw new Error('Not found');
         sop = await res.json();
       } catch {

@@ -243,10 +243,9 @@
     async function load() {
       const grid = document.getElementById('grid');
       try {
-        // Deliberately no credentials - this is the public, unfiltered view
-        // of every SOP, not the caller's own (see routes/sops.js's GET /
-        // scoping: no category + no resolved req.user = everything).
-        const res = await fetch('/sops', { credentials: 'omit' });
+        // Public, unauthenticated view - only SOPs explicitly marked public
+        // (see routes/sops.js's GET /public).
+        const res = await fetch('/sops/public', { credentials: 'omit' });
         if (!res.ok) throw new Error('Failed to load');
         const sops = await res.json();
 
