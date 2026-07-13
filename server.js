@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const session = require('express-session');
 const pgSession = require('connect-pg-simple')(session);
 const cors = require('cors');
@@ -9,11 +11,63 @@ const db = require('./db');
 const { pool } = db;
 const passport = require('./auth');
 const sopsRouter = require('./routes/sops');
+const { requireAuth, requireAdmin } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: true, credentials: true }));
+// Chrome extension's fixed production ID (see manifest.json / dashboard.html's
+// EXTENSION_ID) - the only non-web origin allowed to call this API with
+// credentials.
+const EXTENSION_ORIGIN = 'chrome-extension://leklkiojcckkjcgojcaalbnnagfncknm';
+const WEB_ORIGINS = [
+  process.env.BASE_URL,
+  'https://kpcodex-production.up.railway.app',
+  'https://codex.kramer.pro',
+].filter(Boolean);
+if (process.env.NODE_ENV !== 'production') {
+  WEB_ORIGINS.push('http://localhost:3000', 'http://127.0.0.1:3000');
+}
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      // Every page here uses inline <script> blocks (no build step to add
+      // nonces yet), so scriptSrc can't drop 'unsafe-inline' without
+      // breaking the whole app.
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      baseUri: ["'self'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+  // Default 'same-origin' CORP would block the extension's cross-origin
+  // fetches to this API even with valid CORS headers - access control here
+  // is handled by the CORS allowlist below instead.
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
+app.use(cors({
+  origin(origin, callback) {
+    // No Origin header (curl, server-to-server, same-origin page fetches) - allow.
+    if (!origin) return callback(null, true);
+    if (WEB_ORIGINS.includes(origin) || origin === EXTENSION_ORIGIN) return callback(null, true);
+    callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+}));
+
+const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
+const extensionTokenLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+app.use('/auth', authLimiter);
+app.use('/sops', apiLimiter);
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // index: false - "/" needs custom logic (redirect signed-in users straight
@@ -35,7 +89,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000,
   },
 }));
@@ -114,7 +168,7 @@ app.get('/auth/me', async (req, res) => {
   res.json({ user: null });
 });
 
-app.post('/auth/extension-token', async (req, res) => {
+app.post('/auth/extension-token', extensionTokenLimiter, async (req, res) => {
   if (!req.user) {
     console.warn('[auth] /auth/extension-token: rejected, no active session');
     return res.status(401).json({ error: 'Not authenticated' });
@@ -188,35 +242,6 @@ app.get('/extension/codex.crx', (req, res) => {
   if (!fs.existsSync(file)) return res.status(404).send('Run `npm run build` to generate the packed extension.');
   res.type('application/x-chrome-extension').sendFile(file);
 });
-
-// Resolves req.user from either the cookie session or a Bearer token - same
-// fallback shape used throughout (routes/sops.js, /auth/me).
-async function resolveUser(req) {
-  if (req.user) return req.user;
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    try {
-      const result = await db.query('SELECT * FROM users WHERE extension_token = $1', [authHeader.slice(7)]);
-      if (result.rows.length > 0) return result.rows[0];
-    } catch (err) {
-      console.error('[auth] bearer token lookup failed:', err.message);
-    }
-  }
-  return null;
-}
-
-async function requireAuth(req, res, next) {
-  req.user = await resolveUser(req);
-  if (!req.user) return res.status(401).json({ error: 'You must be signed in' });
-  next();
-}
-
-async function requireAdmin(req, res, next) {
-  req.user = await resolveUser(req);
-  if (!req.user) return res.status(401).json({ error: 'You must be signed in' });
-  if (!req.user.is_admin) return res.status(403).json({ error: 'Admin access required' });
-  next();
-}
 
 app.get('/departments', async (req, res) => {
   try {
