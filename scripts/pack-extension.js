@@ -27,6 +27,7 @@ const path = require('path');
 const ChromeExtension = require('crx');
 
 const ROOT = path.join(__dirname, '..');
+const EXTENSION_DIR = path.join(ROOT, 'extension');
 const STAGING_DIR = path.join(ROOT, '.extension-build');
 const DIST_DIR = path.join(ROOT, 'dist');
 const UPDATE_BASE_URL = 'https://kpcodex-production.up.railway.app';
@@ -65,7 +66,7 @@ function stageExtensionFiles() {
   fs.mkdirSync(STAGING_DIR, { recursive: true });
 
   for (const entry of EXTENSION_ENTRIES) {
-    const src = path.join(ROOT, entry);
+    const src = path.join(EXTENSION_DIR, entry);
     if (!fs.existsSync(src)) {
       throw new Error(`Expected extension file/folder missing: ${entry}`);
     }
