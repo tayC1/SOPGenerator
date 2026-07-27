@@ -95,14 +95,15 @@ From your dashboard, click **EDIT** on any SOP you own. It reopens the same rich
 ## Architecture
 
 ```
-Extension                          Backend (Railway)
+extension/                         Backend (Railway)
 ├── manifest.json                  ├── server.js       (Express, routes, sessions)
 ├── background.js  (service worker)├── auth.js          (Google OAuth, Workspace-restricted)
 ├── content.js      (click capture)├── db.js            (Postgres connection)
 ├── popup.html/js   (record UI)    ├── schema.sql       (idempotent migrations)
 ├── review.html                    ├── routes/sops.js   (SOP CRUD)
 ├── scale.js        (review/edit UI, screenshot editor, publish/save)
-└── config.js        (points at the hosted backend URL)
+├── config.js        (points at the hosted backend URL)
+└── Icons/            (copy of root Icons/, also served by the backend at /icons)
 
 Website (public/)                  Admin tooling
 ├── index.html       (landing / sign-in)
