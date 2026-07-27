@@ -339,6 +339,9 @@
   .action-btn .icon { width: 12px; height: 12px; flex-shrink: 0; }
   .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
 
+  .action-btn-danger { color: #e08080; }
+  .action-btn-danger:hover { background: rgba(224, 128, 128, 0.18); }
+
   .empty-state {
     text-align: center;
     color: var(--text-faint);
@@ -453,6 +456,7 @@
       eye: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
       edit: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
       download: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+      trash: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
     };
 
     function escapeHtml(str) {
@@ -476,6 +480,21 @@
 
     let allSops = [];
     let activeCategory = '';
+    let currentUser = null;
+
+    // Owners can always delete their own SOPs. An admin may also delete
+    // one within their scope: super_admin covers everything, department_admin
+    // only SOPs categorized under a department they're currently in (an
+    // uncategorized SOP has no department for them to be scoped over).
+    function canDeleteSop(sop) {
+      if (!currentUser) return false;
+      if (sop.user_id === currentUser.id) return true;
+      if (currentUser.role === 'super_admin') return true;
+      if (currentUser.role === 'department_admin' && sop.category) {
+        return (currentUser.departments || []).includes(sop.category);
+      }
+      return false;
+    }
 
     // Chrome Web Store-assigned extension ID for the published listing - if
     // the listing is ever republished under a different keypair, this
@@ -490,6 +509,11 @@
         document.getElementById('userName').textContent = name;
         document.getElementById('userAvatar').textContent = initials(name);
         document.getElementById('adminLink').style.display = data.user?.is_admin ? 'block' : 'none';
+        currentUser = data.user || null;
+        // loadSops() may have already rendered cards before currentUser was
+        // known, which would hide delete buttons the caller is actually
+        // entitled to - re-render now that permission info is in.
+        renderGrid();
         return data.user || null;
       } catch (err) {
         console.error('[auth-bridge] /auth/me failed:', err);
@@ -554,6 +578,7 @@
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
             <button class="action-btn" type="button" data-edit="${sop.id}">${ICONS.edit} EDIT</button>
             <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
+            ${canDeleteSop(sop) ? `<button class="action-btn action-btn-danger" type="button" data-delete="${sop.id}">${ICONS.trash} DELETE</button>` : ''}
           </div>
         </article>
       `;
@@ -583,6 +608,9 @@
       });
       grid.querySelectorAll('[data-edit]').forEach((btn) => {
         btn.addEventListener('click', () => editSop(btn.dataset.edit));
+      });
+      grid.querySelectorAll('[data-delete]').forEach((btn) => {
+        btn.addEventListener('click', () => deleteSop(btn));
       });
     }
 
@@ -641,6 +669,37 @@
         });
       } catch {
         alert('Could not open this SOP for editing right now.');
+      }
+    }
+
+    // Two-click confirm (armed state) instead of window.confirm() - same
+    // pattern used elsewhere in the app for destructive actions.
+    async function deleteSop(btn) {
+      const id = btn.dataset.delete;
+      if (btn.dataset.armed !== 'true') {
+        btn.dataset.armed = 'true';
+        btn.innerHTML = `${ICONS.trash} CONFIRM?`;
+        setTimeout(() => {
+          if (btn.isConnected && btn.dataset.armed === 'true') {
+            btn.dataset.armed = 'false';
+            btn.innerHTML = `${ICONS.trash} DELETE`;
+          }
+        }, 3000);
+        return;
+      }
+
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/sops/${id}`, { method: 'DELETE', credentials: 'include' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
+        allSops = allSops.filter((sop) => String(sop.id) !== String(id));
+        renderStats();
+        renderGrid();
+      } catch (err) {
+        btn.disabled = false;
+        btn.dataset.armed = 'false';
+        btn.innerHTML = `${ICONS.trash} DELETE`;
+        alert(err.message);
       }
     }
 

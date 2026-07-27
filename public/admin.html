@@ -523,6 +523,16 @@
       });
     }
 
+    // A bare "app.ramp.com" has no scheme, so a browser resolves it as a
+    // path relative to whatever page it's clicked from instead of treating
+    // it as an external site - assume https:// unless a scheme is already
+    // present (http:, mailto:, etc.).
+    function normalizeUrl(url) {
+      const trimmed = String(url ?? '').trim();
+      if (!trimmed || /^[a-z][a-z0-9+.-]*:/i.test(trimmed)) return trimmed;
+      return `https://${trimmed}`;
+    }
+
     async function saveDepartment(card) {
       const deptId = card.dataset.deptId;
       const stateEl = document.getElementById(`dept-save-state-${deptId}`);
@@ -531,7 +541,7 @@
       const links = [...card.querySelectorAll('.link-row')]
         .map((row) => ({
           label: row.querySelector('.link-label').value.trim(),
-          url: row.querySelector('.link-url').value.trim(),
+          url: normalizeUrl(row.querySelector('.link-url').value),
         }))
         .filter((link) => link.label && link.url);
 
