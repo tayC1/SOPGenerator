@@ -107,6 +107,10 @@ document.getElementById('viewSopsBtn').addEventListener('click', () => {
   chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
 });
 
+adminLink.addEventListener('click', () => {
+  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/admin' });
+});
+
 chrome.storage.onChanged.addListener((changes, area) => {
   if (area !== 'local') return;
   const stepsChange     = changes.steps;
@@ -138,6 +142,7 @@ const userAvatar      = document.getElementById('userAvatar');
 const userNameLabel  = document.getElementById('userNameLabel');
 const signOutBtn     = document.getElementById('signOutBtn');
 const signInLink     = document.getElementById('signInLink');
+const adminLink      = document.getElementById('adminLink');
 const siteSops       = document.getElementById('siteSops');
 const siteSopsHeading = document.getElementById('siteSopsHeading');
 const siteSopsList   = document.getElementById('siteSopsList');
@@ -165,6 +170,7 @@ async function renderAuthState() {
     siteSops.style.display = 'none';
     howItWorks.style.display = 'block';
     signInLink.style.display = 'inline';
+    adminLink.style.display = 'none';
     return;
   }
 
@@ -172,6 +178,7 @@ async function renderAuthState() {
   siteSops.style.display = 'block';
   howItWorks.style.display = 'none';
   signInLink.style.display = 'none';
+  adminLink.style.display = currentUser.is_admin ? 'inline' : 'none';
 
   userNameLabel.textContent = currentUser.name || currentUser.email || 'Signed in';
   userAvatar.textContent = initials(currentUser.name || currentUser.email);

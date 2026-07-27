@@ -542,7 +542,7 @@
 
         chrome.runtime.sendMessage(
           EXTENSION_ID,
-          { type: 'USER_SIGNED_IN', token, user: { id: user.id, name: user.name, email: user.email } },
+          { type: 'USER_SIGNED_IN', token, user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin } },
           (response) => {
             if (chrome.runtime.lastError) {
               // Expected if the extension isn't installed in this browser - not an error.
