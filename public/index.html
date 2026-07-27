@@ -80,6 +80,8 @@
       const el = document.getElementById('authError');
       el.textContent = error === 'workspace_required'
         ? 'Sign-in failed: please use your kramer.pro Google account.'
+        : error === 'account_deactivated'
+        ? 'This account has been deactivated. Contact an admin if you believe this is a mistake.'
         : 'Sign-in failed: something went wrong. Please try again.';
       el.style.display = 'block';
       console.error('[auth] sign-in error from redirect:', error);

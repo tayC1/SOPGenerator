@@ -113,6 +113,56 @@
   .save-state.ok { color: #7fc98f; }
   .save-state.err { color: #e08080; }
 
+  .admin-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.8);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .admin-toggle input { cursor: pointer; }
+  .admin-toggle.disabled { color: var(--text-faint); cursor: not-allowed; }
+
+  .badge-role {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--tag);
+    background: rgba(233, 109, 45, 0.15);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  .badge-deactivated {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #e08080;
+    background: rgba(224, 128, 128, 0.15);
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-top: 3px;
+  }
+
+  tr.deactivated-row { opacity: 0.6; }
+
+  .btn-remove, .btn-reactivate {
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-remove { background: rgba(224, 128, 128, 0.18); color: #e08080; }
+  .btn-remove:hover { background: rgba(224, 128, 128, 0.3); }
+  .btn-reactivate { background: rgba(127, 201, 143, 0.18); color: #7fc98f; }
+  .btn-reactivate:hover { background: rgba(127, 201, 143, 0.3); }
+  .btn-remove:disabled, .btn-reactivate:disabled { opacity: 0.6; cursor: default; }
+
   /* department cards */
   .dept-grid {
     display: grid;
@@ -223,34 +273,70 @@
     }
 
     let departments = [];
+    let currentUser = null;
 
     async function loadDepartments() {
-      const res = await fetch('/departments');
+      const res = await fetch('/admin/departments', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to load departments');
       departments = await res.json();
     }
 
     function userRowHtml(user) {
       const userDepartments = Array.isArray(user.departments) ? user.departments : [];
+      const isDeactivated = user.is_active === false;
+      const isSelf = String(user.id) === String(currentUser?.id);
+
       const checkboxes = departments.map((d) => `
         <label class="dept-checkbox">
-          <input type="checkbox" value="${escapeHtml(d.name)}"${userDepartments.includes(d.name) ? ' checked' : ''}>
+          <input type="checkbox" value="${escapeHtml(d.name)}"${userDepartments.includes(d.name) ? ' checked' : ''}${isDeactivated ? ' disabled' : ''}>
           ${escapeHtml(d.name)}
         </label>
       `).join('');
+
+      let adminCell;
+      if (user.role === 'super_admin') {
+        adminCell = '<span class="badge-role">Super Admin</span>';
+      } else {
+        const isAdmin = user.role === 'department_admin';
+        // Scope-coupling: a member with zero departments has nothing to be
+        // scoped over, so promoting them is disabled until they're assigned one.
+        const disabled = isDeactivated || (!isAdmin && userDepartments.length === 0);
+        adminCell = `
+          <label class="admin-toggle${disabled ? ' disabled' : ''}">
+            <input type="checkbox" class="admin-toggle-input" data-user-id="${user.id}"${isAdmin ? ' checked' : ''}${disabled ? ' disabled' : ''}>
+            Is Admin
+          </label>
+          <span class="save-state" id="admin-msg-${user.id}"></span>
+        `;
+      }
+
+      let actionCell;
+      if (isDeactivated) {
+        actionCell = `<button type="button" class="btn-reactivate" data-user-id="${user.id}">Reactivate</button>`;
+      } else if (isSelf || (user.role !== 'member' && currentUser?.role !== 'super_admin')) {
+        actionCell = '';
+      } else {
+        actionCell = `<button type="button" class="btn-remove" data-user-id="${user.id}">Remove</button>`;
+      }
+
       return `
-        <tr>
-          <td>${escapeHtml(user.name || 'Unknown')}<br><span class="email">${escapeHtml(user.email)}</span></td>
+        <tr${isDeactivated ? ' class="deactivated-row"' : ''}>
+          <td>${escapeHtml(user.name || 'Unknown')}<br><span class="email">${escapeHtml(user.email)}</span>${isDeactivated ? '<br><span class="badge-deactivated">Deactivated</span>' : ''}</td>
           <td>
             <div class="dept-checkboxes" data-user-id="${user.id}">${checkboxes}</div>
             <span class="save-state" id="save-state-${user.id}"></span>
+          </td>
+          <td>${adminCell}</td>
+          <td>
+            ${actionCell}
+            <span class="save-state" id="action-msg-${user.id}"></span>
           </td>
         </tr>
       `;
     }
 
     async function loadUsers() {
-      const res = await fetch('/users');
+      const res = await fetch('/admin/users', { credentials: 'include' });
       if (!res.ok) throw new Error('Failed to load users');
       const users = await res.json();
 
@@ -261,6 +347,18 @@
         container.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
           checkbox.addEventListener('change', () => saveUserDepartments(container));
         });
+      });
+
+      tbody.querySelectorAll('.admin-toggle-input').forEach((toggle) => {
+        toggle.addEventListener('change', () => toggleUserAdmin(toggle));
+      });
+
+      tbody.querySelectorAll('.btn-remove').forEach((btn) => {
+        btn.addEventListener('click', () => removeUser(btn));
+      });
+
+      tbody.querySelectorAll('.btn-reactivate').forEach((btn) => {
+        btn.addEventListener('click', () => reactivateUser(btn));
       });
     }
 
@@ -281,9 +379,87 @@
         if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
         stateEl.textContent = 'Saved ✓';
         stateEl.className = 'save-state ok';
+        // Removing a department can auto-demote an admin (scope-coupling) -
+        // refresh the row so the Is Admin toggle reflects that.
+        await loadUsers();
       } catch (err) {
         stateEl.textContent = err.message;
         stateEl.className = 'save-state err';
+      }
+    }
+
+    async function toggleUserAdmin(toggle) {
+      const userId = toggle.dataset.userId;
+      const makeAdmin = toggle.checked;
+      const msgEl = document.getElementById(`admin-msg-${userId}`);
+      toggle.disabled = true;
+      msgEl.textContent = 'Saving…';
+      msgEl.className = 'save-state';
+      try {
+        const res = await fetch(`/users/${userId}/role`, {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ isAdmin: makeAdmin }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to update admin status');
+        await loadUsers();
+      } catch (err) {
+        toggle.checked = !makeAdmin;
+        toggle.disabled = false;
+        msgEl.textContent = err.message;
+        msgEl.className = 'save-state err';
+      }
+    }
+
+    // Two-click confirm (armed state) instead of window.confirm() - same
+    // pattern the extension popup uses, kept consistent here for a
+    // destructive action even though this page isn't under that restriction.
+    async function removeUser(btn) {
+      const userId = btn.dataset.userId;
+      if (btn.dataset.armed !== 'true') {
+        btn.dataset.armed = 'true';
+        btn.textContent = 'Confirm remove?';
+        setTimeout(() => {
+          if (btn.isConnected && btn.dataset.armed === 'true') {
+            btn.dataset.armed = 'false';
+            btn.textContent = 'Remove';
+          }
+        }, 3000);
+        return;
+      }
+
+      const msgEl = document.getElementById(`action-msg-${userId}`);
+      btn.disabled = true;
+      msgEl.textContent = 'Removing…';
+      msgEl.className = 'save-state';
+      try {
+        const res = await fetch(`/users/${userId}/deactivate`, { method: 'POST', credentials: 'include' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to remove user');
+        await loadUsers();
+      } catch (err) {
+        btn.disabled = false;
+        btn.dataset.armed = 'false';
+        btn.textContent = 'Remove';
+        msgEl.textContent = err.message;
+        msgEl.className = 'save-state err';
+      }
+    }
+
+    async function reactivateUser(btn) {
+      const userId = btn.dataset.userId;
+      const msgEl = document.getElementById(`action-msg-${userId}`);
+      btn.disabled = true;
+      msgEl.textContent = 'Reactivating…';
+      msgEl.className = 'save-state';
+      try {
+        const res = await fetch(`/users/${userId}/reactivate`, { method: 'POST', credentials: 'include' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to reactivate user');
+        await loadUsers();
+      } catch (err) {
+        btn.disabled = false;
+        msgEl.textContent = err.message;
+        msgEl.className = 'save-state err';
       }
     }
 
@@ -398,6 +574,8 @@
         return;
       }
 
+      currentUser = user;
+
       main.innerHTML = `
         <h1 class="page-title">Admin Portal</h1>
         <p class="page-subtitle">Assign departments and manage team pages.</p>
@@ -406,7 +584,7 @@
           <div class="section-heading">Assign Departments</div>
           <div class="card">
             <table>
-              <thead><tr><th>User</th><th>Department</th></tr></thead>
+              <thead><tr><th>User</th><th>Department</th><th>Admin</th><th></th></tr></thead>
               <tbody id="usersTbody"></tbody>
             </table>
           </div>
