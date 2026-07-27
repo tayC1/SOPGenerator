@@ -477,9 +477,10 @@
     let allSops = [];
     let activeCategory = '';
 
-    // Derived from the "key" field in the extension's manifest.json - if that
-    // keypair ever changes, this literal must be updated to match.
-    const EXTENSION_ID = 'leklkiojcckkjcgojcaalbnnagfncknm';
+    // Chrome Web Store-assigned extension ID for the published listing - if
+    // the listing is ever republished under a different keypair, this
+    // literal must be updated to match.
+    const EXTENSION_ID = 'capicbafpiflgbopfcklobgdebodigmb';
 
     async function loadUser() {
       try {

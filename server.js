@@ -16,10 +16,9 @@ const { requireAuth, requireAdmin } = require('./middleware/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Chrome extension's fixed production ID (see manifest.json / dashboard.html's
-// EXTENSION_ID) - the only non-web origin allowed to call this API with
-// credentials.
-const EXTENSION_ORIGIN = 'chrome-extension://leklkiojcckkjcgojcaalbnnagfncknm';
+// Chrome extension's fixed production ID (see dashboard.html's EXTENSION_ID)
+// - the only non-web origin allowed to call this API with credentials.
+const EXTENSION_ORIGIN = 'chrome-extension://capicbafpiflgbopfcklobgdebodigmb';
 const WEB_ORIGINS = [
   process.env.BASE_URL,
   'https://kpcodex-production.up.railway.app',
