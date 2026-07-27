@@ -12,12 +12,19 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS extension_token TEXT;
-ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS title TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS default_category TEXT;
+
+-- NOTE: as of migrations/1785184098125_add-user-role.js, schema changes for
+-- this table are tracked via node-pg-migrate (see migrations/), not here.
+-- This file is left as a historical snapshot up to that point; is_admin was
+-- replaced by `role` and is NOT re-added below.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'member';
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS deactivated_at TIMESTAMPTZ;
 
 -- A user can belong to more than one team, so department membership is a
 -- join table keyed on department name (matching how sops.category and the

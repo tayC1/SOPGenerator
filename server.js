@@ -11,7 +11,7 @@ const db = require('./db');
 const { pool } = db;
 const passport = require('./auth');
 const sopsRouter = require('./routes/sops');
-const { requireAuth, requireAdmin } = require('./middleware/auth');
+const { resolveUser, requireAuth, requireAdmin, isAdminRole, departmentsForUser, isScopedOverDepartments } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -113,7 +113,8 @@ app.get('/auth/google/callback', (req, res, next) => {
     }
     if (!user) {
       console.warn('[auth] callback rejected sign-in:', info?.message);
-      return res.redirect('/?error=workspace_required');
+      const errorCode = info?.message === 'This account has been deactivated.' ? 'account_deactivated' : 'workspace_required';
+      return res.redirect(`/?error=${errorCode}`);
     }
     req.logIn(user, (loginErr) => {
       if (loginErr) {
@@ -134,37 +135,14 @@ app.get('/auth/logout', (req, res) => {
   });
 });
 
-async function getUserDepartments(userId) {
-  const result = await db.query('SELECT department_name FROM user_departments WHERE user_id = $1 ORDER BY department_name', [userId]);
-  return result.rows.map((r) => r.department_name);
-}
-
 app.get('/auth/me', async (req, res) => {
-  if (req.user) {
-    const departments = await getUserDepartments(req.user.id);
-    return res.json({ user: { ...req.user, departments } });
-  }
+  const user = await resolveUser(req);
+  if (!user) return res.json({ user: null });
 
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.slice(7);
-    try {
-      const result = await db.query(
-        'SELECT * FROM users WHERE extension_token = $1',
-        [token]
-      );
-      if (result.rows.length > 0) {
-        const departments = await getUserDepartments(result.rows[0].id);
-        return res.json({ user: { ...result.rows[0], departments } });
-      }
-      console.warn('[auth] /auth/me: no user matches provided extension token');
-    } catch (err) {
-      console.error('[auth] /auth/me: token lookup failed:', err.message);
-      return res.status(500).json({ error: err.message });
-    }
-  }
-
-  res.json({ user: null });
+  const departments = await departmentsForUser(user.id);
+  // is_admin stays in the response (derived from role, not a stored column)
+  // so existing clients like dashboard.html's nav-link check keep working.
+  res.json({ user: { ...user, is_admin: isAdminRole(user.role), departments } });
 });
 
 app.post('/auth/extension-token', extensionTokenLimiter, async (req, res) => {
@@ -254,6 +232,12 @@ app.get('/departments', async (req, res) => {
 
 app.patch('/departments/:id', requireAdmin, async (req, res) => {
   try {
+    const deptCheck = await db.query('SELECT name FROM departments WHERE id = $1', [req.params.id]);
+    if (deptCheck.rows.length === 0) return res.status(404).json({ error: 'Department not found' });
+    if (!(await isScopedOverDepartments(req.user, [deptCheck.rows[0].name]))) {
+      return res.status(403).json({ error: 'You are not an admin over this department' });
+    }
+
     const { lead, description, links } = req.body;
     const result = await db.query(
       `UPDATE departments SET lead = $1, description = $2, links = $3
@@ -261,7 +245,6 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
        RETURNING id, name, lead, description, links`,
       [lead ?? null, description ?? null, JSON.stringify(links ?? []), req.params.id]
     );
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Department not found' });
     res.json(result.rows[0]);
   } catch (err) {
     console.error('[departments] failed to update department:', err.message);
@@ -269,7 +252,53 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
   }
 });
 
-app.get('/users', async (req, res) => {
+// Admin-portal-only, scoped listings. Distinct from the public GET
+// /departments and GET /users below (unauthenticated team pages and the
+// settings page's teammate lookup need the full unscoped data) - the admin
+// portal needs a department-admin's view cut down to their own scope, which
+// would break those other callers if applied to the shared endpoints.
+app.get('/admin/users', requireAdmin, async (req, res) => {
+  try {
+    const scope = req.user.role === 'department_admin' ? await departmentsForUser(req.user.id) : null;
+    const result = scope
+      ? await db.query(
+          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at,
+                  COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
+           FROM users u
+           JOIN user_departments ud_scope ON ud_scope.user_id = u.id AND ud_scope.department_name = ANY($1)
+           LEFT JOIN user_departments ud ON ud.user_id = u.id
+           GROUP BY u.id
+           ORDER BY u.name`,
+          [scope]
+        )
+      : await db.query(
+          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at,
+                  COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
+           FROM users u
+           LEFT JOIN user_departments ud ON ud.user_id = u.id
+           GROUP BY u.id
+           ORDER BY u.name`
+        );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('[admin] failed to list users:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/admin/departments', requireAdmin, async (req, res) => {
+  try {
+    const result = req.user.role === 'department_admin'
+      ? await db.query('SELECT id, name, lead, description, links FROM departments WHERE name = ANY($1) ORDER BY name', [await departmentsForUser(req.user.id)])
+      : await db.query('SELECT id, name, lead, description, links FROM departments ORDER BY name');
+    res.json(result.rows);
+  } catch (err) {
+    console.error('[admin] failed to list departments:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/users', requireAuth, async (req, res) => {
   const { department } = req.query;
   try {
     // departments comes back as a real array per user (aggregated from the
@@ -361,31 +390,153 @@ app.post('/users/invite', requireAuth, async (req, res) => {
 });
 
 app.patch('/users/:id', requireAdmin, async (req, res) => {
-  const departments = Array.isArray(req.body.departments) ? req.body.departments : [];
+  const submitted = Array.isArray(req.body.departments) ? req.body.departments : [];
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
-    const userCheck = await client.query('SELECT id FROM users WHERE id = $1', [req.params.id]);
+    const userCheck = await client.query('SELECT id, role FROM users WHERE id = $1', [req.params.id]);
     if (userCheck.rows.length === 0) {
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'User not found' });
     }
+
+    // A department_admin may only touch departments within their own scope
+    // - any other department this user already belongs to is left alone,
+    // rather than letting a wholesale replacement silently wipe membership
+    // the acting admin has no authority over.
+    let finalDepartments = submitted;
+    if (req.user.role === 'department_admin') {
+      const scope = await departmentsForUser(req.user.id);
+      const outsideScope = submitted.filter((d) => !scope.includes(d));
+      if (outsideScope.length > 0) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: `Cannot assign departments outside your scope: ${outsideScope.join(', ')}` });
+      }
+      const currentResult = await client.query('SELECT department_name FROM user_departments WHERE user_id = $1', [req.params.id]);
+      const untouched = currentResult.rows.map((r) => r.department_name).filter((d) => !scope.includes(d));
+      finalDepartments = [...untouched, ...submitted];
+    }
+
     await client.query('DELETE FROM user_departments WHERE user_id = $1', [req.params.id]);
-    for (const name of departments) {
+    for (const name of finalDepartments) {
       await client.query(
         'INSERT INTO user_departments (user_id, department_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
         [req.params.id, name]
       );
     }
+
+    // Scope-coupling: a department_admin whose last department was just
+    // removed can no longer be scoped over anything, so their admin status
+    // is revoked automatically instead of left dangling with an empty scope.
+    if (userCheck.rows[0].role === 'department_admin' && finalDepartments.length === 0) {
+      await client.query("UPDATE users SET role = 'member' WHERE id = $1", [req.params.id]);
+    }
+
     await client.query('COMMIT');
-    const result = await db.query('SELECT id, name, email FROM users WHERE id = $1', [req.params.id]);
-    res.json({ ...result.rows[0], departments });
+    const result = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.params.id]);
+    res.json({ ...result.rows[0], departments: finalDepartments });
   } catch (err) {
     await client.query('ROLLBACK');
     console.error('[users] failed to update user departments:', err.message);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
+  }
+});
+
+// FEATURE 1: promote to department_admin (scope = their current department
+// membership) or demote back to member. super_admin status is never
+// touched here - deliberately out of reach of this toggle.
+app.post('/users/:id/role', requireAdmin, async (req, res) => {
+  const makeAdmin = req.body.isAdmin === true;
+  try {
+    const targetResult = await db.query('SELECT id, role FROM users WHERE id = $1', [req.params.id]);
+    if (targetResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    const target = targetResult.rows[0];
+
+    if (target.role === 'super_admin') {
+      return res.status(400).json({ error: 'Super admin status cannot be changed from this toggle.' });
+    }
+
+    const targetDepartments = await departmentsForUser(req.params.id);
+    if (!(await isScopedOverDepartments(req.user, targetDepartments))) {
+      return res.status(403).json({ error: "You are not an admin over this user's department" });
+    }
+
+    if (makeAdmin && targetDepartments.length === 0) {
+      return res.status(400).json({ error: 'Assign at least one department before making this user an admin.' });
+    }
+
+    const result = await db.query(
+      'UPDATE users SET role = $1 WHERE id = $2 RETURNING id, name, email, role',
+      [makeAdmin ? 'department_admin' : 'member', req.params.id]
+    );
+    console.log(`[admin] ${req.user.email} set role=${result.rows[0].role} for ${result.rows[0].email}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[users] failed to update role:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// FEATURE 2: soft delete. Blocks self-removal, requires a super_admin to
+// remove another admin, and scopes a department_admin's authority to users
+// who share one of their departments.
+app.post('/users/:id/deactivate', requireAdmin, async (req, res) => {
+  if (Number(req.params.id) === req.user.id) {
+    return res.status(400).json({ error: 'You cannot remove yourself.' });
+  }
+  try {
+    const targetResult = await db.query('SELECT id, email, role FROM users WHERE id = $1', [req.params.id]);
+    if (targetResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+    const target = targetResult.rows[0];
+
+    if (target.role !== 'member' && req.user.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Only a super admin can remove another admin.' });
+    }
+
+    const targetDepartments = await departmentsForUser(req.params.id);
+    if (!(await isScopedOverDepartments(req.user, targetDepartments))) {
+      return res.status(403).json({ error: "You are not an admin over this user's department" });
+    }
+
+    // Clear the extension token too - is_active already blocks resolveUser
+    // from honoring it, but rotating it out removes any doubt.
+    const result = await db.query(
+      `UPDATE users SET is_active = false, deactivated_at = NOW(), extension_token = NULL
+       WHERE id = $1
+       RETURNING id, name, email, is_active, deactivated_at`,
+      [req.params.id]
+    );
+    console.log(`[admin] ${req.user.email} deactivated ${target.email}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[users] failed to deactivate user:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/users/:id/reactivate', requireAdmin, async (req, res) => {
+  try {
+    const targetResult = await db.query('SELECT id, email FROM users WHERE id = $1', [req.params.id]);
+    if (targetResult.rows.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const targetDepartments = await departmentsForUser(req.params.id);
+    if (!(await isScopedOverDepartments(req.user, targetDepartments))) {
+      return res.status(403).json({ error: "You are not an admin over this user's department" });
+    }
+
+    const result = await db.query(
+      `UPDATE users SET is_active = true, deactivated_at = NULL
+       WHERE id = $1
+       RETURNING id, name, email, is_active, deactivated_at`,
+      [req.params.id]
+    );
+    console.log(`[admin] ${req.user.email} reactivated ${targetResult.rows[0].email}`);
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error('[users] failed to reactivate user:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 

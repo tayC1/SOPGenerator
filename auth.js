@@ -36,6 +36,10 @@ passport.use(new GoogleStrategy(
       );
 
       if (existing.rows.length > 0) {
+        if (!existing.rows[0].is_active) {
+          console.warn(`[auth] rejected sign-in from deactivated account ${email}`);
+          return done(null, false, { message: 'This account has been deactivated.' });
+        }
         // Backfill token for users who signed up before the column was added
         if (!existing.rows[0].extension_token) {
           console.log(`[auth] backfilling extension_token for existing user ${email}`);
