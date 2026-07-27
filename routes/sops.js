@@ -1,10 +1,10 @@
 const { Router } = require('express');
 const db = require('../db');
-const { requireAuth } = require('../middleware/auth');
+const { requireAuth, isScopedOverDepartments } = require('../middleware/auth');
 
 const router = Router();
 
-const LIST_FIELDS = 'id, title, url, description, category, author, steps, created_at';
+const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, created_at';
 const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, created_at';
 
 async function getCallerDepartments(userId) {
@@ -145,12 +145,23 @@ router.patch('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const existing = await db.query('SELECT user_id FROM sops WHERE id = $1', [req.params.id]);
+    const existing = await db.query('SELECT user_id, category FROM sops WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ error: 'SOP not found' });
-    if (existing.rows[0].user_id !== req.user.id) {
+    const sop = existing.rows[0];
+
+    // Owners can always delete their own SOPs. Otherwise, an admin may
+    // delete it if it falls within their scope (category = a department
+    // they're scoped over) - an uncategorized SOP has no department for a
+    // department_admin to be scoped over, so only its owner or a
+    // super_admin can remove it.
+    const isOwner = sop.user_id === req.user.id;
+    const isInAdminScope = !isOwner && sop.category && (await isScopedOverDepartments(req.user, [sop.category]));
+    if (!isOwner && !isInAdminScope) {
       return res.status(403).json({ error: 'You can only delete your own SOPs' });
     }
+
     await db.query('DELETE FROM sops WHERE id = $1', [req.params.id]);
+    console.log(`[sops] ${req.user.email} deleted SOP ${req.params.id}${isOwner ? '' : ' (admin scope)'}`);
     res.json({ deleted: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

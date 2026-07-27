@@ -238,12 +238,21 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
       return res.status(403).json({ error: 'You are not an admin over this department' });
     }
 
-    const { lead, description, links } = req.body;
+    const { lead, description } = req.body;
+    // A bare "app.ramp.com" has no scheme, so a browser treats it as a path
+    // relative to whatever page it's clicked from instead of an external
+    // site - assume https:// unless a scheme is already present. Normalized
+    // here (not just client-side) so every writer produces clean data.
+    const links = (Array.isArray(req.body.links) ? req.body.links : []).map((link) => {
+      const url = String(link?.url ?? '').trim();
+      const normalizedUrl = url && !/^[a-z][a-z0-9+.-]*:/i.test(url) ? `https://${url}` : url;
+      return { label: link?.label ?? '', url: normalizedUrl };
+    });
     const result = await db.query(
       `UPDATE departments SET lead = $1, description = $2, links = $3
        WHERE id = $4
        RETURNING id, name, lead, description, links`,
-      [lead ?? null, description ?? null, JSON.stringify(links ?? []), req.params.id]
+      [lead ?? null, description ?? null, JSON.stringify(links), req.params.id]
     );
     res.json(result.rows[0]);
   } catch (err) {

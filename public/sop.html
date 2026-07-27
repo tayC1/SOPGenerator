@@ -139,6 +139,7 @@
   <header>
     <a href="/"><img class="brand-icon" src="/icons/CODEX - 48PX.png" alt="CODEX"></a>
     <a class="back-link" href="/dashboard">← My SOPs</a>
+    <a class="back-link" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
   </header>
 
   <div class="main" id="main">
@@ -213,7 +214,18 @@
       `;
     }
 
+    async function loadAdminLink() {
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        document.getElementById('adminLink').style.display = data.user?.is_admin ? 'inline' : 'none';
+      } catch {
+        // not signed in / request failed - leave the admin link hidden
+      }
+    }
+
     load();
+    loadAdminLink();
   </script>
 </body>
 </html>

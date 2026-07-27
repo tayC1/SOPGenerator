@@ -188,6 +188,7 @@
       <span>CODEX</span>
     </a>
     <div class="header-actions">
+      <a class="btn-header btn-home" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
       <a class="btn-header btn-home" href="/">Home</a>
       <a class="btn-header btn-signin" href="/auth/google">Sign In</a>
     </div>
@@ -260,7 +261,18 @@
       }
     }
 
+    async function loadAdminLink() {
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        document.getElementById('adminLink').style.display = data.user?.is_admin ? 'inline-flex' : 'none';
+      } catch {
+        // not signed in / request failed - leave the admin link hidden
+      }
+    }
+
     load();
+    loadAdminLink();
   </script>
 </body>
 </html>

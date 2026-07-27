@@ -238,6 +238,7 @@
       <span>CODEX</span>
     </a>
     <a class="btn-home" href="/dashboard">My Dashboard</a>
+    <a class="btn-home" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
   </header>
 
   <main id="main">
@@ -455,6 +456,8 @@
         `;
         return;
       }
+
+      document.getElementById('adminLink').style.display = currentUser.is_admin ? 'inline-flex' : 'none';
 
       renderPage();
     }
