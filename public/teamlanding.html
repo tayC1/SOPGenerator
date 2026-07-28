@@ -512,6 +512,12 @@
       return false;
     }
 
+    // Same scoping rule as PATCH /sops/:id on the server - kept as a
+    // separate name from canDeleteSop even though the logic is identical
+    // today, since edit and delete permissions are conceptually distinct
+    // and may diverge later.
+    const canEditSop = canDeleteSop;
+
     async function loadUser() {
       try {
         const res = await fetch('/auth/me', { credentials: 'include' });
@@ -619,7 +625,7 @@
           </div>
           <div class="sop-card-actions">
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
-            <a class="action-btn" href="/documents/new?id=${sop.id}">${ICONS.edit} EDIT</a>
+            ${canEditSop(sop) ? `<a class="action-btn" href="/documents/new?id=${sop.id}">${ICONS.edit} EDIT</a>` : ''}
             <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
             ${canDeleteSop(sop) ? `<button class="action-btn action-btn-danger" type="button" data-delete="${sop.id}">${ICONS.trash} DELETE</button>` : ''}
           </div>

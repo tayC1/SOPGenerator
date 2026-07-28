@@ -130,10 +130,33 @@ router.patch('/:id', async (req, res) => {
   try {
     const existing = await db.query('SELECT * FROM sops WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ error: 'SOP not found' });
-    if (existing.rows[0].user_id !== req.user.id) {
-      return res.status(403).json({ error: 'You can only edit your own SOPs' });
+
+    // Owners can always edit their own SOPs. Otherwise, an admin may edit
+    // one within their scope (category = a department they're scoped over)
+    // - mirrors DELETE /:id's isInAdminScope check. An uncategorized SOP has
+    // no department for a department_admin to be scoped over, so only its
+    // owner or a super_admin can edit it.
+    const sop = existing.rows[0];
+    const isOwner = sop.user_id === req.user.id;
+    const isInAdminScope = !isOwner && sop.category && (await isScopedOverDepartments(req.user, [sop.category]));
+    if (!isOwner && !isInAdminScope) {
+      return res.status(403).json({ error: 'You do not have permission to edit this SOP' });
     }
     const { title, url, description, steps, category, is_public, content } = req.body;
+
+    // A scoped (non-owner) admin editing within their department shouldn't
+    // be able to use that same edit to move the SOP into - or out of - a
+    // department they don't control; that would hand its content to another
+    // department_admin, or strand it uncategorized, without their consent.
+    // Owners and super_admins can freely recategorize, matching how POST
+    // already lets an owner pick any category for their own SOP.
+    if (!isOwner && req.user.role !== 'super_admin') {
+      const newCategory = category ?? null;
+      if (newCategory !== sop.category && !(newCategory && (await isScopedOverDepartments(req.user, [newCategory])))) {
+        return res.status(403).json({ error: 'You cannot move this SOP outside your department scope' });
+      }
+    }
+
     const result = await db.query(
       `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7
        WHERE id = $8
