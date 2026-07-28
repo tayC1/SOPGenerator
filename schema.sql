@@ -52,6 +52,14 @@ CREATE TABLE IF NOT EXISTS sops (
 
 ALTER TABLE sops ADD COLUMN IF NOT EXISTS is_public BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- doc_type distinguishes step-by-step SOPs (captured via the browser
+-- extension) from freeform prose reference documents (written directly in
+-- the web app) - see migrations/1785267138297_add-doc-type-to-sops.js.
+-- content holds the prose body for doc_type = 'document'; SOPs keep using
+-- steps instead.
+ALTER TABLE sops ADD COLUMN IF NOT EXISTS doc_type TEXT NOT NULL DEFAULT 'sop';
+ALTER TABLE sops ADD COLUMN IF NOT EXISTS content TEXT;
+
 CREATE TABLE IF NOT EXISTS departments (
   id          SERIAL PRIMARY KEY,
   name        TEXT UNIQUE NOT NULL,

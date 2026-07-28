@@ -4,8 +4,8 @@ const { requireAuth, isScopedOverDepartments } = require('../middleware/auth');
 
 const router = Router();
 
-const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, created_at';
-const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, created_at';
+const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, created_at';
+const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, created_at';
 
 async function getCallerDepartments(userId) {
   const result = await db.query('SELECT department_name FROM user_departments WHERE user_id = $1', [userId]);
@@ -65,14 +65,25 @@ router.use(requireAuth);
 router.post('/', async (req, res) => {
   const author = req.user.name ?? null;
   const user_id = req.user.id;
-  const { title, url, description, steps, category } = req.body;
+  const { title, url, description, steps, category, doc_type, content } = req.body;
   const created_date = new Date();
   try {
     const result = await db.query(
-      `INSERT INTO sops (user_id, title, url, description, steps, author, category, created_date)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      `INSERT INTO sops (user_id, title, url, description, steps, author, category, created_date, doc_type, content)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
        RETURNING *`,
-      [user_id, title, url, description, JSON.stringify(steps ?? []), author, category ?? null, created_date]
+      [
+        user_id,
+        title,
+        url,
+        description,
+        JSON.stringify(steps ?? []),
+        author,
+        category ?? null,
+        created_date,
+        doc_type === 'document' ? 'document' : 'sop',
+        content ?? null,
+      ]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
@@ -122,10 +133,10 @@ router.patch('/:id', async (req, res) => {
     if (existing.rows[0].user_id !== req.user.id) {
       return res.status(403).json({ error: 'You can only edit your own SOPs' });
     }
-    const { title, url, description, steps, category, is_public } = req.body;
+    const { title, url, description, steps, category, is_public, content } = req.body;
     const result = await db.query(
-      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6
-       WHERE id = $7
+      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7
+       WHERE id = $8
        RETURNING *`,
       [
         title,
@@ -134,6 +145,7 @@ router.patch('/:id', async (req, res) => {
         JSON.stringify(steps ?? []),
         category ?? null,
         is_public ?? existing.rows[0].is_public,
+        content ?? existing.rows[0].content,
         req.params.id,
       ]
     );

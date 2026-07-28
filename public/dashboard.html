@@ -410,11 +410,11 @@
     <main class="main">
       <div class="main-header">
         <h1 class="page-title">My SOPs</h1>
-        <a class="btn-create" href="/">
+        <a class="btn-create" href="/documents/new">
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </span>
-          Create SOP
+          Add Document
         </a>
       </div>
 
@@ -559,11 +559,13 @@
 
     function sopCardHtml(sop) {
       const category = sop.category || 'Uncategorized';
+      const isDocument = sop.doc_type === 'document';
       const stepCount = Array.isArray(sop.steps) ? sop.steps.length : (sop.step_count ?? null);
       return `
         <article class="sop-card">
           <div class="sop-tags">
             <span class="tag tag-solid">${escapeHtml(category)}</span>
+            ${isDocument ? '<span class="tag tag-outline">Document</span>' : ''}
           </div>
           <h2 class="sop-title"><a href="/sop.html?id=${sop.id}">${escapeHtml(sop.title)}</a></h2>
           <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
@@ -572,11 +574,13 @@
               <span class="avatar">${escapeHtml(initials(sop.author))}</span>
               <span>${escapeHtml(sop.author || 'Unknown')} · ${formatDate(sop.created_at)}</span>
             </div>
-            ${stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
+            ${!isDocument && stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
           </div>
           <div class="sop-card-actions">
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
-            <button class="action-btn" type="button" data-edit="${sop.id}">${ICONS.edit} EDIT</button>
+            ${isDocument
+              ? `<a class="action-btn" href="/documents/new?id=${sop.id}">${ICONS.edit} EDIT</a>`
+              : `<button class="action-btn" type="button" data-edit="${sop.id}">${ICONS.edit} EDIT</button>`}
             <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
             ${canDeleteSop(sop) ? `<button class="action-btn action-btn-danger" type="button" data-delete="${sop.id}">${ICONS.trash} DELETE</button>` : ''}
           </div>

@@ -133,12 +133,23 @@
       margin-top: 80px;
       font-size: 15px;
     }
+    .doc-content {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 12px;
+      padding: 24px 28px;
+      font-size: 15px;
+      line-height: 1.7;
+      color: rgba(255,255,255,0.85);
+      white-space: pre-wrap;
+    }
   </style>
 </head>
 <body>
   <header>
     <a href="/"><img class="brand-icon" src="/icons/CODEX - 48PX.png" alt="CODEX"></a>
     <a class="back-link" href="/dashboard">← My SOPs</a>
+    <a class="back-link" href="#" id="editLink" style="display: none;">Edit</a>
     <a class="back-link" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
   </header>
 
@@ -153,6 +164,17 @@
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
+    }
+
+    let currentSop = null;
+    let currentUserId = null;
+
+    function updateEditLink() {
+      const editLink = document.getElementById('editLink');
+      if (currentSop && currentSop.doc_type === 'document' && currentUserId != null && currentSop.user_id === currentUserId) {
+        editLink.href = `/documents/new?id=${currentSop.id}`;
+        editLink.style.display = 'inline';
+      }
     }
 
     async function load() {
@@ -176,27 +198,34 @@
         return;
       }
 
+      currentSop = sop;
+      updateEditLink();
+
       document.title = `${sop.title} — CODEX`;
 
       const date = sop.created_at
         ? new Date(sop.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
         : '';
 
+      const isDocument = sop.doc_type === 'document';
       const steps = Array.isArray(sop.steps) ? sop.steps : [];
 
-      const stepsHtml = steps.length === 0
-        ? '<p class="empty" style="margin-top:24px">No steps recorded.</p>'
-        : steps.map((step, i) => `
-          <div class="step">
-            <div class="step-info">
-              <span class="step-number">Step ${i + 1}</span>
-              <span class="step-description">${escape(step.description || step.title || '')}</span>
-            </div>
-            ${step.screenshot || step.screenshot_base64
-              ? `<img class="step-screenshot" src="data:image/png;base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">`
-              : ''}
-          </div>
-        `).join('');
+      const bodyHtml = isDocument
+        ? `<div class="doc-content">${escape(sop.content || '')}</div>`
+        : `${steps.length > 0 ? `<div class="steps-heading">${steps.length} step${steps.length === 1 ? '' : 's'}</div>` : ''}
+           ${steps.length === 0
+             ? '<p class="empty" style="margin-top:24px">No steps recorded.</p>'
+             : steps.map((step, i) => `
+              <div class="step">
+                <div class="step-info">
+                  <span class="step-number">Step ${i + 1}</span>
+                  <span class="step-description">${escape(step.description || step.title || '')}</span>
+                </div>
+                ${step.screenshot || step.screenshot_base64
+                  ? `<img class="step-screenshot" src="data:image/png;base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">`
+                  : ''}
+              </div>
+            `).join('')}`;
 
       main.innerHTML = `
         <div class="sop-header">
@@ -209,8 +238,7 @@
             ${sop.url ? `<div class="meta-item"><span class="meta-label">Source</span><span class="meta-value"><a href="${escape(sop.url)}" target="_blank" rel="noopener">${escape(sop.url)}</a></span></div>` : ''}
           </div>
         </div>
-        ${steps.length > 0 ? `<div class="steps-heading">${steps.length} step${steps.length === 1 ? '' : 's'}</div>` : ''}
-        ${stepsHtml}
+        ${bodyHtml}
       `;
     }
 
@@ -219,6 +247,8 @@
         const res = await fetch('/auth/me', { credentials: 'include' });
         const data = await res.json();
         document.getElementById('adminLink').style.display = data.user?.is_admin ? 'inline' : 'none';
+        currentUserId = data.user?.id ?? null;
+        updateEditLink();
       } catch {
         // not signed in / request failed - leave the admin link hidden
       }
