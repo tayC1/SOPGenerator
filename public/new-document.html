@@ -173,8 +173,127 @@
     border: 1.5px solid rgba(255, 255, 255, 0.15);
   }
   .btn-secondary:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+  .btn-small { padding: 7px 14px; font-size: 12px; }
 
   .sop-instructions .btn-primary { margin-top: 4px; }
+
+  .sop-mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .mode-btn {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .mode-btn.active {
+    border-color: #e96d2d;
+    background: rgba(233, 109, 45, 0.12);
+    color: #fff;
+  }
+
+  .step-list { margin-bottom: 18px; }
+
+  .step-card {
+    position: relative;
+    background: rgba(0, 0, 0, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 16px 16px 14px;
+    margin-bottom: 12px;
+  }
+
+  .step-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .step-number {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.35);
+  }
+
+  .step-card-controls { display: flex; gap: 6px; }
+
+  .icon-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: inherit;
+    font-size: 12px;
+    width: 26px;
+    height: 26px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+  .icon-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+  .icon-btn:disabled { opacity: 0.3; cursor: default; }
+  .icon-btn-danger:hover { color: #ff9b9b; border-color: rgba(255, 100, 100, 0.4); }
+
+  .step-card textarea {
+    min-height: 70px;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 13px;
+    line-height: 1.5;
+    outline: none;
+    resize: vertical;
+    margin-bottom: 10px;
+  }
+  .step-card textarea:focus { border-color: #e96d2d; }
+
+  .step-image-row { display: flex; align-items: center; gap: 10px; }
+
+  .step-thumb {
+    width: 64px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+
+  .step-image-row input[type="file"] {
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    max-width: 220px;
+  }
+
+  .add-step-btn {
+    width: 100%;
+    background: transparent;
+    border: 1.5px dashed rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    color: rgba(255, 255, 255, 0.6);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: 18px;
+  }
+  .add-step-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
 
   .error-banner {
     background: rgba(255, 100, 100, 0.12);
@@ -206,7 +325,7 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="8" x2="17" y2="8"></line><line x1="9" y1="12" x2="17" y2="12"></line><line x1="9" y1="16" x2="13" y2="16"></line><circle cx="6" cy="8" r="1"></circle><circle cx="6" cy="12" r="1"></circle><circle cx="6" cy="16" r="1"></circle></svg>
         </div>
         <div class="type-card-title">Standard Operating Procedure</div>
-        <div class="type-card-desc">A step-by-step guide with screenshots, captured live in your browser with the CODEX extension.</div>
+        <div class="type-card-desc">A step-by-step guide — record it live with the CODEX browser extension, or build the steps manually here.</div>
       </button>
       <button class="type-card" type="button" data-type="document" id="documentCard">
         <div class="type-card-icon">
@@ -217,11 +336,48 @@
       </button>
     </div>
 
-    <div class="panel sop-instructions" id="sopPanel" style="display: none;">
-      <p style="font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 18px;">
-        SOPs are recorded live as you work: open the CODEX browser extension, hit <strong>Record</strong>, and walk through the process. Steps and screenshots are captured automatically, and you'll review and save them when you stop recording.
-      </p>
-      <a class="btn btn-primary" href="/welcome">Install / open the extension</a>
+    <div id="sopPanel" style="display: none;">
+      <div class="sop-mode-toggle" id="sopModeToggle">
+        <button class="mode-btn active" type="button" id="modeExtensionBtn">Record with the extension</button>
+        <button class="mode-btn" type="button" id="modeManualBtn">Build steps manually</button>
+      </div>
+
+      <div class="panel sop-instructions" id="sopExtensionInfo">
+        <p style="font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 18px;">
+          SOPs are recorded live as you work: open the CODEX browser extension, hit <strong>Record</strong>, and walk through the process. Steps and screenshots are captured automatically, and you'll review and save them when you stop recording.
+        </p>
+        <a class="btn btn-primary" href="/welcome">Install / open the extension</a>
+      </div>
+
+      <form class="panel" id="sopBuilderForm" style="display: none;">
+        <div class="field">
+          <label for="sopTitleInput">Title</label>
+          <input type="text" id="sopTitleInput" placeholder="e.g. Onboarding a New Vendor" required>
+        </div>
+        <div class="field">
+          <label for="sopCategorySelect">Category</label>
+          <select id="sopCategorySelect">
+            <option value="">Uncategorized</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="sopDescriptionInput">Short description (optional)</label>
+          <input type="text" id="sopDescriptionInput" placeholder="One line summary shown on the card">
+        </div>
+
+        <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-bottom: 10px;">Steps</label>
+        <div class="step-list" id="stepList"></div>
+        <button class="add-step-btn" type="button" id="addStepBtn">+ Add step</button>
+
+        <div class="field field-checkbox">
+          <input type="checkbox" id="sopPublicCheckbox">
+          <label for="sopPublicCheckbox" style="text-transform: none; font-size: 13px; letter-spacing: normal; color: rgba(255,255,255,0.7); margin: 0;">Make visible to anonymous/public browsing</label>
+        </div>
+        <div class="actions">
+          <a class="btn btn-secondary" href="/dashboard">Cancel</a>
+          <button class="btn btn-primary" type="submit" id="sopSubmitBtn">Save SOP</button>
+        </div>
+      </form>
     </div>
 
     <form class="panel" id="documentForm" style="display: none;">
@@ -271,7 +427,27 @@
     const contentInput     = document.getElementById('contentInput');
     const publicCheckbox   = document.getElementById('publicCheckbox');
 
+    const sopModeToggle       = document.getElementById('sopModeToggle');
+    const modeExtensionBtn    = document.getElementById('modeExtensionBtn');
+    const modeManualBtn       = document.getElementById('modeManualBtn');
+    const sopExtensionInfo    = document.getElementById('sopExtensionInfo');
+    const sopBuilderForm      = document.getElementById('sopBuilderForm');
+    const sopTitleInput       = document.getElementById('sopTitleInput');
+    const sopCategorySelect   = document.getElementById('sopCategorySelect');
+    const sopDescriptionInput = document.getElementById('sopDescriptionInput');
+    const sopPublicCheckbox   = document.getElementById('sopPublicCheckbox');
+    const sopSubmitBtn        = document.getElementById('sopSubmitBtn');
+    const stepList            = document.getElementById('stepList');
+    const addStepBtn          = document.getElementById('addStepBtn');
+
     const editId = new URLSearchParams(location.search).get('id');
+
+    // Steps kept as the original step objects (mutated in place) so that any
+    // extra fields an extension-captured step carries (clickX, clickY,
+    // pageUrl, type for warning/tip/flag annotations, etc.) survive a manual
+    // edit here even though this UI only exposes description + screenshot.
+    let sopSteps = [];
+    let sopUrl = '';
 
     function escapeHtml(str) {
       return String(str ?? '')
@@ -293,41 +469,151 @@
       documentForm.style.display = type === 'document' ? 'block' : 'none';
     }
 
-    async function loadCategories() {
+    function setSopMode(mode) {
+      modeExtensionBtn.classList.toggle('active', mode === 'extension');
+      modeManualBtn.classList.toggle('active', mode === 'manual');
+      sopExtensionInfo.style.display = mode === 'extension' ? 'block' : 'none';
+      sopBuilderForm.style.display = mode === 'manual' ? 'block' : 'none';
+      if (mode === 'manual' && sopSteps.length === 0) {
+        sopSteps.push({ description: '', screenshot: null });
+        renderSteps();
+      }
+    }
+
+    function renderSteps() {
+      stepList.innerHTML = sopSteps.map((step, i) => `
+        <div class="step-card" data-index="${i}">
+          <div class="step-card-head">
+            <span class="step-number">Step ${i + 1}</span>
+            <div class="step-card-controls">
+              <button type="button" class="icon-btn" data-move-up="${i}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
+              <button type="button" class="icon-btn" data-move-down="${i}" ${i === sopSteps.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
+              <button type="button" class="icon-btn icon-btn-danger" data-remove-step="${i}" title="Remove step">✕</button>
+            </div>
+          </div>
+          <textarea data-step-text="${i}" placeholder="What happens in this step?">${escapeHtml(step.description || step.title || '')}</textarea>
+          <div class="step-image-row">
+            ${step.screenshot ? `<img class="step-thumb" src="data:image/png;base64,${step.screenshot}" alt="Step ${i + 1} screenshot">` : ''}
+            <input type="file" accept="image/*" data-step-file="${i}">
+            ${step.screenshot ? `<button type="button" class="icon-btn" data-remove-image="${i}" title="Remove image">✕</button>` : ''}
+          </div>
+        </div>
+      `).join('');
+
+      stepList.querySelectorAll('[data-step-text]').forEach((el) => {
+        el.addEventListener('input', () => {
+          sopSteps[Number(el.dataset.stepText)].description = el.value;
+        });
+      });
+      stepList.querySelectorAll('[data-move-up]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const i = Number(el.dataset.moveUp);
+          [sopSteps[i - 1], sopSteps[i]] = [sopSteps[i], sopSteps[i - 1]];
+          renderSteps();
+        });
+      });
+      stepList.querySelectorAll('[data-move-down]').forEach((el) => {
+        el.addEventListener('click', () => {
+          const i = Number(el.dataset.moveDown);
+          [sopSteps[i + 1], sopSteps[i]] = [sopSteps[i], sopSteps[i + 1]];
+          renderSteps();
+        });
+      });
+      stepList.querySelectorAll('[data-remove-step]').forEach((el) => {
+        el.addEventListener('click', () => {
+          sopSteps.splice(Number(el.dataset.removeStep), 1);
+          renderSteps();
+        });
+      });
+      stepList.querySelectorAll('[data-remove-image]').forEach((el) => {
+        el.addEventListener('click', () => {
+          sopSteps[Number(el.dataset.removeImage)].screenshot = null;
+          renderSteps();
+        });
+      });
+      stepList.querySelectorAll('[data-step-file]').forEach((el) => {
+        el.addEventListener('change', () => {
+          const file = el.files[0];
+          const i = Number(el.dataset.stepFile);
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            sopSteps[i].screenshot = String(reader.result).replace(/^data:image\/\w+;base64,/, '');
+            renderSteps();
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+    }
+
+    addStepBtn.addEventListener('click', () => {
+      sopSteps.push({ description: '', screenshot: null });
+      renderSteps();
+    });
+
+    async function loadCategories(select) {
       try {
         const res = await fetch('/departments');
         if (!res.ok) throw new Error('Failed to load departments');
         const departments = await res.json();
-        categorySelect.innerHTML = '<option value="">Uncategorized</option>' +
+        select.innerHTML = '<option value="">Uncategorized</option>' +
           departments.map((d) => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`).join('');
       } catch (err) {
         console.error('[new-document] failed to load categories:', err);
       }
     }
 
-    async function loadForEdit() {
+    async function loadDocumentForEdit(sop) {
+      titleInput.value = sop.title || '';
+      descriptionInput.value = sop.description || '';
+      contentInput.value = sop.content || '';
+      publicCheckbox.checked = !!sop.is_public;
+      await loadCategories(categorySelect);
+      categorySelect.value = sop.category || '';
+      documentForm.style.display = 'block';
+      submitBtn.textContent = 'Save changes';
+    }
+
+    async function loadSopForEdit(sop) {
       typeGrid.style.display = 'none';
-      pageTitle.textContent = 'Edit document';
-      pageSub.textContent = 'Update this reference document.';
+      sopModeToggle.style.display = 'none';
+      sopExtensionInfo.style.display = 'none';
+      sopPanel.style.display = 'block';
+
+      sopTitleInput.value = sop.title || '';
+      sopDescriptionInput.value = sop.description || '';
+      sopPublicCheckbox.checked = !!sop.is_public;
+      sopUrl = sop.url || '';
+      sopSteps = Array.isArray(sop.steps) && sop.steps.length > 0
+        ? sop.steps
+        : [{ description: '', screenshot: null }];
+      renderSteps();
+
+      await loadCategories(sopCategorySelect);
+      sopCategorySelect.value = sop.category || '';
+      sopBuilderForm.style.display = 'block';
+      sopSubmitBtn.textContent = 'Save changes';
+    }
+
+    async function loadForEdit() {
+      pageTitle.textContent = 'Edit';
+      pageSub.textContent = 'Update this document.';
 
       try {
         const res = await fetch(`/sops/${editId}`, { credentials: 'include' });
         if (!res.ok) throw new Error('Not found');
         const sop = await res.json();
 
-        if (sop.doc_type !== 'document') {
-          showError('This SOP was captured with the browser extension, so it can only be edited there. Open the CODEX extension and use Edit on this SOP instead.');
-          return;
+        if (sop.doc_type === 'document') {
+          pageTitle.textContent = 'Edit document';
+          pageSub.textContent = 'Update this reference document.';
+          typeGrid.style.display = 'none';
+          await loadDocumentForEdit(sop);
+        } else {
+          pageTitle.textContent = 'Edit SOP';
+          pageSub.textContent = 'Update this SOP\'s steps.';
+          await loadSopForEdit(sop);
         }
-
-        titleInput.value = sop.title || '';
-        descriptionInput.value = sop.description || '';
-        contentInput.value = sop.content || '';
-        publicCheckbox.checked = !!sop.is_public;
-        await loadCategories();
-        categorySelect.value = sop.category || '';
-        documentForm.style.display = 'block';
-        submitBtn.textContent = 'Save changes';
       } catch (err) {
         console.error('[new-document] failed to load document for edit:', err);
         showError('Could not load this document right now.');
@@ -366,13 +652,55 @@
       }
     });
 
+    sopBuilderForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const cleanedSteps = sopSteps.filter((s) => (s.description || '').trim() || s.screenshot);
+      if (cleanedSteps.length === 0) {
+        showError('Add at least one step before saving.');
+        return;
+      }
+
+      sopSubmitBtn.disabled = true;
+      sopSubmitBtn.textContent = 'Saving…';
+
+      const payload = {
+        title: sopTitleInput.value.trim(),
+        category: sopCategorySelect.value || null,
+        description: sopDescriptionInput.value.trim(),
+        url: sopUrl,
+        steps: cleanedSteps,
+        doc_type: 'sop',
+        is_public: sopPublicCheckbox.checked,
+      };
+
+      try {
+        const res = await fetch(editId ? `/sops/${editId}` : '/sops', {
+          method: editId ? 'PATCH' : 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+        const sop = await res.json();
+        location.href = `/sop.html?id=${sop.id}`;
+      } catch (err) {
+        showError(err.message || 'Could not save this SOP right now.');
+        sopSubmitBtn.disabled = false;
+        sopSubmitBtn.textContent = editId ? 'Save changes' : 'Save SOP';
+      }
+    });
+
     sopCard.addEventListener('click', () => selectType('sop'));
     documentCard.addEventListener('click', () => selectType('document'));
+    modeExtensionBtn.addEventListener('click', () => setSopMode('extension'));
+    modeManualBtn.addEventListener('click', () => setSopMode('manual'));
 
     if (editId) {
       loadForEdit();
     } else {
-      loadCategories();
+      loadCategories(categorySelect);
+      loadCategories(sopCategorySelect);
     }
   </script>
 </body>
