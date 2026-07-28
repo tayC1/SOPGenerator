@@ -180,6 +180,81 @@ function removeKeyListeners() {
   document.removeEventListener('blur', onBlur, true);
 }
 
+// A click/keystroke often triggers a re-render, navigation, or animation
+// that hasn't finished by a fixed short delay - the screenshot would then
+// capture a half-updated or stale page. Waiting for two animation frames
+// guarantees at least one full paint has happened before the extra delay
+// starts counting, and the delay itself is long enough to cover typical
+// UI transitions (~200-300ms) instead of the old flat 60ms, which was
+// only ever enough for instant, non-animated DOM updates.
+function afterRender(callback) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      setTimeout(callback, 400);
+    });
+  });
+}
+
+function clampText(text, max = 80) {
+  const trimmed = String(text || '').replace(/\s+/g, ' ').trim();
+  return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
+}
+
+// The best human-readable name for a form field is the <label> a person
+// actually sees, not the input's id/name attribute - those are frequently
+// framework-generated (e.g. "input_47", "react-select-2-input") and are
+// exactly the kind of "weird field name" that shows up in a captured step
+// when there's no label lookup at all.
+function nearestLabelText(el) {
+  if (!el) return '';
+  if (el.id) {
+    try {
+      const labelEl = document.querySelector(`label[for="${CSS.escape(el.id)}"]`);
+      if (labelEl?.innerText?.trim()) return labelEl.innerText.trim();
+    } catch {
+      // invalid id for a CSS selector (rare) - fall through to the other lookups
+    }
+  }
+  const wrappingLabel = el.closest?.('label');
+  if (wrappingLabel?.innerText?.trim()) return wrappingLabel.innerText.trim();
+  return '';
+}
+
+// Shared accessible-name lookup for anything a step needs to describe -
+// a typed-into field, a key press target, or a click. A click especially
+// often lands on a leaf node with no text of its own (an <svg>/<path>/
+// <span> inside an icon button), so it walks up to the nearest actual
+// interactive ancestor and prefers that element's accessible name (aria-
+// label first, matching how browsers compute accessible names) instead
+// of an empty or unrelated leaf value.
+function describeElement(el) {
+  if (!el) return '';
+
+  if (isTypableInput(el)) {
+    const label = nearestLabelText(el);
+    return clampText(
+      label ||
+      el.getAttribute('aria-label') ||
+      el.getAttribute('placeholder') ||
+      el.getAttribute('name') ||
+      el.id ||
+      el.tagName.toLowerCase()
+    );
+  }
+
+  const target = el.closest?.('button, a, [role="button"], summary') || el;
+  return clampText(
+    target.getAttribute?.('aria-label') ||
+    target.innerText?.trim() ||
+    target.textContent?.trim() ||
+    target.value ||
+    target.placeholder ||
+    target.getAttribute?.('alt') ||
+    target.getAttribute?.('title') ||
+    ''
+  );
+}
+
 function isTypableInput(el) {
   if (!el) return false;
   const tag = el.tagName.toLowerCase();
@@ -239,10 +314,11 @@ function captureKeydown(e) {
 }
 
 function captureTypedText(el, value) {
-  const label = el.getAttribute('aria-label') || el.getAttribute('placeholder') ||
-                el.getAttribute('name') || el.id || el.tagName.toLowerCase();
+  // Derive the label synchronously, before any render/navigation the
+  // blur might trigger has a chance to change or remove this element.
+  const label = describeElement(el);
   if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
-  setTimeout(() => {
+  afterRender(() => {
     chrome.runtime.sendMessage({
       action: 'captureScreenshot',
       elementText: label,
@@ -256,13 +332,13 @@ function captureTypedText(el, value) {
     }, () => {
       if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
     });
-  }, 60);
+  });
 }
 
 function sendKeyStroke(el, keyLabel) {
-  const elementText = el?.innerText?.trim() || el?.value || el?.placeholder || el?.getAttribute?.('aria-label') || '';
+  const elementText = describeElement(el);
   if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
-  setTimeout(() => {
+  afterRender(() => {
     chrome.runtime.sendMessage({
       action: 'captureScreenshot',
       elementText,
@@ -276,7 +352,7 @@ function sendKeyStroke(el, keyLabel) {
     }, () => {
       if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
     });
-  }, 60);
+  });
 }
 
 // Capture click data
@@ -285,15 +361,11 @@ function captureClick(e) {
   if (recordingOverlay && recordingOverlay.contains(e.target)) return;
 
   const element = e.target;
-  
-  // Get element text
-  const elementText = element.innerText?.trim() || 
-                      element.textContent?.trim() || 
-                      element.value || 
-                      element.placeholder || 
-                      element.alt ||
-                      element.title ||
-                      '';
+
+  // Derive the label synchronously, before whatever the click triggers
+  // (navigation, a re-render, a modal) has a chance to change this
+  // element or remove it from the page entirely.
+  const elementText = describeElement(element);
 
   const tagName = element.tagName.toLowerCase();
   const pageTitle = document.title;
@@ -306,8 +378,9 @@ function captureClick(e) {
   // Hide overlay so it doesn't appear in the screenshot
   if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
 
-  // Wait one frame for the browser to repaint before capturing
-  setTimeout(function () {
+  // Wait for the click's effects to actually render before capturing -
+  // see afterRender's comment for why this isn't just a short fixed delay.
+  afterRender(function () {
     chrome.runtime.sendMessage({
       action: 'captureScreenshot',
       elementText,
@@ -324,7 +397,7 @@ function captureClick(e) {
         console.log('Step captured:', response?.stepId);
       }
     });
-  }, 60);
+  });
 }
 
 // Check recording status on content load

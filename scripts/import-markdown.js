@@ -136,14 +136,55 @@ function parseFrontmatter(raw) {
   return { meta, body };
 }
 
+// Lowercased in the middle of a title, same as this file's own headings
+// above ("How do we Hire?" aside, this is the common convention) - not
+// applied to the first or last word, so "To" in "How To" still gets
+// capitalized when it opens or closes a title.
+const TITLE_CASE_MINOR_WORDS = new Set([
+  'a', 'an', 'and', 'as', 'at', 'but', 'by', 'for', 'in',
+  'nor', 'of', 'on', 'or', 'so', 'the', 'to', 'up', 'yet', 'vs',
+]);
+
+function toTitleCase(text) {
+  const words = text.split(' ').filter(Boolean);
+  return words
+    .map((word, i) => {
+      const lower = word.toLowerCase();
+      if (i > 0 && i < words.length - 1 && TITLE_CASE_MINOR_WORDS.has(lower)) return lower;
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join(' ');
+}
+
+// A heading pulled out of the markdown body still has its markdown syntax
+// in it (e.g. "# **Payroll** Guide") - strip that so the saved title is
+// plain text instead of literal asterisks/brackets.
+function stripInlineMarkdown(text) {
+  return text
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .trim();
+}
+
 function deriveTitle(meta, body, filePath) {
   if (meta.title) return meta.title.trim();
-  const heading = body.match(/^#\s+(.+)$/m);
-  if (heading) return heading[1].trim();
-  return path
+
+  // H1 first, but fall back to H2/H3 - plenty of files use a smaller
+  // heading as their effective title instead of a true H1.
+  const heading = body.match(/^#{1,3}\s+(.+)$/m);
+  if (heading) return stripInlineMarkdown(heading[1]);
+
+  const base = path
     .basename(filePath, path.extname(filePath))
+    .replace(/^\d{4}-\d{2}-\d{2}[-_]?/, '') // leading date prefix, e.g. "2023-04-01-notes"
+    .replace(/^\d+[-_]+/, '') // leading numeric prefix, e.g. "01-getting-started"
     .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .trim();
+  return base ? toTitleCase(base) : 'Untitled';
 }
 
 function parseBool(value, fallback) {
