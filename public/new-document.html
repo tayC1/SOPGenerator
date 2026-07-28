@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Add Document — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #2d2b2e;
+    color: #fff;
+    min-height: 100vh;
+    padding: 48px 24px;
+  }
+
+  header {
+    max-width: 760px;
+    margin: 0 auto 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .brand-icon { width: 32px; height: 32px; }
+
+  .back-link {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: none;
+  }
+  .back-link:hover { color: #fff; }
+
+  .main { max-width: 760px; margin: 0 auto; }
+
+  .page-title {
+    font-size: 26px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .page-sub {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 32px;
+  }
+
+  .type-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .type-card {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1.5px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+    padding: 22px 22px 20px;
+    cursor: pointer;
+    color: #fff;
+    font-family: inherit;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .type-card:hover { border-color: rgba(255, 255, 255, 0.25); }
+  .type-card.selected {
+    border-color: #e96d2d;
+    background: rgba(233, 109, 45, 0.1);
+  }
+
+  .type-card-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: 14px;
+    color: #e96d2d;
+  }
+  .type-card-icon svg { width: 100%; height: 100%; }
+
+  .type-card-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .type-card-desc {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.5;
+  }
+
+  .panel {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 28px 30px;
+  }
+
+  .field { margin-bottom: 20px; }
+
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: rgba(255, 255, 255, 0.4);
+    margin-bottom: 8px;
+  }
+
+  .field input[type="text"],
+  .field select,
+  .field textarea {
+    width: 100%;
+    background: rgba(0, 0, 0, 0.2);
+    border: 1.5px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 11px 13px;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    outline: none;
+  }
+  .field input[type="text"]:focus,
+  .field select:focus,
+  .field textarea:focus { border-color: #e96d2d; }
+
+  .field textarea {
+    min-height: 260px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+
+  .field-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.7);
+  }
+  .field-checkbox input { width: 16px; height: 16px; }
+
+  .actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-primary { background: #e96d2d; color: #fff; }
+  .btn-primary:hover { background: #d55f22; }
+  .btn-primary:disabled { opacity: 0.5; cursor: default; }
+  .btn-secondary {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    border: 1.5px solid rgba(255, 255, 255, 0.15);
+  }
+  .btn-secondary:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+
+  .sop-instructions .btn-primary { margin-top: 4px; }
+
+  .error-banner {
+    background: rgba(255, 100, 100, 0.12);
+    border: 1px solid rgba(255, 100, 100, 0.3);
+    color: #ff9b9b;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    margin-bottom: 24px;
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <header>
+    <a href="/dashboard"><img class="brand-icon" src="/icons/CODEX - 48PX.png" alt="CODEX"></a>
+    <a class="back-link" href="/dashboard">← My SOPs</a>
+  </header>
+
+  <div class="main">
+    <h1 class="page-title" id="pageTitle">Add a document</h1>
+    <p class="page-sub" id="pageSub">Choose what kind of document you're adding to CODEX.</p>
+
+    <div class="error-banner" id="errorBanner"></div>
+
+    <div class="type-grid" id="typeGrid">
+      <button class="type-card" type="button" data-type="sop" id="sopCard">
+        <div class="type-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><line x1="9" y1="8" x2="17" y2="8"></line><line x1="9" y1="12" x2="17" y2="12"></line><line x1="9" y1="16" x2="13" y2="16"></line><circle cx="6" cy="8" r="1"></circle><circle cx="6" cy="12" r="1"></circle><circle cx="6" cy="16" r="1"></circle></svg>
+        </div>
+        <div class="type-card-title">Standard Operating Procedure</div>
+        <div class="type-card-desc">A step-by-step guide with screenshots, captured live in your browser with the CODEX extension.</div>
+      </button>
+      <button class="type-card" type="button" data-type="document" id="documentCard">
+        <div class="type-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line><line x1="8" y1="9" x2="10" y2="9"></line></svg>
+        </div>
+        <div class="type-card-title">Reference Document</div>
+        <div class="type-card-desc">A freeform, written document — policies, guides, notes — typed directly here rather than captured as steps.</div>
+      </button>
+    </div>
+
+    <div class="panel sop-instructions" id="sopPanel" style="display: none;">
+      <p style="font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 18px;">
+        SOPs are recorded live as you work: open the CODEX browser extension, hit <strong>Record</strong>, and walk through the process. Steps and screenshots are captured automatically, and you'll review and save them when you stop recording.
+      </p>
+      <a class="btn btn-primary" href="/welcome">Install / open the extension</a>
+    </div>
+
+    <form class="panel" id="documentForm" style="display: none;">
+      <div class="field">
+        <label for="titleInput">Title</label>
+        <input type="text" id="titleInput" placeholder="e.g. Expense Reimbursement Policy" required>
+      </div>
+      <div class="field">
+        <label for="categorySelect">Category</label>
+        <select id="categorySelect">
+          <option value="">Uncategorized</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="descriptionInput">Short description (optional)</label>
+        <input type="text" id="descriptionInput" placeholder="One line summary shown on the card">
+      </div>
+      <div class="field">
+        <label for="contentInput">Document content</label>
+        <textarea id="contentInput" placeholder="Write the reference document here…" required></textarea>
+      </div>
+      <div class="field field-checkbox">
+        <input type="checkbox" id="publicCheckbox">
+        <label for="publicCheckbox" style="text-transform: none; font-size: 13px; letter-spacing: normal; color: rgba(255,255,255,0.7); margin: 0;">Make visible to anonymous/public browsing</label>
+      </div>
+      <div class="actions">
+        <a class="btn btn-secondary" href="/dashboard">Cancel</a>
+        <button class="btn btn-primary" type="submit" id="submitBtn">Save document</button>
+      </div>
+    </form>
+  </div>
+
+  <script>
+    const typeGrid       = document.getElementById('typeGrid');
+    const sopCard        = document.getElementById('sopCard');
+    const documentCard   = document.getElementById('documentCard');
+    const sopPanel       = document.getElementById('sopPanel');
+    const documentForm   = document.getElementById('documentForm');
+    const errorBanner    = document.getElementById('errorBanner');
+    const pageTitle      = document.getElementById('pageTitle');
+    const pageSub        = document.getElementById('pageSub');
+    const submitBtn      = document.getElementById('submitBtn');
+
+    const titleInput       = document.getElementById('titleInput');
+    const categorySelect   = document.getElementById('categorySelect');
+    const descriptionInput = document.getElementById('descriptionInput');
+    const contentInput     = document.getElementById('contentInput');
+    const publicCheckbox   = document.getElementById('publicCheckbox');
+
+    const editId = new URLSearchParams(location.search).get('id');
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function showError(message) {
+      errorBanner.textContent = message;
+      errorBanner.style.display = 'block';
+    }
+
+    function selectType(type) {
+      sopCard.classList.toggle('selected', type === 'sop');
+      documentCard.classList.toggle('selected', type === 'document');
+      sopPanel.style.display = type === 'sop' ? 'block' : 'none';
+      documentForm.style.display = type === 'document' ? 'block' : 'none';
+    }
+
+    async function loadCategories() {
+      try {
+        const res = await fetch('/departments');
+        if (!res.ok) throw new Error('Failed to load departments');
+        const departments = await res.json();
+        categorySelect.innerHTML = '<option value="">Uncategorized</option>' +
+          departments.map((d) => `<option value="${escapeHtml(d.name)}">${escapeHtml(d.name)}</option>`).join('');
+      } catch (err) {
+        console.error('[new-document] failed to load categories:', err);
+      }
+    }
+
+    async function loadForEdit() {
+      typeGrid.style.display = 'none';
+      pageTitle.textContent = 'Edit document';
+      pageSub.textContent = 'Update this reference document.';
+
+      try {
+        const res = await fetch(`/sops/${editId}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Not found');
+        const sop = await res.json();
+
+        if (sop.doc_type !== 'document') {
+          showError('This SOP was captured with the browser extension, so it can only be edited there. Open the CODEX extension and use Edit on this SOP instead.');
+          return;
+        }
+
+        titleInput.value = sop.title || '';
+        descriptionInput.value = sop.description || '';
+        contentInput.value = sop.content || '';
+        publicCheckbox.checked = !!sop.is_public;
+        await loadCategories();
+        categorySelect.value = sop.category || '';
+        documentForm.style.display = 'block';
+        submitBtn.textContent = 'Save changes';
+      } catch (err) {
+        console.error('[new-document] failed to load document for edit:', err);
+        showError('Could not load this document right now.');
+      }
+    }
+
+    documentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving…';
+
+      const payload = {
+        title: titleInput.value.trim(),
+        category: categorySelect.value || null,
+        description: descriptionInput.value.trim(),
+        content: contentInput.value,
+        steps: [],
+        doc_type: 'document',
+        is_public: publicCheckbox.checked,
+      };
+
+      try {
+        const res = await fetch(editId ? `/sops/${editId}` : '/sops', {
+          method: editId ? 'PATCH' : 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+        const sop = await res.json();
+        location.href = `/sop.html?id=${sop.id}`;
+      } catch (err) {
+        showError(err.message || 'Could not save this document right now.');
+        submitBtn.disabled = false;
+        submitBtn.textContent = editId ? 'Save changes' : 'Save document';
+      }
+    });
+
+    sopCard.addEventListener('click', () => selectType('sop'));
+    documentCard.addEventListener('click', () => selectType('document'));
+
+    if (editId) {
+      loadForEdit();
+    } else {
+      loadCategories();
+    }
+  </script>
+</body>
+</html>

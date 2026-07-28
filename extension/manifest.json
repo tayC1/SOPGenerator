@@ -34,7 +34,7 @@
     }
   },
   "externally_connectable": {
-    "matches": ["https://kpcodex-production.up.railway.app/*"]
+    "matches": ["https://kpcodex-production.up.railway.app/*", "https://codex.kramer.pro/*"]
   },
   "content_scripts": [
     {
