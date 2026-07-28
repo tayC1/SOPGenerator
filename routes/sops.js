@@ -142,7 +142,11 @@ router.patch('/:id', async (req, res) => {
     if (!isOwner && !isInAdminScope) {
       return res.status(403).json({ error: 'You do not have permission to edit this SOP' });
     }
-    const { title, url, description, steps, category, is_public, content } = req.body;
+    const { title, url, description, steps, category, is_public, content, doc_type } = req.body;
+    // Only 'sop'/'document' are valid per the sops_doc_type_check
+    // constraint - anything else (including omitted) keeps the existing
+    // type, so switching type is opt-in and a typo can't corrupt the row.
+    const nextDocType = doc_type === 'sop' || doc_type === 'document' ? doc_type : sop.doc_type;
 
     // A scoped (non-owner) admin editing within their department shouldn't
     // be able to use that same edit to move the SOP into - or out of - a
@@ -158,8 +162,8 @@ router.patch('/:id', async (req, res) => {
     }
 
     const result = await db.query(
-      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7
-       WHERE id = $8
+      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7, doc_type = $8
+       WHERE id = $9
        RETURNING *`,
       [
         title,
@@ -169,6 +173,7 @@ router.patch('/:id', async (req, res) => {
         category ?? null,
         is_public ?? existing.rows[0].is_public,
         content ?? existing.rows[0].content,
+        nextDocType,
         req.params.id,
       ]
     );

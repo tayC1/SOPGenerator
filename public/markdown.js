@@ -50,8 +50,24 @@
     return text;
   }
 
+  // Some documents were pasted in wholesale (frontmatter block and all)
+  // rather than going through scripts/import-markdown.js, which is the
+  // only thing that actually strips it - the web editor has no
+  // frontmatter awareness at all. Strip a leading "---"-delimited block
+  // here too so it never shows up in the rendered view, regardless of
+  // how a document ended up with one in its stored content.
+  function stripFrontmatter(raw) {
+    const text = String(raw ?? '');
+    const lines = text.split(/\r?\n/);
+    if (lines[0]?.trim() !== '---') return text;
+    for (let i = 1; i < lines.length; i++) {
+      if (lines[i].trim() === '---') return lines.slice(i + 1).join('\n');
+    }
+    return text; // no closing "---" - not actually a frontmatter block
+  }
+
   function renderMarkdown(raw) {
-    const lines = escapeHtml(raw).split(/\r?\n/);
+    const lines = escapeHtml(stripFrontmatter(raw)).split(/\r?\n/);
     const out = [];
 
     let paragraph = [];

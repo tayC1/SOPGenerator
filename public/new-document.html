@@ -515,11 +515,50 @@
       errorBanner.style.display = 'block';
     }
 
+    // Switching type - in either direction, in edit mode or while still
+    // creating - carries over the fields both forms share (title,
+    // category, description) so re-picking a card doesn't discard what
+    // was already typed, and only fills in a value if the destination
+    // side is still empty (so toggling back and forth never clobbers
+    // edits made after an earlier switch).
+    function syncSharedFields(toType) {
+      const fill = (dest, src) => { if (!dest.value && src.value) dest.value = src.value; };
+      if (toType === 'sop') {
+        fill(sopTitleInput, titleInput);
+        fill(sopCategorySelect, categorySelect);
+        fill(sopDescriptionInput, descriptionInput);
+        // Seed a single step from the document's prose so switching a
+        // reference document into an SOP doesn't throw away what was
+        // written - only when the step builder is still blank.
+        if ((sopSteps.length === 0 || (sopSteps.length === 1 && !sopSteps[0].description && !sopSteps[0].screenshot)) && contentInput.value.trim()) {
+          sopSteps = [{ description: contentInput.value.trim(), screenshot: null }];
+          renderSteps();
+        }
+      } else {
+        fill(titleInput, sopTitleInput);
+        fill(categorySelect, sopCategorySelect);
+        fill(descriptionInput, sopDescriptionInput);
+        if (!contentInput.value.trim()) {
+          const flattened = sopSteps.map((s) => (s.description || '').trim()).filter(Boolean).join('\n\n');
+          if (flattened) contentInput.value = flattened;
+        }
+      }
+    }
+
     function selectType(type) {
       sopCard.classList.toggle('selected', type === 'sop');
       documentCard.classList.toggle('selected', type === 'document');
       sopPanel.style.display = type === 'sop' ? 'block' : 'none';
       documentForm.style.display = type === 'document' ? 'block' : 'none';
+      syncSharedFields(type);
+
+      // Editing always goes straight to the manual step builder - "record
+      // with the extension" only makes sense when starting fresh, not
+      // when there's already saved data on screen to edit.
+      if (type === 'sop' && editId) {
+        sopModeToggle.style.display = 'none';
+        setSopMode('manual');
+      }
     }
 
     function setSopMode(mode) {
@@ -621,18 +660,12 @@
       descriptionInput.value = sop.description || '';
       contentInput.value = sop.content || '';
       publicCheckbox.checked = !!sop.is_public;
-      await loadCategories(categorySelect);
       categorySelect.value = sop.category || '';
-      documentForm.style.display = 'block';
+      selectType('document');
       submitBtn.textContent = 'Save changes';
     }
 
     async function loadSopForEdit(sop) {
-      typeGrid.style.display = 'none';
-      sopModeToggle.style.display = 'none';
-      sopExtensionInfo.style.display = 'none';
-      sopPanel.style.display = 'block';
-
       sopTitleInput.value = sop.title || '';
       sopDescriptionInput.value = sop.description || '';
       sopPublicCheckbox.checked = !!sop.is_public;
@@ -642,29 +675,29 @@
         : [{ description: '', screenshot: null }];
       renderSteps();
 
-      await loadCategories(sopCategorySelect);
       sopCategorySelect.value = sop.category || '';
-      sopBuilderForm.style.display = 'block';
+      selectType('sop');
       sopSubmitBtn.textContent = 'Save changes';
     }
 
     async function loadForEdit() {
       pageTitle.textContent = 'Edit';
-      pageSub.textContent = 'Update this document.';
+      pageSub.textContent = 'Update this document - you can also change its type below.';
 
       try {
         const res = await fetch(`/sops/${editId}`, { credentials: 'include' });
         if (!res.ok) throw new Error('Not found');
         const sop = await res.json();
 
+        // Both selects need their option lists ready before either load
+        // function sets a .value on them, since switching type can set a
+        // category on whichever select wasn't the "native" one for this
+        // document's current doc_type.
+        await Promise.all([loadCategories(categorySelect), loadCategories(sopCategorySelect)]);
+
         if (sop.doc_type === 'document') {
-          pageTitle.textContent = 'Edit document';
-          pageSub.textContent = 'Update this reference document.';
-          typeGrid.style.display = 'none';
           await loadDocumentForEdit(sop);
         } else {
-          pageTitle.textContent = 'Edit SOP';
-          pageSub.textContent = 'Update this SOP\'s steps.';
           await loadSopForEdit(sop);
         }
       } catch (err) {

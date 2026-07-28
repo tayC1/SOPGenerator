@@ -63,7 +63,15 @@ app.use(cors({
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const extensionTokenLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
-const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
+// Every SOP/document view, plus every dashboard/team-page load, hits this
+// path - an employee reading through a stack of documentation in one
+// sitting can easily rack up dozens of requests, and express-rate-limit
+// keys by IP by default, so a whole office sharing one public IP pools
+// the same budget. 100/15min was tight enough to plausibly lock out
+// normal reading, not just abuse; this is a generous ceiling instead of
+// a per-request one, since GET/reads here have no real abuse surface
+// (auth/ownership checks already gate what's returned).
+const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHeaders: true, legacyHeaders: false });
 // Scoped to /auth/google (covers /auth/google and /auth/google/callback
 // via prefix match) rather than the whole /auth path - /auth/me is a
 // lightweight session check that nearly every page calls on load, and
