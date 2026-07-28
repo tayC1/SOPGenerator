@@ -64,7 +64,13 @@ app.use(cors({
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false });
 const extensionTokenLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false });
 const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false });
-app.use('/auth', authLimiter);
+// Scoped to /auth/google (covers /auth/google and /auth/google/callback
+// via prefix match) rather than the whole /auth path - /auth/me is a
+// lightweight session check that nearly every page calls on load, and
+// sharing this budget with it meant normal browsing could exhaust it and
+// then block real sign-in attempts too, looking exactly like a broken
+// login. /auth/extension-token already has its own dedicated limiter.
+app.use('/auth/google', authLimiter);
 app.use('/sops', apiLimiter);
 
 app.use(express.json({ limit: '50mb' }));

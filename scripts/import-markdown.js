@@ -42,10 +42,29 @@
 // afterward (see routes/sops.js's PATCH/DELETE scoping). If they haven't
 // signed in yet, run scripts/import-google-users.js first.
 //
+// Images: a markdown image reference (![alt](src)) pointing at a local
+// file - root-relative like "/assets/x.png" (resolved against --dir), or
+// relative to the markdown file itself like "./images/x.png" - is read
+// off disk and inlined as a base64 data: URI, since a document's content
+// is just a text column with nowhere else to host a sibling image file
+// (this matches how SOP step screenshots are already stored as inline
+// base64 elsewhere in this app). http(s) and already-inlined data: URIs
+// are left untouched. A reference that can't be resolved (file missing,
+// unrecognized extension) is left as-is and reported as a warning.
+//
 // Usage:
 //   node scripts/import-markdown.js --dir ./legacy-docs --user you@kramer.pro
 //   node scripts/import-markdown.js --dir ./legacy-docs --user you@kramer.pro --apply
 //   node scripts/import-markdown.js --dir ./legacy-docs --user you@kramer.pro --category Finance --public --apply
+//
+// --fix-images: re-scans --dir and, for any file whose (exact, unique)
+// title matches an existing doc_type='document' row, re-embeds its
+// images and overwrites just that row's `content` - use this to backfill
+// images into documents that were already imported before this script
+// supported inlining them. --user is not needed in this mode, since it
+// only updates existing rows rather than creating new ones.
+//   node scripts/import-markdown.js --dir ./legacy-docs --fix-images
+//   node scripts/import-markdown.js --dir ./legacy-docs --fix-images --apply
 
 require('dotenv').config();
 const fs = require('fs');
@@ -59,10 +78,20 @@ function arg(name, fallback = null) {
 }
 
 const APPLY = process.argv.includes('--apply');
+const FIX_IMAGES = process.argv.includes('--fix-images');
 const DEFAULT_PUBLIC = process.argv.includes('--public');
 const DIR = arg('dir');
 const USER_EMAIL = arg('user');
 const DEFAULT_CATEGORY = arg('category');
+
+const IMAGE_MIME_BY_EXT = {
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+};
 
 function walk(dir) {
   const out = [];
@@ -139,18 +168,48 @@ function parseDate(value, fallback) {
   return isNaN(d.getTime()) ? fallback : d;
 }
 
+// Rewrites markdown image references pointing at a local file into
+// inline base64 data: URIs - see the file-header comment for why. `warn`
+// is called with a plain-English reason for anything left unresolved.
+function inlineLocalImages(body, filePath, rootDir, warn) {
+  return body.replace(/(!\[[^\]]*\]\()([^)\s]+)(\))/g, (match, prefix, src, suffix) => {
+    if (/^[a-z][a-z0-9+.-]*:/i.test(src)) return match; // already http(s)/data/etc - leave alone
+
+    const resolved = src.startsWith('/') ? path.join(rootDir, src) : path.join(path.dirname(filePath), src);
+    const mime = IMAGE_MIME_BY_EXT[path.extname(resolved).toLowerCase()];
+
+    if (!mime) {
+      warn(`unrecognized image type "${src}" - left as-is (won't display)`);
+      return match;
+    }
+    if (!fs.existsSync(resolved)) {
+      warn(`image not found on disk: "${src}" (looked for ${resolved}) - left as-is (won't display)`);
+      return match;
+    }
+
+    const bytes = fs.readFileSync(resolved);
+    if (bytes.length > 5 * 1024 * 1024) {
+      warn(`image "${src}" is ${(bytes.length / 1024 / 1024).toFixed(1)}MB - embedding anyway, but consider shrinking it`);
+    }
+    return `${prefix}data:${mime};base64,${bytes.toString('base64')}${suffix}`;
+  });
+}
+
 async function main() {
-  if (!DIR || !USER_EMAIL) {
+  if (!DIR || (!USER_EMAIL && !FIX_IMAGES)) {
     console.error('Usage: node scripts/import-markdown.js --dir <path> --user <email> [--category <name>] [--public] [--apply]');
+    console.error('       node scripts/import-markdown.js --dir <path> --fix-images [--apply]');
     process.exitCode = 1;
     return;
   }
 
-  const userResult = await db.query('SELECT id, name FROM users WHERE email = $1', [USER_EMAIL]);
-  if (userResult.rows.length === 0) {
-    throw new Error(`No CODEX user found with email ${USER_EMAIL} - they need to have signed in at least once (or run scripts/import-google-users.js first).`);
-  }
-  const owner = userResult.rows[0];
+  const owner = FIX_IMAGES ? null : await (async () => {
+    const userResult = await db.query('SELECT id, name FROM users WHERE email = $1', [USER_EMAIL]);
+    if (userResult.rows.length === 0) {
+      throw new Error(`No CODEX user found with email ${USER_EMAIL} - they need to have signed in at least once (or run scripts/import-google-users.js first).`);
+    }
+    return userResult.rows[0];
+  })();
 
   // Category matching is exact-string everywhere else in CODEX (team
   // pages, admin scoping, PATCH/DELETE permission checks), so a
@@ -173,20 +232,11 @@ async function main() {
     const rel = path.relative(DIR, filePath);
     try {
       const raw = fs.readFileSync(filePath, 'utf8');
-      const { meta, body } = parseFrontmatter(raw);
+      const { meta, body: rawBody } = parseFrontmatter(raw);
+      const warn = (msg) => console.warn(`  [warn] ${rel}: ${msg}`);
+      const body = inlineLocalImages(rawBody, filePath, DIR, warn);
 
       const title = deriveTitle(meta, body, filePath);
-      const rawCategory = meta.category || meta.dept || meta.department || DEFAULT_CATEGORY || null;
-      const category = rawCategory ? (departmentByLowerName.get(rawCategory.toLowerCase()) || rawCategory) : null;
-      if (rawCategory && category === rawCategory && !departmentByLowerName.has(rawCategory.toLowerCase())) {
-        console.warn(`  [warn] ${rel}: category "${rawCategory}" doesn't match any existing department - saved as-is, but it won't show up on a team page or be manageable by that department's admins until the name matches exactly.`);
-      }
-      const description = meta.description || null;
-      const url = meta.url || null;
-      const author = meta.author || owner.name || null;
-      const isPublic = resolveIsPublic(meta, DEFAULT_PUBLIC);
-      const createdAt = parseDate(meta.created_at || meta.created, new Date());
-      const updatedAt = parseDate(meta.updated || meta.updated_at, createdAt);
       const content = body.trim();
 
       if (!content) {
@@ -194,6 +244,49 @@ async function main() {
         failed++;
         continue;
       }
+
+      if (FIX_IMAGES) {
+        const existing = await db.query(
+          "SELECT id, content FROM sops WHERE doc_type = 'document' AND title = $1",
+          [title]
+        );
+        if (existing.rows.length === 0) {
+          console.log(`  [skip] ${rel} - no existing document titled "${title}"`);
+          failed++;
+          continue;
+        }
+        if (existing.rows.length > 1) {
+          warn(`${existing.rows.length} existing documents share the title "${title}" - skipped, ambiguous which to update`);
+          failed++;
+          continue;
+        }
+        const row = existing.rows[0];
+        if (row.content === content) {
+          console.log(`  [unchanged] "${title}" - already up to date`);
+          continue;
+        }
+        if (!APPLY) {
+          console.log(`  [dry run] would update images in "${title}" (id ${row.id})`);
+          imported++;
+          continue;
+        }
+        await db.query('UPDATE sops SET content = $1, updated_at = NOW() WHERE id = $2', [content, row.id]);
+        console.log(`  updated images in "${title}" (id ${row.id})`);
+        imported++;
+        continue;
+      }
+
+      const rawCategory = meta.category || meta.dept || meta.department || DEFAULT_CATEGORY || null;
+      const category = rawCategory ? (departmentByLowerName.get(rawCategory.toLowerCase()) || rawCategory) : null;
+      if (rawCategory && category === rawCategory && !departmentByLowerName.has(rawCategory.toLowerCase())) {
+        warn(`category "${rawCategory}" doesn't match any existing department - saved as-is, but it won't show up on a team page or be manageable by that department's admins until the name matches exactly.`);
+      }
+      const description = meta.description || null;
+      const url = meta.url || null;
+      const author = meta.author || owner.name || null;
+      const isPublic = resolveIsPublic(meta, DEFAULT_PUBLIC);
+      const createdAt = parseDate(meta.created_at || meta.created, new Date());
+      const updatedAt = parseDate(meta.updated || meta.updated_at, createdAt);
 
       if (!APPLY) {
         console.log(`  [dry run] would import "${title}" (category=${category || 'Uncategorized'}, public=${isPublic}) from ${rel}`);
@@ -216,9 +309,9 @@ async function main() {
 
   console.log('');
   if (APPLY) {
-    console.log(`Done. Imported ${imported}, failed ${failed}.`);
+    console.log(`Done. ${FIX_IMAGES ? 'Updated' : 'Imported'} ${imported}, failed ${failed}.`);
   } else {
-    console.log(`Done. ${imported} file(s) would be imported (${failed} skipped) - rerun with --apply to write them.`);
+    console.log(`Done. ${imported} file(s) would be ${FIX_IMAGES ? 'updated' : 'imported'} (${failed} skipped) - rerun with --apply to write them.`);
   }
 }
 

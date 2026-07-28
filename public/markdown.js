@@ -27,6 +27,18 @@
   // HTML-escaping touches.
   function renderInline(text) {
     text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // Images (![alt](src)) have to be handled before the link rule below,
+    // since a leading "!" is the only thing that distinguishes them from
+    // a plain link - otherwise the link rule would match the "[alt](src)"
+    // part and turn an image into a clickable link instead. data: URIs
+    // (inline base64 images) are allowed here in addition to http(s),
+    // unlike plain links, since that's how this app embeds images.
+    text = text.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, src) => {
+      const safeSrc = /^(https?:|data:image\/)/i.test(src) ? src : null;
+      return safeSrc
+        ? `<img src="${safeSrc}" alt="${alt}" loading="lazy">`
+        : `[image unavailable: ${alt || src}]`;
+    });
     text = text.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/__([^_]+)__/g, '<strong>$1</strong>');
     text = text.replace(/\*([^*]+)\*/g, '<em>$1</em>');
