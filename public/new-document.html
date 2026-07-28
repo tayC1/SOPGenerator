@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="/markdown.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -305,6 +306,50 @@
     margin-bottom: 24px;
     display: none;
   }
+
+  .doc-content {
+    font-size: 14px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.85);
+  }
+  .doc-content h1, .doc-content h2, .doc-content h3,
+  .doc-content h4, .doc-content h5, .doc-content h6 {
+    margin: 18px 0 8px;
+    line-height: 1.35;
+    color: #fff;
+  }
+  .doc-content h1:first-child, .doc-content h2:first-child, .doc-content h3:first-child { margin-top: 0; }
+  .doc-content h1 { font-size: 21px; font-weight: 800; }
+  .doc-content h2 { font-size: 18px; font-weight: 700; }
+  .doc-content h3 { font-size: 15px; font-weight: 700; }
+  .doc-content p { margin: 0 0 12px; }
+  .doc-content ul, .doc-content ol { margin: 0 0 12px; padding-left: 22px; }
+  .doc-content li { margin-bottom: 4px; }
+  .doc-content strong { color: #fff; font-weight: 700; }
+  .doc-content code {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 12px;
+    font-family: 'SFMono-Regular', Consolas, monospace;
+  }
+  .doc-content pre {
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 8px;
+    padding: 12px 14px;
+    overflow-x: auto;
+    margin: 0 0 12px;
+  }
+  .doc-content pre code { background: none; padding: 0; }
+  .doc-content blockquote {
+    border-left: 3px solid rgba(233, 109, 45, 0.6);
+    padding: 2px 14px;
+    margin: 0 0 12px;
+    color: rgba(255, 255, 255, 0.65);
+  }
+  .doc-content a { color: #7eb8d4; }
+  .doc-content hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.12); margin: 16px 0; }
+  .doc-content .doc-empty { color: rgba(255, 255, 255, 0.4); font-style: italic; }
 </style>
 </head>
 <body>
@@ -396,8 +441,13 @@
         <input type="text" id="descriptionInput" placeholder="One line summary shown on the card">
       </div>
       <div class="field">
-        <label for="contentInput">Document content</label>
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <label for="contentInput" style="margin-bottom: 0;">Document content (Markdown supported)</label>
+          <button type="button" class="btn btn-secondary btn-small" id="togglePreviewBtn">Preview</button>
+        </div>
+        <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin: 6px 0 8px;"># Heading, **bold**, *italic*, - lists, &gt; quote, `code`, [link](url)</p>
         <textarea id="contentInput" placeholder="Write the reference document here…" required></textarea>
+        <div class="panel doc-content" id="contentPreview" style="display: none; margin-top: 10px;"></div>
       </div>
       <div class="field field-checkbox">
         <input type="checkbox" id="publicCheckbox">
@@ -426,6 +476,8 @@
     const descriptionInput = document.getElementById('descriptionInput');
     const contentInput     = document.getElementById('contentInput');
     const publicCheckbox   = document.getElementById('publicCheckbox');
+    const togglePreviewBtn = document.getElementById('togglePreviewBtn');
+    const contentPreview   = document.getElementById('contentPreview');
 
     const sopModeToggle       = document.getElementById('sopModeToggle');
     const modeExtensionBtn    = document.getElementById('modeExtensionBtn');
@@ -695,6 +747,20 @@
     documentCard.addEventListener('click', () => selectType('document'));
     modeExtensionBtn.addEventListener('click', () => setSopMode('extension'));
     modeManualBtn.addEventListener('click', () => setSopMode('manual'));
+
+    togglePreviewBtn.addEventListener('click', () => {
+      const showingPreview = contentPreview.style.display !== 'none';
+      if (showingPreview) {
+        contentPreview.style.display = 'none';
+        contentInput.style.display = 'block';
+        togglePreviewBtn.textContent = 'Preview';
+      } else {
+        contentPreview.innerHTML = CodexMarkdown.renderMarkdown(contentInput.value);
+        contentPreview.style.display = 'block';
+        contentInput.style.display = 'none';
+        togglePreviewBtn.textContent = 'Edit';
+      }
+    });
 
     if (editId) {
       loadForEdit();
