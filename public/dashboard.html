@@ -652,8 +652,10 @@
     }
 
     async function editSop(id) {
+      // No extension reachable (not installed, or a non-Chrome browser) -
+      // fall back to the web-based manual step editor instead of dead-ending.
       if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-        alert('The CODEX extension is required to edit a SOP. Install it, then try again.');
+        location.href = `/documents/new?id=${id}`;
         return;
       }
       try {
@@ -662,8 +664,10 @@
         const sop = await res.json();
         chrome.runtime.sendMessage(EXTENSION_ID, { type: 'EDIT_SOP', sop }, (response) => {
           if (chrome.runtime.lastError) {
-            console.error('[edit] sendMessage failed:', chrome.runtime.lastError.message);
-            alert(`Could not reach the CODEX extension: ${chrome.runtime.lastError.message}`);
+            // Extension not actually installed/reachable in this browser -
+            // same fallback as the "no chrome.runtime" branch above.
+            console.log('[edit] extension not reachable, falling back to web editor:', chrome.runtime.lastError.message);
+            location.href = `/documents/new?id=${id}`;
             return;
           }
           if (!response || !response.received) {

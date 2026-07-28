@@ -619,7 +619,7 @@
           </div>
           <div class="sop-card-actions">
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
-            <a class="action-btn" href="${isDocument ? `/documents/new?id=${sop.id}` : `/sop.html?id=${sop.id}`}">${ICONS.edit} EDIT</a>
+            <a class="action-btn" href="/documents/new?id=${sop.id}">${ICONS.edit} EDIT</a>
             <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
             ${canDeleteSop(sop) ? `<button class="action-btn action-btn-danger" type="button" data-delete="${sop.id}">${ICONS.trash} DELETE</button>` : ''}
           </div>
