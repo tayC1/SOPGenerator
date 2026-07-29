@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', function () {
     link.textContent = 'Sign in →';
     link.style.cssText = 'font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;opacity:0.9;';
     link.addEventListener('click', function () {
-      chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
+      chrome.tabs.create({ url: 'https://codex.kramer.pro' });
       if (el.parentNode) el.remove();
     });
     el.appendChild(msg);
@@ -420,7 +420,7 @@ document.addEventListener('DOMContentLoaded', function () {
     link.textContent = 'View in CODEX →';
     link.style.cssText = 'font-size:13px;font-weight:500;opacity:0.85;cursor:pointer;text-decoration:underline;';
     link.addEventListener('click', function () {
-      chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/dashboard' });
+      chrome.tabs.create({ url: 'https://codex.kramer.pro/dashboard' });
       if (el.parentNode) el.remove();
     });
 

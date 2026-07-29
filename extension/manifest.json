@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "CODEX",
-  "version": "3.0.1",
-  "version_name": "3.0.1b",
+  "version": "3.1.0",
+  "version_name": "3.1.0",
   "description": "Record clicks and screenshots to generate SOP documents",
   "permissions": [
     "storage",
@@ -34,7 +34,7 @@
     }
   },
   "externally_connectable": {
-    "matches": ["https://kpcodex-production.up.railway.app/*", "https://codex.kramer.pro/*"]
+    "matches": ["https://codex.kramer.pro/*"]
   },
   "content_scripts": [
     {
