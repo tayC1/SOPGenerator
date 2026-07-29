@@ -3,12 +3,16 @@
   "version": "1.0.0",
   "description": "Backend API server for the CODEX Chrome extension",
   "main": "server.js",
+  "bin": {
+    "codex": "./bin/codex.js"
+  },
   "scripts": {
     "start": "node server.js",
     "build": "node scripts/pack-extension.js",
     "migrate": "node-pg-migrate --envPath .env"
   },
   "dependencies": {
+    "commander": "^15.0.0",
     "connect-pg-simple": "^10.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
