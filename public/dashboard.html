@@ -37,7 +37,7 @@
   .icon svg { width: 100%; height: 100%; }
 
   /* ---------- layout ---------- */
-  .dashboard {
+  .app-shell {
     display: flex;
     min-height: 100vh;
   }
@@ -350,14 +350,14 @@
   }
 
   @media (max-width: 860px) {
-    .dashboard { flex-direction: column; }
+    .app-shell { flex-direction: column; }
     .sidebar { width: 100%; height: auto; position: relative; }
     .main { padding: 28px 20px 48px; }
   }
 </style>
 </head>
 <body>
-  <div class="dashboard">
+  <div class="app-shell">
     <aside class="sidebar">
       <a class="sidebar-brand" href="/">
         <img src="/icons/CODEX - 48PX.png" alt="">
@@ -389,19 +389,18 @@
       </nav>
 
       <div class="sidebar-section-label">Categories</div>
-      <div class="category-list" id="categoryList" role="group" aria-label="Filter by category">
-        <button class="category-item active" type="button" data-category="">All categories</button>
-        <button class="category-item" type="button" data-category="Finance">Finance</button>
-        <button class="category-item" type="button" data-category="HR">HR</button>
-        <button class="category-item" type="button" data-category="Internal Ops">Internal Ops</button>
-        <button class="category-item" type="button" data-category="Logistics/Purchasing">Logistics/Purchasing</button>
-        <button class="category-item" type="button" data-category="Live Events/Rentals">Live Events/Rentals</button>
-        <button class="category-item" type="button" data-category="Integrations/Sales">Integrations/Sales</button>
-      </div>
+      <nav class="category-list" id="categoryList" aria-label="Categories">
+        <a class="category-item" href="/team/Finance">Finance</a>
+        <a class="category-item" href="/team/HR">HR</a>
+        <a class="category-item" href="/team/Internal%20Ops">Internal Ops</a>
+        <a class="category-item" href="/team/Logistics%2FPurchasing">Logistics/Purchasing</a>
+        <a class="category-item" href="/team/Live%20Events%2FRentals">Live Events/Rentals</a>
+        <a class="category-item" href="/team/Integrations%2FSales">Integrations/Sales</a>
+      </nav>
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
 
-      <a class="sidebar-footer" href="/settings">
+      <a class="sidebar-footer" href="/settings" id="sidebarFooter">
         <div class="avatar" id="userAvatar">?</div>
         <span class="user-name" id="userName">Loading…</span>
       </a>
@@ -479,7 +478,6 @@
     }
 
     let allSops = [];
-    let activeCategory = '';
     let currentUser = null;
 
     // Owners can always delete their own SOPs. An admin may also delete
@@ -508,22 +506,26 @@
     const EXTENSION_ID = 'capicbafpiflgbopfcklobgdebodigmb';
 
     async function loadUser() {
+      const footer = document.getElementById('sidebarFooter');
       try {
         const res = await fetch('/auth/me', { credentials: 'include' });
         const data = await res.json();
-        const name = data.user?.name || 'Guest';
-        document.getElementById('userName').textContent = name;
-        document.getElementById('userAvatar').textContent = initials(name);
-        document.getElementById('adminLink').style.display = data.user?.is_admin ? 'block' : 'none';
-        currentUser = data.user || null;
+        if (!data.user) throw new Error('not signed in');
+        document.getElementById('userName').textContent = data.user.name || 'Account';
+        document.getElementById('userAvatar').textContent = initials(data.user.name);
+        document.getElementById('adminLink').style.display = data.user.is_admin ? 'block' : 'none';
+        footer.href = '/settings';
+        currentUser = data.user;
         // loadSops() may have already rendered cards before currentUser was
         // known, which would hide delete buttons the caller is actually
         // entitled to - re-render now that permission info is in.
         renderGrid();
-        return data.user || null;
+        return data.user;
       } catch (err) {
         console.error('[auth-bridge] /auth/me failed:', err);
-        document.getElementById('userName').textContent = 'Guest';
+        document.getElementById('userName').textContent = 'Sign In';
+        document.getElementById('userAvatar').textContent = '?';
+        footer.href = '/auth/google';
         return null;
       }
     }
@@ -600,13 +602,9 @@
       const grid = document.getElementById('grid');
       const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-      const filtered = allSops.filter((sop) => {
-        const matchesCategory = !activeCategory || (sop.category || '') === activeCategory;
-        const matchesTerm = !term
-          || sop.title?.toLowerCase().includes(term)
-          || sop.description?.toLowerCase().includes(term);
-        return matchesCategory && matchesTerm;
-      });
+      const filtered = allSops.filter((sop) => !term
+        || sop.title?.toLowerCase().includes(term)
+        || sop.description?.toLowerCase().includes(term));
 
       if (filtered.length === 0) {
         grid.innerHTML = '<p class="empty-state">No SOPs match your filters yet.</p>';
@@ -733,19 +731,6 @@
     }
 
     document.getElementById('searchInput').addEventListener('input', renderGrid);
-
-    document.getElementById('categoryList').addEventListener('click', (e) => {
-      const btn = e.target.closest('.category-item');
-      if (!btn) return;
-      const category = btn.dataset.category;
-      if (!category) {
-        activeCategory = '';
-        document.querySelectorAll('.category-item').forEach((el) => el.classList.toggle('active', el === btn));
-        renderGrid();
-        return;
-      }
-      window.location.href = `/team/${encodeURIComponent(category)}`;
-    });
 
     loadUser().then(bridgeSessionToExtension);
     loadSops();
