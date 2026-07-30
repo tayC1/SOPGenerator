@@ -169,6 +169,19 @@
     .main { padding: 28px 20px 48px; }
   }
 
+  .back-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.55);
+    text-decoration: none;
+    margin-bottom: 20px;
+  }
+  .back-nav:hover { color: #fff; }
+  .back-nav svg { width: 16px; height: 16px; }
+
   .page-title {
     font-size: 26px;
     font-weight: 800;
@@ -501,13 +514,12 @@
           </span>
           Dashboard
         </a>
-        <button class="nav-item" type="button" aria-disabled="true" disabled>
+        <a class="nav-item" href="/saved">
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
           </span>
           Saved
-          <span class="nav-soon">Soon</span>
-        </button>
+        </a>
       </nav>
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
@@ -519,6 +531,10 @@
     </aside>
 
   <main class="main">
+    <a class="back-nav" href="/dashboard" id="backLink">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+      Back
+    </a>
     <h1 class="page-title" id="pageTitle">Add a document</h1>
     <p class="page-sub" id="pageSub">Choose what kind of document you're adding to CODEX.</p>
 
@@ -569,6 +585,10 @@
           <label for="sopDescriptionInput">Short description (optional)</label>
           <input type="text" id="sopDescriptionInput" placeholder="One line summary shown on the card">
         </div>
+        <div class="field">
+          <label for="sopTagInput">Tag (optional)</label>
+          <input type="text" id="sopTagInput" placeholder="e.g. Vendor Onboarding">
+        </div>
 
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-bottom: 10px;">Steps</label>
         <div class="step-list" id="stepList"></div>
@@ -599,6 +619,10 @@
       <div class="field">
         <label for="descriptionInput">Short description (optional)</label>
         <input type="text" id="descriptionInput" placeholder="One line summary shown on the card">
+      </div>
+      <div class="field">
+        <label for="tagInput">Tag (optional)</label>
+        <input type="text" id="tagInput" placeholder="e.g. Expense Policy">
       </div>
       <div class="field">
         <div style="display: flex; align-items: center; justify-content: space-between;">
@@ -635,6 +659,7 @@
     const titleInput       = document.getElementById('titleInput');
     const categorySelect   = document.getElementById('categorySelect');
     const descriptionInput = document.getElementById('descriptionInput');
+    const tagInput          = document.getElementById('tagInput');
     const contentInput     = document.getElementById('contentInput');
     const publicCheckbox   = document.getElementById('publicCheckbox');
     const togglePreviewBtn = document.getElementById('togglePreviewBtn');
@@ -648,6 +673,7 @@
     const sopTitleInput       = document.getElementById('sopTitleInput');
     const sopCategorySelect   = document.getElementById('sopCategorySelect');
     const sopDescriptionInput = document.getElementById('sopDescriptionInput');
+    const sopTagInput         = document.getElementById('sopTagInput');
     const sopPublicCheckbox   = document.getElementById('sopPublicCheckbox');
     const sopSubmitBtn        = document.getElementById('sopSubmitBtn');
     const stepList            = document.getElementById('stepList');
@@ -687,6 +713,7 @@
         fill(sopTitleInput, titleInput);
         fill(sopCategorySelect, categorySelect);
         fill(sopDescriptionInput, descriptionInput);
+        fill(sopTagInput, tagInput);
         // Seed a single step from the document's prose so switching a
         // reference document into an SOP doesn't throw away what was
         // written - only when the step builder is still blank.
@@ -698,6 +725,7 @@
         fill(titleInput, sopTitleInput);
         fill(categorySelect, sopCategorySelect);
         fill(descriptionInput, sopDescriptionInput);
+        fill(tagInput, sopTagInput);
         if (!contentInput.value.trim()) {
           const flattened = sopSteps.map((s) => (s.description || '').trim()).filter(Boolean).join('\n\n');
           if (flattened) contentInput.value = flattened;
@@ -818,6 +846,7 @@
     async function loadDocumentForEdit(sop) {
       titleInput.value = sop.title || '';
       descriptionInput.value = sop.description || '';
+      tagInput.value = sop.tag || '';
       contentInput.value = sop.content || '';
       publicCheckbox.checked = !!sop.is_public;
       categorySelect.value = sop.category || '';
@@ -828,6 +857,7 @@
     async function loadSopForEdit(sop) {
       sopTitleInput.value = sop.title || '';
       sopDescriptionInput.value = sop.description || '';
+      sopTagInput.value = sop.tag || '';
       sopPublicCheckbox.checked = !!sop.is_public;
       sopUrl = sop.url || '';
       sopSteps = Array.isArray(sop.steps) && sop.steps.length > 0
@@ -875,6 +905,7 @@
         title: titleInput.value.trim(),
         category: categorySelect.value || null,
         description: descriptionInput.value.trim(),
+        tag: tagInput.value.trim() || null,
         content: contentInput.value,
         steps: [],
         doc_type: 'document',
@@ -914,6 +945,7 @@
         title: sopTitleInput.value.trim(),
         category: sopCategorySelect.value || null,
         description: sopDescriptionInput.value.trim(),
+        tag: sopTagInput.value.trim() || null,
         url: sopUrl,
         steps: cleanedSteps,
         doc_type: 'sop',
@@ -977,6 +1009,27 @@
       }
     }
 
+    // Prefer real browser back navigation (returns to the exact scroll
+    // position / search state of whatever list page sent you here, via
+    // bfcache) over a fixed link. Falls back to the referrer, or /dashboard
+    // if this page was opened directly (no history to go back to).
+    function initBackLink() {
+      const backLink = document.getElementById('backLink');
+      const ref = document.referrer;
+      let sameOriginRef = null;
+      try {
+        if (ref && new URL(ref).origin === location.origin) sameOriginRef = ref;
+      } catch {}
+      backLink.href = sameOriginRef || '/dashboard';
+      backLink.addEventListener('click', (e) => {
+        if (history.length > 1) {
+          e.preventDefault();
+          history.back();
+        }
+      });
+    }
+
+    initBackLink();
     loadUser();
 
     if (editId) {

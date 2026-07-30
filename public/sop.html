@@ -6,6 +6,7 @@
   <title>SOP — CODEX</title>
   <link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
   <script src="/markdown.js"></script>
+  <script src="/saved.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -153,6 +154,36 @@
     }
     .back-link:hover { color: #fff; }
 
+    .back-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      color: rgba(255,255,255,0.55);
+      text-decoration: none;
+      margin-bottom: 20px;
+    }
+    .back-nav:hover { color: #fff; }
+    .back-nav svg { width: 16px; height: 16px; }
+
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .pin-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: rgba(255,255,255,0.7);
+      cursor: pointer;
+    }
+    .pin-btn:hover { background: rgba(255,255,255,0.1); }
+    .pin-btn.is-saved { color: #e96d2d; border-color: rgba(233,109,45,0.4); }
+    .pin-btn svg { width: 18px; height: 18px; display: block; }
+
     /* ---------- main ---------- */
     .main {
       flex: 1;
@@ -184,6 +215,10 @@
       margin-bottom: 10px;
       line-height: 1.25;
     }
+    .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px; }
+    .tag { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 20px; }
+    .tag-solid { background: #e96d2d; color: #1e1e1e; }
+    .tag-outline { border: 1px solid #e96d2d; color: rgba(255,255,255,0.75); }
     .sop-description {
       font-size: 14px;
       color: rgba(255,255,255,0.6);
@@ -348,13 +383,12 @@
           </span>
           Dashboard
         </a>
-        <button class="nav-item" type="button" aria-disabled="true" disabled>
+        <a class="nav-item" href="/saved">
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
           </span>
           Saved
-          <span class="nav-soon">Soon</span>
-        </button>
+        </a>
       </nav>
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
@@ -365,8 +399,14 @@
       </a>
     </aside>
 
-    <main class="main" id="main">
-      <p class="empty">Loading…</p>
+    <main class="main">
+      <a class="back-nav" href="/dashboard" id="backLink">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back
+      </a>
+      <div id="main">
+        <p class="empty">Loading…</p>
+      </div>
     </main>
   </div>
 
@@ -389,6 +429,28 @@
         editLink.href = `/documents/new?id=${currentSop.id}`;
         editLink.style.display = 'inline';
       }
+    }
+
+    function updatePinButton() {
+      const pinBtn = document.getElementById('pinBtn');
+      if (!pinBtn || !currentSop || currentUserId == null) return;
+      pinBtn.style.display = 'inline-flex';
+      const saved = CodexSaved.isSaved(currentSop.id);
+      pinBtn.classList.toggle('is-saved', saved);
+      pinBtn.innerHTML = CodexSaved.icon(currentSop.id);
+      pinBtn.title = saved ? 'Remove from Saved' : 'Save';
+      pinBtn.setAttribute('aria-label', pinBtn.title);
+      pinBtn.onclick = async () => {
+        pinBtn.disabled = true;
+        try {
+          await CodexSaved.toggle(currentSop.id);
+          updatePinButton();
+        } catch {
+          alert('Could not update the saved state right now.');
+        } finally {
+          pinBtn.disabled = false;
+        }
+      };
     }
 
     async function load() {
@@ -449,7 +511,15 @@
         <div class="sop-header">
           <div class="sop-header-top">
             <div class="sop-title">${escape(sop.title)}</div>
-            <a class="back-link" href="#" id="editLink" style="display: none;">Edit</a>
+            <div class="header-actions">
+              <button class="pin-btn" type="button" id="pinBtn" style="display: none;" title="Save" aria-label="Save"></button>
+              <a class="back-link" href="#" id="editLink" style="display: none;">Edit</a>
+            </div>
+          </div>
+          <div class="sop-tags">
+            <span class="tag tag-solid">${escape(sop.category || 'Uncategorized')}</span>
+            <span class="tag tag-outline">${isDocument ? 'Document' : 'SOP'}</span>
+            ${sop.tag ? `<span class="tag tag-outline">${escape(sop.tag)}</span>` : ''}
           </div>
           ${sop.description ? `<div class="sop-description">${escape(sop.description)}</div>` : ''}
           <div class="sop-author">By ${escape(sop.author || 'Unknown')}</div>
@@ -462,6 +532,7 @@
         ${bodyHtml}
       `;
       updateEditLink();
+      updatePinButton();
     }
 
     function initials(name) {
@@ -481,13 +552,36 @@
           document.getElementById('userName').textContent = data.user.name || 'Account';
           document.getElementById('userAvatar').textContent = initials(data.user.name);
           footer.href = '/settings';
+          await CodexSaved.load();
         }
         updateEditLink();
+        updatePinButton();
       } catch {
         // not signed in / request failed - leave the sidebar in its signed-out state
       }
     }
 
+    // Prefer real browser back navigation (returns to the exact scroll
+    // position / search state of whatever list page sent you here, via
+    // bfcache) over a fixed link. Falls back to the referrer, or /dashboard
+    // if this page was opened directly (no history to go back to).
+    function initBackLink() {
+      const backLink = document.getElementById('backLink');
+      const ref = document.referrer;
+      let sameOriginRef = null;
+      try {
+        if (ref && new URL(ref).origin === location.origin) sameOriginRef = ref;
+      } catch {}
+      backLink.href = sameOriginRef || '/dashboard';
+      backLink.addEventListener('click', (e) => {
+        if (history.length > 1) {
+          e.preventDefault();
+          history.back();
+        }
+      });
+    }
+
+    initBackLink();
     load();
     loadUser();
   </script>
