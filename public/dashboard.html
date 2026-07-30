@@ -275,9 +275,29 @@
     padding: 16px;
     display: flex;
     flex-direction: column;
+    position: relative;
   }
 
-  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pin-corner {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(45, 43, 46, 0.45);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .pin-corner:hover { background: rgba(45, 43, 46, 0.65); }
+  .pin-corner.is-saved { color: var(--tag); }
+  .pin-corner .icon { width: 14px; height: 14px; }
+
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 34px; }
 
   .tag {
     font-size: 11px;
@@ -343,8 +363,6 @@
   .action-btn-danger { color: #e08080; }
   .action-btn-danger:hover { background: rgba(224, 128, 128, 0.18); }
 
-  .action-btn-pin { flex: 0 0 auto; width: 34px; padding: 8px 0; }
-  .action-btn-pin.is-saved { color: var(--tag); }
 
   .empty-state {
     text-align: center;
@@ -568,6 +586,7 @@
       const stepCount = Array.isArray(sop.steps) ? sop.steps.length : (sop.step_count ?? null);
       return `
         <article class="sop-card">
+          <button class="pin-corner${CodexSaved.isSaved(sop.id) ? ' is-saved' : ''}" type="button" data-pin="${sop.id}" title="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}" aria-label="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}">${CodexSaved.icon(sop.id)}</button>
           <div class="sop-tags">
             <span class="tag tag-solid">${escapeHtml(category)}</span>
             <span class="tag tag-outline">${isDocument ? 'Document' : 'SOP'}</span>
@@ -583,7 +602,6 @@
             ${!isDocument && stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
           </div>
           <div class="sop-card-actions">
-            <button class="action-btn action-btn-pin${CodexSaved.isSaved(sop.id) ? ' is-saved' : ''}" type="button" data-pin="${sop.id}" title="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}" aria-label="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}">${CodexSaved.icon(sop.id)}</button>
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
             ${canEditSop(sop)
               ? (isDocument

@@ -182,9 +182,29 @@
     padding: 16px;
     display: flex;
     flex-direction: column;
+    position: relative;
   }
 
-  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pin-corner {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    border: none;
+    background: rgba(45, 43, 46, 0.45);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .pin-corner:hover { background: rgba(45, 43, 46, 0.65); }
+  .pin-corner.is-saved { color: var(--tag); }
+  .pin-corner .icon { width: 14px; height: 14px; }
+
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 34px; }
 
   .tag {
     font-size: 11px;
@@ -247,8 +267,6 @@
 
   .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
 
-  .action-btn-pin { flex: 0 0 auto; width: 34px; padding: 8px 0; }
-  .action-btn-pin.is-saved { color: var(--tag); }
 
   .empty-state {
     text-align: center;
@@ -335,10 +353,11 @@
       const stepCount = Array.isArray(sop.steps) ? sop.steps.length : null;
       const isDocument = sop.doc_type === 'document';
       const pinBtn = signedIn
-        ? `<button class="action-btn action-btn-pin${CodexSaved.isSaved(sop.id) ? ' is-saved' : ''}" type="button" data-pin="${sop.id}" title="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}" aria-label="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}">${CodexSaved.icon(sop.id)}</button>`
+        ? `<button class="pin-corner${CodexSaved.isSaved(sop.id) ? ' is-saved' : ''}" type="button" data-pin="${sop.id}" title="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}" aria-label="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}">${CodexSaved.icon(sop.id)}</button>`
         : '';
       return `
         <article class="sop-card">
+          ${pinBtn}
           <div class="sop-tags">
             <span class="tag">${escapeHtml(sop.category || 'Uncategorized')}</span>
             <span class="tag tag-outline">${isDocument ? 'Document' : 'SOP'}</span>
@@ -354,7 +373,6 @@
             ${stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
           </div>
           <div class="sop-card-actions">
-            ${pinBtn}
             <a class="action-btn" href="/sop.html?id=${sop.id}">View SOP</a>
           </div>
         </article>
