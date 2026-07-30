@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My SOPs — CODEX</title>
+<title>Saved — CODEX</title>
 <link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -96,39 +96,6 @@
 
   .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
   .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
-  .nav-item[aria-disabled="true"] {
-    cursor: not-allowed;
-    color: var(--text-faint);
-  }
-  .nav-item[aria-disabled="true"]:hover { background: none; }
-
-  .nav-soon {
-    margin-left: auto;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-    border: 1px solid var(--border);
-    border-radius: 20px;
-    padding: 2px 7px;
-  }
-
-  .sidebar-section-label {
-    padding: 18px 20px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-faint);
-  }
-
-  .category-list {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    padding: 0 12px;
-  }
 
   .category-item {
     display: block;
@@ -145,7 +112,6 @@
   }
 
   .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
-  .category-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; }
 
   .sidebar-footer {
     margin-top: auto;
@@ -195,41 +161,7 @@
   }
 
   .page-title { font-size: 26px; font-weight: 600; }
-
-  .btn-create {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--accent);
-    color: #fff;
-    border: none;
-    border-radius: 8px;
-    padding: 11px 20px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    cursor: pointer;
-  }
-
-  .btn-create:hover { opacity: 0.88; }
-
-  .stats-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-    gap: 16px;
-    margin-bottom: 28px;
-  }
-
-  .stat-card {
-    background: rgba(217, 217, 217, 0.08);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px 20px;
-  }
-
-  .stat-label { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
-  .stat-value { font-size: 34px; font-weight: 600; line-height: 1; margin-bottom: 6px; }
-  .stat-sub { font-size: 12px; color: var(--text-faint); }
+  .page-subtitle { font-size: 13px; color: var(--text-dim); margin-top: 4px; }
 
   .toolbar { margin-bottom: 24px; }
 
@@ -253,13 +185,6 @@
     font-size: 14px;
     font-family: inherit;
     color: #1e1e1e;
-  }
-
-  .section-heading {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text-dim);
-    margin-bottom: 14px;
   }
 
   .sop-grid {
@@ -340,10 +265,11 @@
   .action-btn .icon { width: 12px; height: 12px; flex-shrink: 0; }
   .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
 
-  .action-btn-danger { color: #e08080; }
-  .action-btn-danger:hover { background: rgba(224, 128, 128, 0.18); }
-
-  .action-btn-pin { flex: 0 0 auto; width: 34px; padding: 8px 0; }
+  .action-btn-pin {
+    flex: 0 0 auto;
+    width: 34px;
+    padding: 8px 0;
+  }
   .action-btn-pin.is-saved { color: var(--tag); }
 
   .empty-state {
@@ -371,13 +297,13 @@
       <div class="sidebar-divider"></div>
 
       <nav class="sidebar-nav" aria-label="Primary">
-        <a class="nav-item active" href="/dashboard">
+        <a class="nav-item" href="/dashboard">
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
           </span>
           Dashboard
         </a>
-        <a class="nav-item" href="/saved">
+        <a class="nav-item active" href="/saved">
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
           </span>
@@ -385,8 +311,8 @@
         </a>
       </nav>
 
-      <div class="sidebar-section-label">Categories</div>
-      <nav class="category-list" id="categoryList" aria-label="Categories">
+      <div class="sidebar-section-label" style="padding: 18px 20px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint);">Categories</div>
+      <nav class="category-list" style="display: flex; flex-direction: column; gap: 2px; padding: 0 12px;" aria-label="Categories">
         <a class="category-item" href="/team/Finance">Finance</a>
         <a class="category-item" href="/team/HR">HR</a>
         <a class="category-item" href="/team/Internal%20Ops">Internal Ops</a>
@@ -405,30 +331,9 @@
 
     <main class="main">
       <div class="main-header">
-        <h1 class="page-title">My SOPs</h1>
-        <a class="btn-create" href="/documents/new">
-          <span class="icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-          </span>
-          Add Document
-        </a>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-card">
-          <div class="stat-label">Total SOPs</div>
-          <div class="stat-value" id="statTotal">—</div>
-          <div class="stat-sub" id="statTotalSub">&nbsp;</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Categories</div>
-          <div class="stat-value" id="statCategories">—</div>
-          <div class="stat-sub">Across your SOPs</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Added this month</div>
-          <div class="stat-value" id="statMonth">—</div>
-          <div class="stat-sub">&nbsp;</div>
+        <div>
+          <h1 class="page-title">Saved</h1>
+          <div class="page-subtitle">SOPs and documents you've pinned</div>
         </div>
       </div>
 
@@ -437,12 +342,12 @@
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
           </span>
-          <input type="search" id="searchInput" placeholder="Search your SOPs" aria-label="Search your SOPs">
+          <input type="search" id="searchInput" placeholder="Search your saved items" aria-label="Search your saved items">
         </div>
       </div>
 
       <div id="grid">
-        <p class="empty-state">Loading your SOPs…</p>
+        <p class="empty-state">Loading your saved SOPs…</p>
       </div>
     </main>
   </div>
@@ -452,7 +357,6 @@
       eye: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
       edit: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>',
       download: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
-      trash: '<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>',
     };
 
     function escapeHtml(str) {
@@ -477,11 +381,9 @@
     let allSops = [];
     let currentUser = null;
 
-    // Owners can always delete their own SOPs. An admin may also delete
-    // one within their scope: super_admin covers everything, department_admin
-    // only SOPs categorized under a department they're currently in (an
-    // uncategorized SOP has no department for them to be scoped over).
-    function canDeleteSop(sop) {
+    // Same scoping rule as PATCH/DELETE /sops/:id on the server - owners
+    // always can, admins within their scope can too.
+    function canEditSop(sop) {
       if (!currentUser) return false;
       if (sop.user_id === currentUser.id) return true;
       if (currentUser.role === 'super_admin') return true;
@@ -490,17 +392,6 @@
       }
       return false;
     }
-
-    // Same scoping rule as PATCH /sops/:id on the server - kept as a
-    // separate name from canDeleteSop even though the logic is identical
-    // today, since edit and delete permissions are conceptually distinct
-    // and may diverge later.
-    const canEditSop = canDeleteSop;
-
-    // Chrome Web Store-assigned extension ID for the published listing - if
-    // the listing is ever republished under a different keypair, this
-    // literal must be updated to match.
-    const EXTENSION_ID = 'capicbafpiflgbopfcklobgdebodigmb';
 
     async function loadUser() {
       const footer = document.getElementById('sidebarFooter');
@@ -513,52 +404,13 @@
         document.getElementById('adminLink').style.display = data.user.is_admin ? 'block' : 'none';
         footer.href = '/settings';
         currentUser = data.user;
-        // loadSops() may have already rendered cards before currentUser was
-        // known, which would hide delete buttons the caller is actually
-        // entitled to - re-render now that permission info is in.
         renderGrid();
         return data.user;
       } catch (err) {
-        console.error('[auth-bridge] /auth/me failed:', err);
         document.getElementById('userName').textContent = 'Sign In';
         document.getElementById('userAvatar').textContent = '?';
         footer.href = '/auth/google';
         return null;
-      }
-    }
-
-    // Hands the signed-in session off to the CODEX extension, if installed,
-    // so it can authenticate its own API calls with a Bearer token instead
-    // of relying on a browser session cookie it has no access to.
-    async function bridgeSessionToExtension(user) {
-      if (!user) {
-        console.log('[auth-bridge] no active session, skipping extension bridge');
-        return;
-      }
-      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-        console.log('[auth-bridge] CODEX extension not installed/reachable, skipping');
-        return;
-      }
-
-      try {
-        const res = await fetch('/auth/extension-token', { method: 'POST', credentials: 'include' });
-        if (!res.ok) throw new Error(`extension-token request failed: ${res.status}`);
-        const { token } = await res.json();
-
-        chrome.runtime.sendMessage(
-          EXTENSION_ID,
-          { type: 'USER_SIGNED_IN', token, user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin } },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              // Expected if the extension isn't installed in this browser - not an error.
-              console.log('[auth-bridge] extension not reachable:', chrome.runtime.lastError.message);
-              return;
-            }
-            console.log('[auth-bridge] extension acknowledged sign-in:', response);
-          }
-        );
-      } catch (err) {
-        console.error('[auth-bridge] failed to bridge session to extension:', err);
       }
     }
 
@@ -583,7 +435,7 @@
             ${!isDocument && stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
           </div>
           <div class="sop-card-actions">
-            <button class="action-btn action-btn-pin${CodexSaved.isSaved(sop.id) ? ' is-saved' : ''}" type="button" data-pin="${sop.id}" title="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}" aria-label="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}">${CodexSaved.icon(sop.id)}</button>
+            <button class="action-btn action-btn-pin is-saved" type="button" data-unsave="${sop.id}" title="Remove from Saved" aria-label="Remove from Saved">${CodexSaved.ICON_FILLED}</button>
             <a class="action-btn" href="/sop.html?id=${sop.id}">${ICONS.eye} VIEW</a>
             ${canEditSop(sop)
               ? (isDocument
@@ -591,7 +443,6 @@
                 : `<button class="action-btn" type="button" data-edit="${sop.id}">${ICONS.edit} EDIT</button>`)
               : ''}
             <button class="action-btn" type="button" data-export="${sop.id}">${ICONS.download} EXPORT</button>
-            ${canDeleteSop(sop) ? `<button class="action-btn action-btn-danger" type="button" data-delete="${sop.id}">${ICONS.trash} DELETE</button>` : ''}
           </div>
         </article>
       `;
@@ -606,7 +457,9 @@
         || sop.description?.toLowerCase().includes(term));
 
       if (filtered.length === 0) {
-        grid.innerHTML = '<p class="empty-state">No SOPs match your filters yet.</p>';
+        grid.innerHTML = allSops.length === 0
+          ? '<p class="empty-state">Nothing saved yet — pin a SOP from its page or the dashboard to see it here.</p>'
+          : '<p class="empty-state">No saved items match your search.</p>';
         return;
       }
 
@@ -618,44 +471,22 @@
       grid.querySelectorAll('[data-edit]').forEach((btn) => {
         btn.addEventListener('click', () => editSop(btn.dataset.edit));
       });
-      grid.querySelectorAll('[data-delete]').forEach((btn) => {
-        btn.addEventListener('click', () => deleteSop(btn));
-      });
-      grid.querySelectorAll('[data-pin]').forEach((btn) => {
-        btn.addEventListener('click', () => togglePin(btn));
+      grid.querySelectorAll('[data-unsave]').forEach((btn) => {
+        btn.addEventListener('click', () => unsaveSop(btn));
       });
     }
 
-    async function togglePin(btn) {
-      const id = btn.dataset.pin;
+    async function unsaveSop(btn) {
+      const id = btn.dataset.unsave;
       btn.disabled = true;
       try {
-        const saved = await CodexSaved.toggle(id);
-        btn.classList.toggle('is-saved', saved);
-        btn.innerHTML = CodexSaved.icon(id);
-        btn.title = saved ? 'Remove from Saved' : 'Save';
-        btn.setAttribute('aria-label', btn.title);
+        await CodexSaved.toggle(id);
+        allSops = allSops.filter((sop) => String(sop.id) !== String(id));
+        renderGrid();
       } catch {
-        alert('Could not update the saved state right now.');
-      } finally {
         btn.disabled = false;
+        alert('Could not update the saved state right now.');
       }
-    }
-
-    function renderStats() {
-      const total = allSops.length;
-      const categories = new Set(allSops.map((s) => s.category || 'Uncategorized'));
-      const now = new Date();
-      const addedThisMonth = allSops.filter((s) => {
-        if (!s.created_at) return false;
-        const d = new Date(s.created_at);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      }).length;
-
-      document.getElementById('statTotal').textContent = total;
-      document.getElementById('statTotalSub').textContent = `${addedThisMonth} added this month`;
-      document.getElementById('statCategories').textContent = total === 0 ? 0 : categories.size;
-      document.getElementById('statMonth').textContent = addedThisMonth;
     }
 
     async function exportSop(id) {
@@ -676,85 +507,26 @@
     }
 
     async function editSop(id) {
-      // No extension reachable (not installed, or a non-Chrome browser) -
-      // fall back to the web-based manual step editor instead of dead-ending.
-      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-        location.href = `/documents/new?id=${id}`;
-        return;
-      }
-      try {
-        const res = await fetch(`/sops/${id}`, { credentials: 'include' });
-        if (!res.ok) throw new Error('Not found');
-        const sop = await res.json();
-        chrome.runtime.sendMessage(EXTENSION_ID, { type: 'EDIT_SOP', sop }, (response) => {
-          if (chrome.runtime.lastError) {
-            // Extension not actually installed/reachable in this browser -
-            // same fallback as the "no chrome.runtime" branch above.
-            console.log('[edit] extension not reachable, falling back to web editor:', chrome.runtime.lastError.message);
-            location.href = `/documents/new?id=${id}`;
-            return;
-          }
-          if (!response || !response.received) {
-            console.error('[edit] extension did not accept EDIT_SOP:', response);
-            alert(`Could not open this SOP for editing: ${(response && response.error) || 'unknown error'}`);
-          }
-        });
-      } catch {
-        alert('Could not open this SOP for editing right now.');
-      }
+      location.href = `/documents/new?id=${id}`;
     }
 
-    // Two-click confirm (armed state) instead of window.confirm() - same
-    // pattern used elsewhere in the app for destructive actions.
-    async function deleteSop(btn) {
-      const id = btn.dataset.delete;
-      if (btn.dataset.armed !== 'true') {
-        btn.dataset.armed = 'true';
-        btn.innerHTML = `${ICONS.trash} CONFIRM?`;
-        setTimeout(() => {
-          if (btn.isConnected && btn.dataset.armed === 'true') {
-            btn.dataset.armed = 'false';
-            btn.innerHTML = `${ICONS.trash} DELETE`;
-          }
-        }, 3000);
-        return;
-      }
-
-      btn.disabled = true;
-      try {
-        const res = await fetch(`/sops/${id}`, { method: 'DELETE', credentials: 'include' });
-        if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
-        allSops = allSops.filter((sop) => String(sop.id) !== String(id));
-        renderStats();
-        renderGrid();
-      } catch (err) {
-        btn.disabled = false;
-        btn.dataset.armed = 'false';
-        btn.innerHTML = `${ICONS.trash} DELETE`;
-        alert(err.message);
-      }
-    }
-
-    async function loadSops() {
+    async function loadSaved() {
       const grid = document.getElementById('grid');
       try {
-        const [res] = await Promise.all([
-          fetch('/sops', { credentials: 'include' }),
-          CodexSaved.load(),
-        ]);
+        await CodexSaved.load();
+        const res = await fetch('/sops/saved', { credentials: 'include' });
         if (!res.ok) throw new Error('Failed to load');
         allSops = await res.json();
-        renderStats();
         renderGrid();
       } catch {
-        grid.innerHTML = '<p class="empty-state">Failed to load your SOPs.</p>';
+        grid.innerHTML = '<p class="empty-state">Failed to load your saved SOPs.</p>';
       }
     }
 
     document.getElementById('searchInput').addEventListener('input', renderGrid);
 
-    loadUser().then(bridgeSessionToExtension);
-    loadSops();
+    loadUser();
+    loadSaved();
   </script>
 </body>
 </html>

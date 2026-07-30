@@ -204,6 +204,10 @@ app.get('/settings', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'settings.html'));
 });
 
+app.get('/saved', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'saved.html'));
+});
+
 app.get('/browse', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'browse.html'));
 });

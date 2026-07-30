@@ -7,6 +7,7 @@
 <link rel="icon" type="image/png" href="/icons/CODEX - 48PX.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="/saved.js"></script>
 <style>
   :root {
     --bg: #2d2b2e;
@@ -194,6 +195,8 @@
     color: #1e1e1e;
   }
 
+  .tag-outline { border: 1px solid var(--tag); background: transparent; color: #2d2b2e; }
+
   .sop-title { font-size: 15px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
   .sop-title a { color: inherit; text-decoration: none; }
   .sop-title a:hover { text-decoration: underline; }
@@ -222,12 +225,14 @@
   .sop-author span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sop-steps { flex-shrink: 0; color: var(--accent); font-weight: 600; }
 
+  .sop-card-actions { display: flex; gap: 8px; }
+
   .action-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 6px;
-    width: 100%;
+    flex: 1;
     background: rgba(45, 43, 46, 0.45);
     color: #fff;
     border: none;
@@ -241,6 +246,9 @@
   }
 
   .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
+
+  .action-btn-pin { flex: 0 0 auto; width: 34px; padding: 8px 0; }
+  .action-btn-pin.is-saved { color: var(--tag); }
 
   .empty-state {
     text-align: center;
@@ -273,13 +281,12 @@
           </span>
           Dashboard
         </a>
-        <button class="nav-item" type="button" aria-disabled="true" disabled>
+        <a class="nav-item" href="/saved">
           <span class="icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
           </span>
           Saved
-          <span class="nav-soon">Soon</span>
-        </button>
+        </a>
       </nav>
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
@@ -319,12 +326,23 @@
       return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
     }
 
+    let allSops = [];
+    // Pin button only shows once we know the visitor is signed in (browse
+    // is otherwise fully anonymous) - see sopCardHtml.
+    let signedIn = false;
+
     function sopCardHtml(sop) {
       const stepCount = Array.isArray(sop.steps) ? sop.steps.length : null;
+      const isDocument = sop.doc_type === 'document';
+      const pinBtn = signedIn
+        ? `<button class="action-btn action-btn-pin${CodexSaved.isSaved(sop.id) ? ' is-saved' : ''}" type="button" data-pin="${sop.id}" title="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}" aria-label="${CodexSaved.isSaved(sop.id) ? 'Remove from Saved' : 'Save'}">${CodexSaved.icon(sop.id)}</button>`
+        : '';
       return `
         <article class="sop-card">
           <div class="sop-tags">
             <span class="tag">${escapeHtml(sop.category || 'Uncategorized')}</span>
+            <span class="tag tag-outline">${isDocument ? 'Document' : 'SOP'}</span>
+            ${sop.tag ? `<span class="tag tag-outline">${escapeHtml(sop.tag)}</span>` : ''}
           </div>
           <h2 class="sop-title"><a href="/sop.html?id=${sop.id}">${escapeHtml(sop.title)}</a></h2>
           <p class="sop-desc">${escapeHtml(sop.description || 'No description provided.')}</p>
@@ -335,9 +353,40 @@
             </div>
             ${stepCount != null ? `<span class="sop-steps">${stepCount} step${stepCount === 1 ? '' : 's'}</span>` : ''}
           </div>
-          <a class="action-btn" href="/sop.html?id=${sop.id}">View SOP</a>
+          <div class="sop-card-actions">
+            ${pinBtn}
+            <a class="action-btn" href="/sop.html?id=${sop.id}">View SOP</a>
+          </div>
         </article>
       `;
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('grid');
+      if (allSops.length === 0) {
+        grid.innerHTML = '<p class="empty-state">No SOPs published yet.</p>';
+        return;
+      }
+      grid.innerHTML = `<div class="sop-grid">${allSops.map(sopCardHtml).join('')}</div>`;
+      grid.querySelectorAll('[data-pin]').forEach((btn) => {
+        btn.addEventListener('click', () => togglePin(btn));
+      });
+    }
+
+    async function togglePin(btn) {
+      const id = btn.dataset.pin;
+      btn.disabled = true;
+      try {
+        const saved = await CodexSaved.toggle(id);
+        btn.classList.toggle('is-saved', saved);
+        btn.innerHTML = CodexSaved.icon(id);
+        btn.title = saved ? 'Remove from Saved' : 'Save';
+        btn.setAttribute('aria-label', btn.title);
+      } catch {
+        alert('Could not update the saved state right now.');
+      } finally {
+        btn.disabled = false;
+      }
     }
 
     async function load() {
@@ -347,14 +396,8 @@
         // (see routes/sops.js's GET /public).
         const res = await fetch('/sops/public', { credentials: 'omit' });
         if (!res.ok) throw new Error('Failed to load');
-        const sops = await res.json();
-
-        if (sops.length === 0) {
-          grid.innerHTML = '<p class="empty-state">No SOPs published yet.</p>';
-          return;
-        }
-
-        grid.innerHTML = `<div class="sop-grid">${sops.map(sopCardHtml).join('')}</div>`;
+        allSops = await res.json();
+        renderGrid();
       } catch {
         grid.innerHTML = '<p class="empty-state">Failed to load SOPs.</p>';
       }
@@ -370,6 +413,9 @@
         document.getElementById('userName').textContent = data.user.name || 'Account';
         document.getElementById('userAvatar').textContent = initials(data.user.name);
         footer.href = '/settings';
+        signedIn = true;
+        await CodexSaved.load();
+        renderGrid();
       } catch {
         // not signed in / request failed - leave the sidebar in its signed-out state
       }

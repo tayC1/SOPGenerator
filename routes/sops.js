@@ -4,8 +4,8 @@ const { requireAuth, isScopedOverDepartments } = require('../middleware/auth');
 
 const router = Router();
 
-const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, created_at';
-const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, created_at';
+const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, tag, created_at';
+const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, tag, created_at';
 
 async function getCallerDepartments(userId) {
   const result = await db.query('SELECT department_name FROM user_departments WHERE user_id = $1', [userId]);
@@ -65,12 +65,12 @@ router.use(requireAuth);
 router.post('/', async (req, res) => {
   const author = req.user.name ?? null;
   const user_id = req.user.id;
-  const { title, url, description, steps, category, doc_type, content } = req.body;
+  const { title, url, description, steps, category, doc_type, content, tag } = req.body;
   const created_date = new Date();
   try {
     const result = await db.query(
-      `INSERT INTO sops (user_id, title, url, description, steps, author, category, created_date, doc_type, content)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `INSERT INTO sops (user_id, title, url, description, steps, author, category, created_date, doc_type, content, tag)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
        RETURNING *`,
       [
         user_id,
@@ -83,6 +83,7 @@ router.post('/', async (req, res) => {
         created_date,
         doc_type === 'document' ? 'document' : 'sop',
         content ?? null,
+        tag ? String(tag).trim() || null : null,
       ]
     );
     res.status(201).json(result.rows[0]);
@@ -107,6 +108,73 @@ router.get('/', async (req, res) => {
           [req.user.id]
         );
     res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /sops/saved-ids - lightweight id list so any page already holding SOP
+// cards (dashboard, browse, team pages) can mark which ones are pinned
+// without re-fetching full SOP records.
+router.get('/saved-ids', async (req, res) => {
+  try {
+    const result = await db.query('SELECT sop_id FROM saved_sops WHERE user_id = $1', [req.user.id]);
+    res.json(result.rows.map((r) => r.sop_id));
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /sops/saved - full records for the caller's pinned SOPs. Filtered
+// through the same visibility rule as canRead() (owner / public / caller's
+// department) so a SOP that's since gone private or left the caller's
+// department quietly drops out of the list instead of erroring - the pin
+// itself (the saved_sops row) is left alone and the SOP reappears here if
+// visibility is restored later.
+router.get('/saved', async (req, res) => {
+  try {
+    const departments = await getCallerDepartments(req.user.id);
+    const result = await db.query(
+      `SELECT s.id, s.user_id, s.title, s.url, s.description, s.category, s.author, s.steps, s.doc_type, s.tag, s.created_at
+       FROM saved_sops ss
+       JOIN sops s ON s.id = ss.sop_id
+       WHERE ss.user_id = $1
+         AND (s.user_id = $1 OR s.is_public = true OR s.category = ANY($2))
+       ORDER BY ss.created_at DESC`,
+      [req.user.id, departments]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /sops/:id/save - pin a SOP. Requires the same read access as
+// actually viewing it, so a caller can't pin (and thus enumerate/track) a
+// SOP they can't otherwise see.
+router.post('/:id/save', async (req, res) => {
+  try {
+    const existing = await db.query('SELECT * FROM sops WHERE id = $1', [req.params.id]);
+    if (existing.rows.length === 0) return res.status(404).json({ error: 'SOP not found' });
+    if (!(await canRead(req.user, existing.rows[0]))) {
+      return res.status(403).json({ error: 'You do not have access to this SOP' });
+    }
+    await db.query(
+      'INSERT INTO saved_sops (user_id, sop_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [req.user.id, req.params.id]
+    );
+    res.json({ saved: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// DELETE /sops/:id/save - unpin. Idempotent - unsaving something that was
+// never saved (or already unsaved) just succeeds.
+router.delete('/:id/save', async (req, res) => {
+  try {
+    await db.query('DELETE FROM saved_sops WHERE user_id = $1 AND sop_id = $2', [req.user.id, req.params.id]);
+    res.json({ saved: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -142,7 +210,7 @@ router.patch('/:id', async (req, res) => {
     if (!isOwner && !isInAdminScope) {
       return res.status(403).json({ error: 'You do not have permission to edit this SOP' });
     }
-    const { title, url, description, steps, category, is_public, content, doc_type } = req.body;
+    const { title, url, description, steps, category, is_public, content, doc_type, tag } = req.body;
     // Only 'sop'/'document' are valid per the sops_doc_type_check
     // constraint - anything else (including omitted) keeps the existing
     // type, so switching type is opt-in and a typo can't corrupt the row.
@@ -162,8 +230,8 @@ router.patch('/:id', async (req, res) => {
     }
 
     const result = await db.query(
-      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7, doc_type = $8
-       WHERE id = $9
+      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7, doc_type = $8, tag = $9
+       WHERE id = $10
        RETURNING *`,
       [
         title,
@@ -174,6 +242,7 @@ router.patch('/:id', async (req, res) => {
         is_public ?? existing.rows[0].is_public,
         content ?? existing.rows[0].content,
         nextDocType,
+        tag ? String(tag).trim() || null : null,
         req.params.id,
       ]
     );
