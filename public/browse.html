@@ -10,6 +10,7 @@
 <style>
   :root {
     --bg: #2d2b2e;
+    --sidebar-bg: rgba(0, 0, 0, 0.24);
     --border: rgba(255, 255, 255, 0.12);
     --text-dim: rgba(255, 255, 255, 0.55);
     --text-faint: rgba(255, 255, 255, 0.35);
@@ -20,66 +21,154 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body { background: var(--bg); }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg);
     color: #ffffff;
     min-height: 100vh;
-    padding: 36px 40px 56px;
   }
 
   a { color: inherit; }
   button { font-family: inherit; }
 
-  .icon { width: 14px; height: 14px; flex-shrink: 0; }
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
   .icon svg { width: 100%; height: 100%; }
 
-  header {
-    max-width: 1280px;
-    margin: 0 auto 36px;
+  /* ---------- layout ---------- */
+  .app-shell {
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
+    min-height: 100vh;
   }
 
-  .brand {
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 252px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
     display: flex;
     align-items: center;
     gap: 12px;
+    padding: 24px 20px 20px;
     text-decoration: none;
+    color: inherit;
   }
 
-  .brand img { width: 32px; height: 32px; object-fit: contain; }
-  .brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+  .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
+  .sidebar-brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
 
-  .header-actions { display: flex; align-items: center; gap: 10px; }
+  .sidebar-divider { height: 1px; background: var(--border); margin: 0 20px; }
 
-  .btn-header {
-    display: inline-flex;
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+  }
+
+  .nav-item {
+    display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
+    gap: 12px;
+    padding: 10px 12px;
     border-radius: 8px;
+    text-decoration: none;
     font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+  .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .nav-item[aria-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--text-faint);
+  }
+  .nav-item[aria-disabled="true"]:hover { background: none; }
+
+  .nav-soon {
+    margin-left: auto;
+    font-size: 10px;
     font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 7px;
+  }
+
+  .category-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
     text-decoration: none;
     cursor: pointer;
-    border: none;
   }
 
-  .btn-home { background: rgba(255, 255, 255, 0.08); color: #fff; }
-  .btn-home:hover { background: rgba(255, 255, 255, 0.14); }
+  .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
 
-  .btn-signin { background: var(--accent); color: #fff; }
-  .btn-signin:hover { opacity: 0.88; }
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
 
-  .page-title { max-width: 1280px; margin: 0 auto 28px; font-size: 28px; font-weight: 600; }
+  .sidebar-footer:hover { background: rgba(255, 255, 255, 0.05); }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 14px; font-weight: 500; }
+
+  /* ---------- main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 36px 40px 56px;
+    max-width: 1280px;
+  }
+
+  .page-title { margin: 0 0 28px; font-size: 28px; font-weight: 600; }
 
   .sop-grid {
-    max-width: 1280px;
-    margin: 0 auto;
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
     gap: 18px;
@@ -128,21 +217,8 @@
     margin-bottom: 12px;
   }
 
-  .avatar {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: #d4d4d4;
-    color: #1e1e1e;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 10px;
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-
   .sop-author { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .sop-author .avatar { width: 20px; height: 20px; font-size: 10px; background: #d4d4d4; color: #1e1e1e; }
   .sop-author span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .sop-steps { flex-shrink: 0; color: var(--accent); font-weight: 600; }
 
@@ -167,37 +243,60 @@
   .action-btn:hover { background: rgba(45, 43, 46, 0.65); }
 
   .empty-state {
-    max-width: 1280px;
-    margin: 0 auto;
     text-align: center;
     color: var(--text-faint);
     padding: 60px 0;
     font-size: 14px;
   }
 
-  @media (max-width: 600px) {
-    body { padding: 28px 20px 48px; }
-    header { flex-direction: column; align-items: flex-start; }
+  @media (max-width: 860px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { padding: 28px 20px 48px; }
   }
 </style>
 </head>
 <body>
-  <header>
-    <a class="brand" href="/">
-      <img src="/icons/CODEX - 48PX.png" alt="">
-      <span>CODEX</span>
-    </a>
-    <div class="header-actions">
-      <a class="btn-header btn-home" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
-      <a class="btn-header btn-home" href="/">Home</a>
-      <a class="btn-header btn-signin" href="/auth/google">Sign In</a>
-    </div>
-  </header>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">
+        <img src="/icons/CODEX - 48PX.png" alt="">
+        <span>CODEX</span>
+      </a>
 
-  <h1 class="page-title">Browse SOPs</h1>
+      <div class="sidebar-divider"></div>
 
-  <div id="grid">
-    <p class="empty-state">Loading SOPs…</p>
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a class="nav-item" href="/dashboard">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          Dashboard
+        </a>
+        <button class="nav-item" type="button" aria-disabled="true" disabled>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+          </span>
+          Saved
+          <span class="nav-soon">Soon</span>
+        </button>
+      </nav>
+
+      <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
+
+      <a class="sidebar-footer" href="/auth/google" id="sidebarFooter">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Sign In</span>
+      </a>
+    </aside>
+
+    <main class="main">
+      <h1 class="page-title">Browse SOPs</h1>
+
+      <div id="grid">
+        <p class="empty-state">Loading SOPs…</p>
+      </div>
+    </main>
   </div>
 
   <script>
@@ -261,18 +360,23 @@
       }
     }
 
-    async function loadAdminLink() {
+    async function loadUser() {
+      const footer = document.getElementById('sidebarFooter');
       try {
         const res = await fetch('/auth/me', { credentials: 'include' });
         const data = await res.json();
-        document.getElementById('adminLink').style.display = data.user?.is_admin ? 'inline-flex' : 'none';
+        if (!data.user) throw new Error('not signed in');
+        document.getElementById('adminLink').style.display = data.user.is_admin ? 'block' : 'none';
+        document.getElementById('userName').textContent = data.user.name || 'Account';
+        document.getElementById('userAvatar').textContent = initials(data.user.name);
+        footer.href = '/settings';
       } catch {
-        // not signed in / request failed - leave the admin link hidden
+        // not signed in / request failed - leave the sidebar in its signed-out state
       }
     }
 
     load();
-    loadAdminLink();
+    loadUser();
   </script>
 </body>
 </html>

@@ -11,23 +11,142 @@
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body { background: #2d2b2e; }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: #2d2b2e;
     color: #fff;
     min-height: 100vh;
-    padding: 48px 24px;
   }
 
-  header {
-    max-width: 760px;
-    margin: 0 auto 40px;
+  a { color: inherit; }
+  button { font-family: inherit; }
+
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .icon svg { width: 100%; height: 100%; }
+
+  /* ---------- layout ---------- */
+  .app-shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 252px;
+    flex-shrink: 0;
+    background: rgba(0, 0, 0, 0.24);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 12px;
+    padding: 24px 20px 20px;
+    text-decoration: none;
+    color: inherit;
   }
 
-  .brand-icon { width: 32px; height: 32px; }
+  .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
+  .sidebar-brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .sidebar-divider { height: 1px; background: rgba(255, 255, 255, 0.12); margin: 0 20px; }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+  .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .nav-item[aria-disabled="true"] {
+    cursor: not-allowed;
+    color: rgba(255, 255, 255, 0.35);
+  }
+  .nav-item[aria-disabled="true"]:hover { background: none; }
+
+  .nav-soon {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 20px;
+    padding: 2px 7px;
+  }
+
+  .category-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .sidebar-footer:hover { background: rgba(255, 255, 255, 0.05); }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #2e5266;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 14px; font-weight: 500; }
 
   .back-link {
     font-size: 13px;
@@ -36,7 +155,19 @@
   }
   .back-link:hover { color: #fff; }
 
-  .main { max-width: 760px; margin: 0 auto; }
+  /* ---------- main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 48px 40px 56px;
+    max-width: 760px;
+  }
+
+  @media (max-width: 860px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { padding: 28px 20px 48px; }
+  }
 
   .page-title {
     font-size: 26px;
@@ -354,12 +485,40 @@
 </style>
 </head>
 <body>
-  <header>
-    <a href="/dashboard"><img class="brand-icon" src="/icons/CODEX - 48PX.png" alt="CODEX"></a>
-    <a class="back-link" href="/dashboard">← My SOPs</a>
-  </header>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">
+        <img src="/icons/CODEX - 48PX.png" alt="">
+        <span>CODEX</span>
+      </a>
 
-  <div class="main">
+      <div class="sidebar-divider"></div>
+
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a class="nav-item" href="/dashboard">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          Dashboard
+        </a>
+        <button class="nav-item" type="button" aria-disabled="true" disabled>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+          </span>
+          Saved
+          <span class="nav-soon">Soon</span>
+        </button>
+      </nav>
+
+      <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
+
+      <a class="sidebar-footer" href="/auth/google" id="sidebarFooter">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Sign In</span>
+      </a>
+    </aside>
+
+  <main class="main">
     <h1 class="page-title" id="pageTitle">Add a document</h1>
     <p class="page-sub" id="pageSub">Choose what kind of document you're adding to CODEX.</p>
 
@@ -459,6 +618,7 @@
         <button class="btn btn-primary" type="submit" id="submitBtn">Save document</button>
       </div>
     </form>
+  </main>
   </div>
 
   <script>
@@ -795,6 +955,29 @@
         togglePreviewBtn.textContent = 'Edit';
       }
     });
+
+    function initials(name) {
+      const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+    }
+
+    async function loadUser() {
+      const footer = document.getElementById('sidebarFooter');
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        if (!data.user) throw new Error('not signed in');
+        document.getElementById('adminLink').style.display = data.user.is_admin ? 'block' : 'none';
+        document.getElementById('userName').textContent = data.user.name || 'Account';
+        document.getElementById('userAvatar').textContent = initials(data.user.name);
+        footer.href = '/settings';
+      } catch {
+        // not signed in / request failed - leave the sidebar in its signed-out state
+      }
+    }
+
+    loadUser();
 
     if (editId) {
       loadForEdit();

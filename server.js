@@ -21,7 +21,6 @@ const PORT = process.env.PORT || 3000;
 const EXTENSION_ORIGIN = 'chrome-extension://capicbafpiflgbopfcklobgdebodigmb';
 const WEB_ORIGINS = [
   process.env.BASE_URL,
-  'https://kpcodex-production.up.railway.app',
   'https://codex.kramer.pro',
 ].filter(Boolean);
 if (process.env.NODE_ENV !== 'production') {

@@ -1,3 +1,3 @@
 const CONFIG = {
-  API_URL: 'https://kpcodex-production.up.railway.app'
+  API_URL: 'https://codex.kramer.pro'
 };

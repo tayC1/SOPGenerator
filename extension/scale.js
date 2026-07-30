@@ -259,33 +259,6 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(function () { toast.remove(); }, 3000);
   }
 
-  // Draws the marker dot directly into the screenshot's pixels so it survives
-  // anywhere downstream that only renders the raw image (server, sop.html, exports).
-  function bakeMarker(base64, clickX, clickY) {
-    return new Promise(function (resolve) {
-      if (!base64 || clickX == null || clickY == null) { resolve(base64); return; }
-      var img = new Image();
-      img.onload = function () {
-        var canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        var ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
-        var r = 16;
-        ctx.beginPath();
-        ctx.arc(clickX * canvas.width, clickY * canvas.height, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(224,75,42,0.25)';
-        ctx.fill();
-        ctx.lineWidth = 3;
-        ctx.strokeStyle = '#e04b2a';
-        ctx.stroke();
-        resolve(canvas.toDataURL('image/png').replace('data:image/png;base64,', ''));
-      };
-      img.onerror = function () { resolve(base64); };
-      img.src = 'data:image/png;base64,' + base64;
-    });
-  }
-
   function pushToCodex() {
     if (steps.length === 0) { showToast('No steps to push.', true); return; }
     chrome.storage.local.get('extensionToken', function (result) {
@@ -293,47 +266,38 @@ document.addEventListener('DOMContentLoaded', function () {
       if (!extensionToken) { showSignInPrompt(); return; }
       showExportForm(function (meta) {
         showToast('Saving to CODEX…');
-        Promise.all(steps.map(function (step) {
-          return bakeMarker(step.screenshot, step.clickX, step.clickY);
-        })).then(function (bakedScreenshots) {
-          var bakedSteps = steps.map(function (step, i) {
-            var copy = Object.assign({}, step);
-            copy.screenshot = bakedScreenshots[i] || step.screenshot;
-            return copy;
-          });
-          var payload = {
-            title: meta.title,
-            description: meta.description || '',
-            category: meta.category || null,
-            url: (steps[0] && steps[0].pageUrl) || '',
-            steps: bakedSteps
-          };
-          fetch(CONFIG.API_URL + '/sops', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ' + extensionToken
-            },
-            body: JSON.stringify(payload)
+        var payload = {
+          title: meta.title,
+          description: meta.description || '',
+          category: meta.category || null,
+          url: (steps[0] && steps[0].pageUrl) || '',
+          steps: steps
+        };
+        fetch(CONFIG.API_URL + '/sops', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ' + extensionToken
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+          .then(function (result) {
+            if (result.ok) {
+              showCodexSuccess();
+              chrome.storage.local.set({ steps: [], isRecording: false });
+              chrome.storage.local.remove(['sopTitle', 'sopSummary', 'category']);
+              steps = [];
+              sopIntroEl = null;
+              updateHeaderInfo();
+              renderSteps();
+            } else {
+              showToast((result.data && result.data.error) || 'Failed to save — check your connection', true);
+            }
           })
-            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
-            .then(function (result) {
-              if (result.ok) {
-                showCodexSuccess();
-                chrome.storage.local.set({ steps: [], isRecording: false });
-                chrome.storage.local.remove(['sopTitle', 'sopSummary', 'category']);
-                steps = [];
-                sopIntroEl = null;
-                updateHeaderInfo();
-                renderSteps();
-              } else {
-                showToast((result.data && result.data.error) || 'Failed to save — check your connection', true);
-              }
-            })
-            .catch(function () {
-              showToast('Failed to save — check your connection', true);
-            });
-        });
+          .catch(function () {
+            showToast('Failed to save — check your connection', true);
+          });
       });
     });
   }
@@ -392,7 +356,7 @@ document.addEventListener('DOMContentLoaded', function () {
     link.textContent = 'Sign in →';
     link.style.cssText = 'font-size:13px;font-weight:600;cursor:pointer;text-decoration:underline;opacity:0.9;';
     link.addEventListener('click', function () {
-      chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
+      chrome.tabs.create({ url: 'https://codex.kramer.pro' });
       if (el.parentNode) el.remove();
     });
     el.appendChild(msg);
@@ -420,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function () {
     link.textContent = 'View in CODEX →';
     link.style.cssText = 'font-size:13px;font-weight:500;opacity:0.85;cursor:pointer;text-decoration:underline;';
     link.addEventListener('click', function () {
-      chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/dashboard' });
+      chrome.tabs.create({ url: 'https://codex.kramer.pro/dashboard' });
       if (el.parentNode) el.remove();
     });
 

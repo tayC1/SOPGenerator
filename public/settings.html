@@ -10,6 +10,7 @@
 <style>
   :root {
     --bg: #2d2b2e;
+    --sidebar-bg: rgba(0, 0, 0, 0.24);
     --border: rgba(255, 255, 255, 0.12);
     --text-dim: rgba(255, 255, 255, 0.55);
     --text-faint: rgba(255, 255, 255, 0.35);
@@ -20,45 +21,150 @@
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
+  html, body { background: var(--bg); }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: var(--bg);
     color: #ffffff;
     min-height: 100vh;
-    padding: 36px 40px 56px;
   }
 
   a { color: inherit; }
   button, input, textarea, select { font-family: inherit; }
 
-  header {
-    max-width: 760px;
-    margin: 0 auto 36px;
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .icon svg { width: 100%; height: 100%; }
+
+  /* ---------- layout ---------- */
+  .app-shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 252px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 24px;
-    flex-wrap: wrap;
-  }
-
-  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
-  .brand img { width: 32px; height: 32px; object-fit: contain; }
-  .brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
-
-  .btn-home {
-    display: inline-flex;
-    align-items: center;
-    padding: 10px 18px;
-    border-radius: 8px;
-    font-size: 14px;
-    font-weight: 600;
+    gap: 12px;
+    padding: 24px 20px 20px;
     text-decoration: none;
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    color: inherit;
   }
-  .btn-home:hover { background: rgba(255, 255, 255, 0.14); }
 
-  main { max-width: 760px; margin: 0 auto; }
+  .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
+  .sidebar-brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 0 20px; }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+  .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .nav-item[aria-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--text-faint);
+  }
+  .nav-item[aria-disabled="true"]:hover { background: none; }
+
+  .nav-soon {
+    margin-left: auto;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 2px 7px;
+  }
+
+  .category-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .sidebar-footer:hover { background: rgba(255, 255, 255, 0.05); }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 14px; font-weight: 500; }
+
+  /* ---------- main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 36px 40px 56px;
+    max-width: 760px;
+  }
 
   .profile-header {
     display: flex;
@@ -69,19 +175,7 @@
     border-bottom: 1px solid var(--border);
   }
 
-  .avatar {
-    width: 72px;
-    height: 72px;
-    border-radius: 50%;
-    background: var(--accent);
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 28px;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
+  .profile-header .avatar { width: 72px; height: 72px; font-size: 28px; font-weight: 700; }
 
   .profile-name { font-size: 22px; font-weight: 700; }
   .profile-title { font-size: 14px; color: var(--tag); font-weight: 600; margin: 3px 0; }
@@ -223,8 +317,14 @@
   .signout-row a { color: #e08080; font-size: 13.5px; text-decoration: underline; }
   .signout-row a:hover { color: #ff9a9a; }
 
-  .denied { max-width: 760px; margin: 60px auto; text-align: center; color: var(--text-faint); font-size: 14px; }
+  .denied { margin: 60px auto; text-align: center; color: var(--text-faint); font-size: 14px; }
   .denied a { color: #7eb8d4; text-decoration: underline; }
+
+  @media (max-width: 860px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { padding: 28px 20px 48px; }
+  }
 
   @media (max-width: 560px) {
     .field-row { grid-template-columns: 1fr; }
@@ -232,18 +332,43 @@
 </style>
 </head>
 <body>
-  <header>
-    <a class="brand" href="/">
-      <img src="/icons/CODEX - 48PX.png" alt="">
-      <span>CODEX</span>
-    </a>
-    <a class="btn-home" href="/dashboard">My Dashboard</a>
-    <a class="btn-home" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
-  </header>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">
+        <img src="/icons/CODEX - 48PX.png" alt="">
+        <span>CODEX</span>
+      </a>
 
-  <main id="main">
-    <p class="empty-note">Loading…</p>
-  </main>
+      <div class="sidebar-divider"></div>
+
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a class="nav-item" href="/dashboard">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          Dashboard
+        </a>
+        <button class="nav-item" type="button" aria-disabled="true" disabled>
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+          </span>
+          Saved
+          <span class="nav-soon">Soon</span>
+        </button>
+      </nav>
+
+      <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
+
+      <a class="sidebar-footer" href="/settings" id="sidebarFooter">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Loading…</span>
+      </a>
+    </aside>
+
+    <main class="main" id="main">
+      <p class="empty-note">Loading…</p>
+    </main>
+  </div>
 
   <script>
     function escapeHtml(str) {
@@ -447,7 +572,11 @@
         currentUser = null;
       }
 
+      const footer = document.getElementById('sidebarFooter');
+
       if (!currentUser) {
+        document.getElementById('userName').textContent = 'Sign In';
+        footer.href = '/auth/google';
         main.innerHTML = `
           <div class="denied">
             <p>You need to be signed in to view settings.</p>
@@ -457,7 +586,10 @@
         return;
       }
 
-      document.getElementById('adminLink').style.display = currentUser.is_admin ? 'inline-flex' : 'none';
+      document.getElementById('adminLink').style.display = currentUser.is_admin ? 'block' : 'none';
+      document.getElementById('userName').textContent = displayName(currentUser);
+      document.getElementById('userAvatar').textContent = initials(displayName(currentUser));
+      footer.href = '/settings';
 
       renderPage();
     }

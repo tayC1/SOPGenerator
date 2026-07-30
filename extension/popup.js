@@ -104,11 +104,11 @@ clearBtn.addEventListener('click', () => {
 });
 
 document.getElementById('viewSopsBtn').addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app' });
+  chrome.tabs.create({ url: 'https://codex.kramer.pro' });
 });
 
 adminLink.addEventListener('click', () => {
-  chrome.tabs.create({ url: 'https://kpcodex-production.up.railway.app/admin' });
+  chrome.tabs.create({ url: 'https://codex.kramer.pro/admin' });
 });
 
 chrome.storage.onChanged.addListener((changes, area) => {

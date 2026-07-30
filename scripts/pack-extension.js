@@ -30,7 +30,7 @@ const ROOT = path.join(__dirname, '..');
 const EXTENSION_DIR = path.join(ROOT, 'extension');
 const STAGING_DIR = path.join(ROOT, '.extension-build');
 const DIST_DIR = path.join(ROOT, 'dist');
-const UPDATE_BASE_URL = 'https://kpcodex-production.up.railway.app';
+const UPDATE_BASE_URL = 'https://codex.kramer.pro';
 
 // Exactly the files manifest.json actually references - not the backend,
 // not public/, not node_modules. review.js is dead code (nothing loads it
