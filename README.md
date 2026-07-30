@@ -1,6 +1,6 @@
 # CODEX
 
-**Live site:** [kpcodex-production.up.railway.app](https://kpcodex-production.up.railway.app)
+**Live site:** [codex.kramer.pro](https://codex.kramer.pro)
 
 A full-featured Knowledge Base/SOP builder built for Kramer Pro. CODEX has two halves that work together:
 
@@ -32,12 +32,12 @@ Signing in (via Google, restricted to `kramer.pro` Workspace accounts) links the
 
 1. **Confirm you have a `kramer.pro` Google account.** Sign-in is restricted to the Workspace domain — a personal Gmail account will be rejected.
 2. **Install the extension:**
-   - Download **[codex.crx](https://kpcodex-production.up.railway.app/extension/codex.crx)**
+   - Download **[codex.crx](https://codex.kramer.pro/extension/codex.crx)**
    - Go to `chrome://extensions/`
    - Enable **Developer mode** (top-right toggle) — required to sideload a `.crx` that isn't from the Chrome Web Store
    - Drag the downloaded `codex.crx` file onto the `chrome://extensions/` page and confirm **Add extension** when prompted
    - The CODEX icon appears in your toolbar
-3. **Sign in on the website:** visit [kpcodex-production.up.railway.app](https://kpcodex-production.up.railway.app) and sign in with Google. This automatically links your session to the extension — you don't sign in separately inside the extension itself.
+3. **Sign in on the website:** visit [codex.kramer.pro](https://codex.kramer.pro) and sign in with Google. This automatically links your session to the extension — you don't sign in separately inside the extension itself.
 4. You're set up. The extension talks to the same hosted backend everyone else uses, so there's no local server to run and no config to edit.
 
 **Updates happen automatically.** The extension is built with `update_url` pointing at our hosted update manifest, so Chrome periodically checks it in the background and pulls new versions on its own — no manual re-download or reload needed. Chrome's check interval isn't instant (typically a few hours), so if you need a specific fix *right now*, you can force it: `chrome://extensions/` → enable Developer mode → **Update** button at the top of the page.

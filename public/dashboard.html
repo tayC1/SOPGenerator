@@ -572,6 +572,13 @@
               console.log('[auth-bridge] extension not reachable:', chrome.runtime.lastError.message);
               return;
             }
+            // background.js always responds (even on failure), so a response
+            // existing doesn't mean the sign-in was actually stored - check
+            // the flag it sends rather than treating any reply as success.
+            if (!response || !response.received) {
+              console.error('[auth-bridge] extension rejected sign-in:', response && response.error);
+              return;
+            }
             console.log('[auth-bridge] extension acknowledged sign-in:', response);
           }
         );
