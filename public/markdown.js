@@ -11,8 +11,15 @@
 //
 // Supported syntax: headings (#..######), bold (**/__), italic (*/_),
 // inline code, fenced code blocks, blockquotes (>), unordered/ordered
-// lists, links, horizontal rules, and paragraphs (single newlines inside
-// a paragraph become <br>, matching how most reference docs are typed).
+// lists, links, horizontal rules, paragraphs (single newlines inside a
+// paragraph become <br>, matching how most reference docs are typed), and
+// a `:::email ... :::` fence (see renderEmailCard) that the slash-menu's
+// email block inserts, rendered as a styled To/Subject/body card rather
+// than plain text.
+//
+// Unlike the rest of public/*.js, this also exports via module.exports
+// when run under Node so scripts/tests/*.test.js can require() it
+// directly without a DOM.
 (function (global) {
   function escapeHtml(str) {
     return String(str ?? '')
@@ -66,6 +73,66 @@
     return text; // no closing "---" - not actually a frontmatter block
   }
 
+  // Renders a `:::email` fence's body as a styled To/Subject/message card
+  // instead of plain text. lines have already been through escapeHtml (same
+  // as every other line renderMarkdown sees), so only markdown syntax -
+  // handled by renderInline - is left to interpret.
+  function renderEmailCard(fenceLines) {
+    const remaining = fenceLines.slice();
+    let to = '';
+    let subject = '';
+
+    // Pull recognized header lines off the front, in either order, and
+    // stop at the first line that isn't a To:/Subject: field.
+    while (remaining.length) {
+      const toMatch = remaining[0].match(/^To:\s?(.*)$/i);
+      const subjectMatch = remaining[0].match(/^Subject:\s?(.*)$/i);
+      if (toMatch) {
+        to = toMatch[1];
+        remaining.shift();
+      } else if (subjectMatch) {
+        subject = subjectMatch[1];
+        remaining.shift();
+      } else {
+        break;
+      }
+    }
+    // Drop a single blank separator line between the header and the body.
+    if (remaining.length && remaining[0].trim() === '') remaining.shift();
+
+    const bodyParagraphs = [];
+    let para = [];
+    const flushBody = () => {
+      if (para.length) {
+        bodyParagraphs.push(`<p>${para.map(renderInline).join('<br>')}</p>`);
+        para = [];
+      }
+    };
+    for (const line of remaining) {
+      if (line.trim() === '') flushBody();
+      else para.push(line);
+    }
+    flushBody();
+
+    const field = (label, value) =>
+      `<div class="email-card-field"><span class="email-card-label">${label}</span><span class="email-card-value">${
+        value ? renderInline(value) : '<span class="email-card-empty">—</span>'
+      }</span></div>`;
+
+    return (
+      '<div class="email-card">' +
+        '<div class="email-card-header">' +
+          '<div class="email-card-icon">✉️</div>' +
+          '<div class="email-card-fields">' +
+            field('To', to) +
+            field('Subject', subject) +
+          '</div>' +
+        '</div>' +
+        `<div class="email-card-body">${bodyParagraphs.join('') || '<p class="email-card-empty">No message body.</p>'}</div>` +
+      '</div>'
+    );
+  }
+
   function renderMarkdown(raw) {
     const lines = escapeHtml(stripFrontmatter(raw)).split(/\r?\n/);
     const out = [];
@@ -75,6 +142,8 @@
     let quote = null; // string[]
     let inCode = false;
     let code = [];
+    let inEmail = false;
+    let emailLines = [];
 
     function flushParagraph() {
       if (paragraph.length) {
@@ -112,6 +181,25 @@
       }
       if (inCode) {
         code.push(line);
+        continue;
+      }
+
+      if (/^:::email\s*$/.test(line.trim())) {
+        flushParagraph();
+        flushList();
+        flushQuote();
+        inEmail = true;
+        emailLines = [];
+        continue;
+      }
+      if (inEmail) {
+        if (line.trim() === ':::') {
+          out.push(renderEmailCard(emailLines));
+          emailLines = [];
+          inEmail = false;
+        } else {
+          emailLines.push(line);
+        }
         continue;
       }
 
@@ -174,9 +262,15 @@
     flushList();
     flushQuote();
     if (inCode) out.push(`<pre><code>${code.join('\n')}</code></pre>`);
+    if (inEmail) out.push(renderEmailCard(emailLines));
 
     return out.join('\n') || '<p class="doc-empty">Nothing written yet.</p>';
   }
 
-  global.CodexMarkdown = { renderMarkdown, escapeHtml };
-})(window);
+  const api = { renderMarkdown, escapeHtml };
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = api;
+  } else {
+    global.CodexMarkdown = api;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);

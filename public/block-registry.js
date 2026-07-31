@@ -68,7 +68,7 @@
       label: 'Email block',
       icon: '✉️',
       keywords: ['email', 'mail', 'to', 'subject'],
-      template: '**To:** {{recipient}}\n**Subject:** {{subject}}\n\n{{body}}',
+      template: ':::email\nTo: {{recipient}}\nSubject: {{subject}}\n\n{{body}}\n:::',
     },
   ];
 
