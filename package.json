@@ -9,6 +9,7 @@
   "scripts": {
     "start": "node server.js",
     "build": "node scripts/pack-extension.js",
+    "build:unpacked": "node scripts/build-unpacked.js",
     "migrate": "node-pg-migrate --envPath .env"
   },
   "dependencies": {

@@ -9,6 +9,19 @@ const statusText    = document.getElementById('statusText');
 const stepCount     = document.getElementById('stepCount');
 const recStepCount  = document.getElementById('recStepCount');
 
+// --- Signed-in state: who's signed in, and their SOPs for the active site ---
+
+const userBar        = document.getElementById('userBar');
+const userAvatar      = document.getElementById('userAvatar');
+const userNameLabel  = document.getElementById('userNameLabel');
+const signOutBtn     = document.getElementById('signOutBtn');
+const signInLink     = document.getElementById('signInLink');
+const adminLink      = document.getElementById('adminLink');
+const siteSops       = document.getElementById('siteSops');
+const siteSopsHeading = document.getElementById('siteSopsHeading');
+const siteSopsList   = document.getElementById('siteSopsList');
+const howItWorks     = document.getElementById('howItWorks');
+
 let isRecording = false;
 
 function updateUI(recording, count) {
@@ -134,19 +147,6 @@ chrome.storage.onChanged.addListener((changes, area) => {
 chrome.storage.local.get(['isRecording', 'steps'], (result) => {
   updateUI(result.isRecording || false, (result.steps || []).length);
 });
-
-// --- Signed-in state: who's signed in, and their SOPs for the active site ---
-
-const userBar        = document.getElementById('userBar');
-const userAvatar      = document.getElementById('userAvatar');
-const userNameLabel  = document.getElementById('userNameLabel');
-const signOutBtn     = document.getElementById('signOutBtn');
-const signInLink     = document.getElementById('signInLink');
-const adminLink      = document.getElementById('adminLink');
-const siteSops       = document.getElementById('siteSops');
-const siteSopsHeading = document.getElementById('siteSopsHeading');
-const siteSopsList   = document.getElementById('siteSopsList');
-const howItWorks     = document.getElementById('howItWorks');
 
 function initials(name) {
   const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);

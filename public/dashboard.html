@@ -515,10 +515,36 @@
     // and may diverge later.
     const canEditSop = canDeleteSop;
 
-    // Chrome Web Store-assigned extension ID for the published listing - if
-    // the listing is ever republished under a different keypair, this
-    // literal must be updated to match.
-    const EXTENSION_ID = 'capicbafpiflgbopfcklobgdebodigmb';
+    // Chrome Web Store-assigned extension ID for the published listing, plus
+    // the fixed dev ID that `npm run build:unpacked` bakes into its manifest
+    // (see scripts/build-unpacked.js) so a local "Load unpacked" install is
+    // also reachable. If the listing is ever republished under a different
+    // keypair, the first literal must be updated to match.
+    const EXTENSION_IDS = ['capicbafpiflgbopfcklobgdebodigmb', 'hjmljeciibdcngnbhganckgekhnoickn'];
+
+    // Tries each known CODEX extension ID in turn and resolves with the
+    // first one that actually responds. A user may have the Web Store
+    // build, the self-hosted build, or a local dev build installed, and
+    // chrome.runtime.sendMessage only targets one extension ID per call.
+    function sendToExtension(message) {
+      return new Promise((resolve) => {
+        let i = 0;
+        function tryNext() {
+          if (i >= EXTENSION_IDS.length) {
+            resolve({ ok: false });
+            return;
+          }
+          chrome.runtime.sendMessage(EXTENSION_IDS[i++], message, (response) => {
+            if (chrome.runtime.lastError || !response) {
+              tryNext();
+              return;
+            }
+            resolve({ ok: true, response });
+          });
+        }
+        tryNext();
+      });
+    }
 
     async function loadUser() {
       const footer = document.getElementById('sidebarFooter');
@@ -563,25 +589,24 @@
         if (!res.ok) throw new Error(`extension-token request failed: ${res.status}`);
         const { token } = await res.json();
 
-        chrome.runtime.sendMessage(
-          EXTENSION_ID,
-          { type: 'USER_SIGNED_IN', token, user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin } },
-          (response) => {
-            if (chrome.runtime.lastError) {
-              // Expected if the extension isn't installed in this browser - not an error.
-              console.log('[auth-bridge] extension not reachable:', chrome.runtime.lastError.message);
-              return;
-            }
-            // background.js always responds (even on failure), so a response
-            // existing doesn't mean the sign-in was actually stored - check
-            // the flag it sends rather than treating any reply as success.
-            if (!response || !response.received) {
-              console.error('[auth-bridge] extension rejected sign-in:', response && response.error);
-              return;
-            }
-            console.log('[auth-bridge] extension acknowledged sign-in:', response);
-          }
-        );
+        const { ok, response } = await sendToExtension({
+          type: 'USER_SIGNED_IN',
+          token,
+          user: { id: user.id, name: user.name, email: user.email, is_admin: user.is_admin },
+        });
+        if (!ok) {
+          // Expected if no CODEX extension is installed in this browser - not an error.
+          console.log('[auth-bridge] no CODEX extension reachable');
+          return;
+        }
+        // background.js always responds (even on failure), so a response
+        // existing doesn't mean the sign-in was actually stored - check
+        // the flag it sends rather than treating any reply as success.
+        if (!response.received) {
+          console.error('[auth-bridge] extension rejected sign-in:', response.error);
+          return;
+        }
+        console.log('[auth-bridge] extension acknowledged sign-in:', response);
       } catch (err) {
         console.error('[auth-bridge] failed to bridge session to extension:', err);
       }
@@ -711,19 +736,18 @@
         const res = await fetch(`/sops/${id}`, { credentials: 'include' });
         if (!res.ok) throw new Error('Not found');
         const sop = await res.json();
-        chrome.runtime.sendMessage(EXTENSION_ID, { type: 'EDIT_SOP', sop }, (response) => {
-          if (chrome.runtime.lastError) {
-            // Extension not actually installed/reachable in this browser -
-            // same fallback as the "no chrome.runtime" branch above.
-            console.log('[edit] extension not reachable, falling back to web editor:', chrome.runtime.lastError.message);
-            location.href = `/documents/new?id=${id}`;
-            return;
-          }
-          if (!response || !response.received) {
-            console.error('[edit] extension did not accept EDIT_SOP:', response);
-            alert(`Could not open this SOP for editing: ${(response && response.error) || 'unknown error'}`);
-          }
-        });
+        const { ok, response } = await sendToExtension({ type: 'EDIT_SOP', sop });
+        if (!ok) {
+          // No CODEX extension actually installed/reachable in this browser -
+          // same fallback as the "no chrome.runtime" branch above.
+          console.log('[edit] no CODEX extension reachable, falling back to web editor');
+          location.href = `/documents/new?id=${id}`;
+          return;
+        }
+        if (!response.received) {
+          console.error('[edit] extension did not accept EDIT_SOP:', response);
+          alert(`Could not open this SOP for editing: ${response.error || 'unknown error'}`);
+        }
       } catch {
         alert('Could not open this SOP for editing right now.');
       }
