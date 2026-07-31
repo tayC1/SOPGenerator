@@ -179,7 +179,10 @@
   tbody tr { border-top: 1px solid var(--border); }
   td .email { color: var(--text-dim); font-size: 12px; }
 
-  .dir-fields { display: flex; flex-direction: column; gap: 4px; min-width: 160px; }
+  .dir-fields { display: flex; flex-direction: column; gap: 4px; min-width: 190px; }
+  .dir-phone-row { display: flex; gap: 4px; }
+  .dir-phone-row .dir-input[data-field="phone"] { flex: 2; }
+  .dir-phone-row .dir-input[data-field="extension"] { flex: 1; min-width: 0; }
   .dir-input {
     width: 100%;
     background: rgba(255, 255, 255, 0.06);
@@ -473,7 +476,10 @@
           <td>
             <div class="dir-fields" data-user-id="${user.id}">
               <input type="text" class="dir-input" data-field="title" placeholder="Title" value="${escapeHtml(user.title)}"${dirDisabled ? ' disabled' : ''}>
-              <input type="text" class="dir-input" data-field="phone" placeholder="Phone" value="${escapeHtml(user.phone)}"${dirDisabled ? ' disabled' : ''}>
+              <div class="dir-phone-row">
+                <input type="text" class="dir-input" data-field="phone" placeholder="Phone" value="${escapeHtml(user.phone)}"${dirDisabled ? ' disabled' : ''}>
+                <input type="text" class="dir-input" data-field="extension" placeholder="Ext." value="${escapeHtml(user.extension)}"${dirDisabled ? ' disabled' : ''}>
+              </div>
               <input type="text" class="dir-input" data-field="slack_url" placeholder="Slack profile link" value="${escapeHtml(user.slack_url)}"${dirDisabled ? ' disabled' : ''}>
             </div>
             <span class="save-state" id="dir-state-${user.id}"></span>

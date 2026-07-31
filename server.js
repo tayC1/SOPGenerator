@@ -296,7 +296,7 @@ app.get('/admin/users', requireAdmin, async (req, res) => {
     const scope = req.user.role === 'department_admin' ? await departmentsForUser(req.user.id) : null;
     const result = scope
       ? await db.query(
-          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at, u.display_name, u.title, u.phone, u.slack_url,
+          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at, u.display_name, u.title, u.phone, u.extension, u.slack_url,
                   COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            JOIN user_departments ud_scope ON ud_scope.user_id = u.id AND ud_scope.department_name = ANY($1)
@@ -306,7 +306,7 @@ app.get('/admin/users', requireAdmin, async (req, res) => {
           [scope]
         )
       : await db.query(
-          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at, u.display_name, u.title, u.phone, u.slack_url,
+          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at, u.display_name, u.title, u.phone, u.extension, u.slack_url,
                   COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            LEFT JOIN user_departments ud ON ud.user_id = u.id
@@ -342,7 +342,7 @@ app.get('/users', requireAuth, async (req, res) => {
     // employee shouldn't keep showing up as reachable.
     const result = department
       ? await db.query(
-          `SELECT u.id, u.name, u.email, u.display_name, u.title, u.phone, u.slack_url,
+          `SELECT u.id, u.name, u.email, u.display_name, u.title, u.phone, u.extension, u.slack_url,
                   COALESCE(array_agg(ud2.department_name) FILTER (WHERE ud2.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            JOIN user_departments ud ON ud.user_id = u.id AND ud.department_name = $1
@@ -353,7 +353,7 @@ app.get('/users', requireAuth, async (req, res) => {
           [department]
         )
       : await db.query(
-          `SELECT u.id, u.name, u.email, u.display_name, u.title, u.phone, u.slack_url,
+          `SELECT u.id, u.name, u.email, u.display_name, u.title, u.phone, u.extension, u.slack_url,
                   COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            LEFT JOIN user_departments ud ON ud.user_id = u.id
@@ -372,7 +372,7 @@ app.get('/users', requireAuth, async (req, res) => {
 // as the :id param and route self-service requests into the admin-only handler.
 app.patch('/users/me', requireAuth, async (req, res) => {
   try {
-    const { first_name, last_name, display_name, title, default_category, phone } = req.body;
+    const { first_name, last_name, display_name, title, default_category, phone, extension } = req.body;
     // A bare "myworkspace.slack.com/team/U0123" has no scheme, so a browser
     // treats it as a path relative to whatever page it's clicked from
     // instead of an external site - assume https:// unless a scheme is
@@ -380,10 +380,10 @@ app.patch('/users/me', requireAuth, async (req, res) => {
     const rawSlackUrl = String(req.body.slack_url ?? '').trim();
     const slackUrl = rawSlackUrl && !/^[a-z][a-z0-9+.-]*:/i.test(rawSlackUrl) ? `https://${rawSlackUrl}` : rawSlackUrl;
     const result = await db.query(
-      `UPDATE users SET first_name = $1, last_name = $2, display_name = $3, title = $4, default_category = $5, phone = $6, slack_url = $7
-       WHERE id = $8
-       RETURNING id, name, email, first_name, last_name, display_name, title, default_category, phone, slack_url`,
-      [first_name || null, last_name || null, display_name || null, title || null, default_category || null, phone || null, slackUrl || null, req.user.id]
+      `UPDATE users SET first_name = $1, last_name = $2, display_name = $3, title = $4, default_category = $5, phone = $6, slack_url = $7, extension = $8
+       WHERE id = $9
+       RETURNING id, name, email, first_name, last_name, display_name, title, default_category, phone, slack_url, extension`,
+      [first_name || null, last_name || null, display_name || null, title || null, default_category || null, phone || null, slackUrl || null, extension || null, req.user.id]
     );
     res.json(result.rows[0]);
   } catch (err) {
@@ -490,7 +490,7 @@ app.patch('/users/:id', requireAdmin, async (req, res) => {
     // sensitive than department tagging above, so editing them requires the
     // acting department_admin to actually share a department with this user
     // right now - not just submit departments within their own scope.
-    const directoryFields = ['display_name', 'title', 'phone', 'slack_url'].filter((f) => f in req.body);
+    const directoryFields = ['display_name', 'title', 'phone', 'extension', 'slack_url'].filter((f) => f in req.body);
     if (directoryFields.length > 0) {
       const targetDepartments = departmentsProvided ? finalDepartments : await departmentsForUser(req.params.id);
       if (!(await isScopedOverDepartments(req.user, targetDepartments))) {
@@ -510,7 +510,7 @@ app.patch('/users/:id', requireAdmin, async (req, res) => {
 
     await client.query('COMMIT');
     const result = await db.query(
-      'SELECT id, name, email, role, display_name, title, phone, slack_url FROM users WHERE id = $1',
+      'SELECT id, name, email, role, display_name, title, phone, extension, slack_url FROM users WHERE id = $1',
       [req.params.id]
     );
     res.json({

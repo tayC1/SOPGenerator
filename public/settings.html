@@ -439,14 +439,18 @@
                 </select>
               </div>
             </div>
+            <div class="field">
+              <label>Title</label>
+              <input type="text" id="titleInput" placeholder="e.g. Manager, Finance" value="${escapeHtml(currentUser.title)}">
+            </div>
             <div class="field-row">
-              <div class="field">
-                <label>Title</label>
-                <input type="text" id="titleInput" placeholder="e.g. Manager, Finance" value="${escapeHtml(currentUser.title)}">
-              </div>
               <div class="field">
                 <label>Phone</label>
                 <input type="tel" id="phoneInput" placeholder="e.g. (555) 123-4567" value="${escapeHtml(currentUser.phone)}">
+              </div>
+              <div class="field">
+                <label>Extension</label>
+                <input type="text" id="extensionInput" placeholder="e.g. 4521" value="${escapeHtml(currentUser.extension)}">
               </div>
             </div>
             <div class="field">
@@ -504,6 +508,7 @@
             title: document.getElementById('titleInput').value.trim(),
             default_category: document.getElementById('defaultCategory').value,
             phone: document.getElementById('phoneInput').value.trim(),
+            extension: document.getElementById('extensionInput').value.trim(),
             slack_url: document.getElementById('slackUrlInput').value.trim(),
           }),
         });
