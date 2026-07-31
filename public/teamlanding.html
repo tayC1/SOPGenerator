@@ -298,6 +298,7 @@
   }
 
   .link-pill:hover { background: rgba(202, 200, 188, 0.24); }
+  .link-pill-team { color: var(--text-faint); }
 
   .member-list { display: flex; flex-direction: column; gap: 10px; }
 
@@ -661,9 +662,11 @@
         }
 
         const linksRow = document.getElementById('linksRow');
-        const links = teamName && Array.isArray(current?.links) ? current.links : [];
+        const links = teamName
+          ? (Array.isArray(current?.links) ? current.links : [])
+          : departments.flatMap((d) => (Array.isArray(d.links) ? d.links.map((link) => ({ ...link, team: d.name })) : []));
         linksRow.innerHTML = links.length > 0
-          ? links.map((link) => `<a class="link-pill" href="${escapeHtml(normalizeUrl(link.url))}" target="_blank" rel="noopener">${escapeHtml(link.label)}</a>`).join('')
+          ? links.map((link) => `<a class="link-pill" href="${escapeHtml(normalizeUrl(link.url))}" target="_blank" rel="noopener">${escapeHtml(link.label)}${link.team ? `<span class="link-pill-team"> · ${escapeHtml(link.team)}</span>` : ''}</a>`).join('')
           : `<p class="empty-note">No links added for ${escapeHtml(teamName || 'any team')} yet.</p>`;
       } catch (err) {
         console.error('[teamlanding] failed to load teams:', err);
