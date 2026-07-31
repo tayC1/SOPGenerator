@@ -11,7 +11,8 @@
     "build": "node scripts/pack-extension.js",
     "build:unpacked": "node scripts/build-unpacked.js",
     "build:webstore": "node scripts/build-webstore.js",
-    "migrate": "node-pg-migrate --envPath .env"
+    "migrate": "node-pg-migrate --envPath .env",
+    "test": "node --test"
   },
   "dependencies": {
     "commander": "^15.0.0",

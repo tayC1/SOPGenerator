@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="/markdown.js"></script>
+<script src="/block-registry.js"></script>
+<script src="/slash-menu.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -492,6 +494,37 @@
     color: rgba(255, 255, 255, 0.65);
   }
   .doc-content a { color: #7eb8d4; }
+
+  .slash-menu {
+    position: absolute;
+    z-index: 100;
+    min-width: 240px;
+    max-height: 280px;
+    overflow-y: auto;
+    background: #38363a;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    padding: 6px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4);
+  }
+  .slash-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.85);
+    cursor: pointer;
+  }
+  .slash-menu-item.is-active,
+  .slash-menu-item:hover { background: rgba(255, 255, 255, 0.08); }
+  .slash-menu-item-icon { flex-shrink: 0; }
+  .slash-menu-empty {
+    padding: 8px 10px;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.4);
+  }
   .doc-content hr { border: none; border-top: 1px solid rgba(255, 255, 255, 0.12); margin: 16px 0; }
   .doc-content img { max-width: 100%; border-radius: 8px; margin: 6px 0 12px; display: block; }
   .doc-content .doc-empty { color: rgba(255, 255, 255, 0.4); font-style: italic; }
@@ -635,7 +668,7 @@
           <label for="contentInput" style="margin-bottom: 0;">Document content (Markdown supported)</label>
           <button type="button" class="btn btn-secondary btn-small" id="togglePreviewBtn">Preview</button>
         </div>
-        <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin: 6px 0 8px;"># Heading, **bold**, *italic*, - lists, &gt; quote, `code`, [link](url)</p>
+        <p style="font-size: 12px; color: rgba(255,255,255,0.4); margin: 6px 0 8px;"># Heading, **bold**, *italic*, - lists, &gt; quote, `code`, [link](url) — type <code>/</code> for a block menu (callout, prerequisites, screenshot, and more)</p>
         <textarea id="contentInput" placeholder="Write the reference document here…" required></textarea>
         <div class="panel doc-content" id="contentPreview" style="display: none; margin-top: 10px;"></div>
       </div>
@@ -993,6 +1026,8 @@
         togglePreviewBtn.textContent = 'Edit';
       }
     });
+
+    CodexSlashMenu.attach(contentInput);
 
     function initials(name) {
       const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
