@@ -97,6 +97,22 @@
   .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
   .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
 
+  .sidebar-section-label {
+    padding: 18px 20px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px;
+  }
+
   .category-item {
     display: block;
     width: 100%;
@@ -112,6 +128,7 @@
   }
 
   .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .category-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; }
 
   .sidebar-footer {
     margin-top: auto;
@@ -330,8 +347,8 @@
         </a>
       </nav>
 
-      <div class="sidebar-section-label" style="padding: 18px 20px 8px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-faint);">Categories</div>
-      <nav class="category-list" style="display: flex; flex-direction: column; gap: 2px; padding: 0 12px;" aria-label="Categories">
+      <div class="sidebar-section-label">Categories</div>
+      <nav class="category-list" id="categoryList" aria-label="Categories">
         <a class="category-item" href="/team/Finance">Finance</a>
         <a class="category-item" href="/team/HR">HR</a>
         <a class="category-item" href="/team/Internal%20Ops">Internal Ops</a>

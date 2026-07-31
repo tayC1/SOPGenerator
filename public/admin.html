@@ -112,6 +112,39 @@
     padding: 2px 7px;
   }
 
+  .sidebar-section-label {
+    padding: 18px 20px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px;
+  }
+
+  .category-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .category-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; }
+
   .sidebar-footer {
     margin-top: auto;
     border-top: 1px solid var(--border);
@@ -384,6 +417,16 @@
           </span>
           Contacts
         </a>
+      </nav>
+
+      <div class="sidebar-section-label">Categories</div>
+      <nav class="category-list" id="categoryList" aria-label="Categories">
+        <a class="category-item" href="/team/Finance">Finance</a>
+        <a class="category-item" href="/team/HR">HR</a>
+        <a class="category-item" href="/team/Internal%20Ops">Internal Ops</a>
+        <a class="category-item" href="/team/Logistics%2FPurchasing">Logistics/Purchasing</a>
+        <a class="category-item" href="/team/Live%20Events%2FRentals">Live Events/Rentals</a>
+        <a class="category-item" href="/team/Integrations%2FSales">Integrations/Sales</a>
       </nav>
 
       <a class="sidebar-footer" href="/settings" id="sidebarFooter">
