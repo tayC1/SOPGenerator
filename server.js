@@ -296,7 +296,7 @@ app.get('/admin/users', requireAdmin, async (req, res) => {
     const scope = req.user.role === 'department_admin' ? await departmentsForUser(req.user.id) : null;
     const result = scope
       ? await db.query(
-          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at,
+          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at, u.display_name, u.title, u.phone, u.slack_url,
                   COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            JOIN user_departments ud_scope ON ud_scope.user_id = u.id AND ud_scope.department_name = ANY($1)
@@ -306,7 +306,7 @@ app.get('/admin/users', requireAdmin, async (req, res) => {
           [scope]
         )
       : await db.query(
-          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at,
+          `SELECT u.id, u.name, u.email, u.role, u.is_active, u.deactivated_at, u.display_name, u.title, u.phone, u.slack_url,
                   COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            LEFT JOIN user_departments ud ON ud.user_id = u.id
@@ -435,7 +435,13 @@ app.post('/users/invite', requireAuth, async (req, res) => {
 });
 
 app.patch('/users/:id', requireAdmin, async (req, res) => {
-  const submitted = Array.isArray(req.body.departments) ? req.body.departments : [];
+  // `departments` is only touched when the key is actually present in the
+  // body - the admin portal's per-field directory edits (title/phone/Slack
+  // link) PATCH this same route without a `departments` key, and treating a
+  // missing key the same as an empty array would silently wipe the user's
+  // team membership on every one of those saves.
+  const departmentsProvided = Array.isArray(req.body.departments);
+  const submitted = departmentsProvided ? req.body.departments : [];
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -445,44 +451,75 @@ app.patch('/users/:id', requireAdmin, async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    // A department_admin may only touch departments within their own scope
-    // - any other department this user already belongs to is left alone,
-    // rather than letting a wholesale replacement silently wipe membership
-    // the acting admin has no authority over.
-    let finalDepartments = submitted;
-    if (req.user.role === 'department_admin') {
-      const scope = await departmentsForUser(req.user.id);
-      const outsideScope = submitted.filter((d) => !scope.includes(d));
-      if (outsideScope.length > 0) {
-        await client.query('ROLLBACK');
-        return res.status(403).json({ error: `Cannot assign departments outside your scope: ${outsideScope.join(', ')}` });
+    let finalDepartments;
+    if (departmentsProvided) {
+      // A department_admin may only touch departments within their own scope
+      // - any other department this user already belongs to is left alone,
+      // rather than letting a wholesale replacement silently wipe membership
+      // the acting admin has no authority over.
+      finalDepartments = submitted;
+      if (req.user.role === 'department_admin') {
+        const scope = await departmentsForUser(req.user.id);
+        const outsideScope = submitted.filter((d) => !scope.includes(d));
+        if (outsideScope.length > 0) {
+          await client.query('ROLLBACK');
+          return res.status(403).json({ error: `Cannot assign departments outside your scope: ${outsideScope.join(', ')}` });
+        }
+        const currentResult = await client.query('SELECT department_name FROM user_departments WHERE user_id = $1', [req.params.id]);
+        const untouched = currentResult.rows.map((r) => r.department_name).filter((d) => !scope.includes(d));
+        finalDepartments = [...untouched, ...submitted];
       }
-      const currentResult = await client.query('SELECT department_name FROM user_departments WHERE user_id = $1', [req.params.id]);
-      const untouched = currentResult.rows.map((r) => r.department_name).filter((d) => !scope.includes(d));
-      finalDepartments = [...untouched, ...submitted];
+
+      await client.query('DELETE FROM user_departments WHERE user_id = $1', [req.params.id]);
+      for (const name of finalDepartments) {
+        await client.query(
+          'INSERT INTO user_departments (user_id, department_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+          [req.params.id, name]
+        );
+      }
+
+      // Scope-coupling: a department_admin whose last department was just
+      // removed can no longer be scoped over anything, so their admin status
+      // is revoked automatically instead of left dangling with an empty scope.
+      if (userCheck.rows[0].role === 'department_admin' && finalDepartments.length === 0) {
+        await client.query("UPDATE users SET role = 'member' WHERE id = $1", [req.params.id]);
+      }
     }
 
-    await client.query('DELETE FROM user_departments WHERE user_id = $1', [req.params.id]);
-    for (const name of finalDepartments) {
-      await client.query(
-        'INSERT INTO user_departments (user_id, department_name) VALUES ($1, $2) ON CONFLICT DO NOTHING',
-        [req.params.id, name]
-      );
-    }
-
-    // Scope-coupling: a department_admin whose last department was just
-    // removed can no longer be scoped over anything, so their admin status
-    // is revoked automatically instead of left dangling with an empty scope.
-    if (userCheck.rows[0].role === 'department_admin' && finalDepartments.length === 0) {
-      await client.query("UPDATE users SET role = 'member' WHERE id = $1", [req.params.id]);
+    // Directory fields (title/phone/Slack link/display name) are more
+    // sensitive than department tagging above, so editing them requires the
+    // acting department_admin to actually share a department with this user
+    // right now - not just submit departments within their own scope.
+    const directoryFields = ['display_name', 'title', 'phone', 'slack_url'].filter((f) => f in req.body);
+    if (directoryFields.length > 0) {
+      const targetDepartments = departmentsProvided ? finalDepartments : await departmentsForUser(req.params.id);
+      if (!(await isScopedOverDepartments(req.user, targetDepartments))) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: "You are not an admin over this user's department" });
+      }
+      const values = [];
+      const sets = directoryFields.map((field) => {
+        let value = String(req.body[field] ?? '').trim();
+        if (field === 'slack_url' && value && !/^[a-z][a-z0-9+.-]*:/i.test(value)) value = `https://${value}`;
+        values.push(value || null);
+        return `${field} = $${values.length}`;
+      });
+      values.push(req.params.id);
+      await client.query(`UPDATE users SET ${sets.join(', ')} WHERE id = $${values.length}`, values);
     }
 
     await client.query('COMMIT');
-    const result = await db.query('SELECT id, name, email, role FROM users WHERE id = $1', [req.params.id]);
-    res.json({ ...result.rows[0], departments: finalDepartments });
+    const result = await db.query(
+      'SELECT id, name, email, role, display_name, title, phone, slack_url FROM users WHERE id = $1',
+      [req.params.id]
+    );
+    res.json({
+      ...result.rows[0],
+      departments: departmentsProvided ? finalDepartments : await departmentsForUser(req.params.id),
+    });
   } catch (err) {
     await client.query('ROLLBACK');
-    console.error('[users] failed to update user departments:', err.message);
+    console.error('[users] failed to update user:', err.message);
     res.status(500).json({ error: err.message });
   } finally {
     client.release();
