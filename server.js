@@ -224,6 +224,10 @@ app.get('/team/:category', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'teamlanding.html'));
 });
 
+app.get('/contacts', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'contacts.html'));
+});
+
 // Self-hosted extension distribution: `npm run build` (wired into the
 // Railway build step via package.json's "build" script) regenerates these
 // two files fresh on every deploy - see scripts/pack-extension.js. Nothing
@@ -332,23 +336,28 @@ app.get('/users', requireAuth, async (req, res) => {
   const { department } = req.query;
   try {
     // departments comes back as a real array per user (aggregated from the
-    // join table) - a user can now be on more than one team.
+    // join table) - a user can now be on more than one team. Deactivated
+    // users are excluded everywhere this is used (sidebar teammates, the
+    // team page's member list, the contacts directory) - a removed
+    // employee shouldn't keep showing up as reachable.
     const result = department
       ? await db.query(
-          `SELECT u.id, u.name, u.email,
+          `SELECT u.id, u.name, u.email, u.display_name, u.title, u.phone, u.slack_url,
                   COALESCE(array_agg(ud2.department_name) FILTER (WHERE ud2.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            JOIN user_departments ud ON ud.user_id = u.id AND ud.department_name = $1
            LEFT JOIN user_departments ud2 ON ud2.user_id = u.id
+           WHERE u.is_active = true
            GROUP BY u.id
            ORDER BY u.name`,
           [department]
         )
       : await db.query(
-          `SELECT u.id, u.name, u.email,
+          `SELECT u.id, u.name, u.email, u.display_name, u.title, u.phone, u.slack_url,
                   COALESCE(array_agg(ud.department_name) FILTER (WHERE ud.department_name IS NOT NULL), '{}') AS departments
            FROM users u
            LEFT JOIN user_departments ud ON ud.user_id = u.id
+           WHERE u.is_active = true
            GROUP BY u.id
            ORDER BY u.name`
         );
@@ -363,12 +372,18 @@ app.get('/users', requireAuth, async (req, res) => {
 // as the :id param and route self-service requests into the admin-only handler.
 app.patch('/users/me', requireAuth, async (req, res) => {
   try {
-    const { first_name, last_name, display_name, title, default_category } = req.body;
+    const { first_name, last_name, display_name, title, default_category, phone } = req.body;
+    // A bare "myworkspace.slack.com/team/U0123" has no scheme, so a browser
+    // treats it as a path relative to whatever page it's clicked from
+    // instead of an external site - assume https:// unless a scheme is
+    // already present, same normalization used for department links.
+    const rawSlackUrl = String(req.body.slack_url ?? '').trim();
+    const slackUrl = rawSlackUrl && !/^[a-z][a-z0-9+.-]*:/i.test(rawSlackUrl) ? `https://${rawSlackUrl}` : rawSlackUrl;
     const result = await db.query(
-      `UPDATE users SET first_name = $1, last_name = $2, display_name = $3, title = $4, default_category = $5
-       WHERE id = $6
-       RETURNING id, name, email, first_name, last_name, display_name, title, default_category`,
-      [first_name || null, last_name || null, display_name || null, title || null, default_category || null, req.user.id]
+      `UPDATE users SET first_name = $1, last_name = $2, display_name = $3, title = $4, default_category = $5, phone = $6, slack_url = $7
+       WHERE id = $8
+       RETURNING id, name, email, first_name, last_name, display_name, title, default_category, phone, slack_url`,
+      [first_name || null, last_name || null, display_name || null, title || null, default_category || null, phone || null, slackUrl || null, req.user.id]
     );
     res.json(result.rows[0]);
   } catch (err) {

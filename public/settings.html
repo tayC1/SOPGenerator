@@ -354,6 +354,12 @@
           </span>
           Saved
         </a>
+        <a class="nav-item" href="/contacts">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          Contacts
+        </a>
       </nav>
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
@@ -433,9 +439,19 @@
                 </select>
               </div>
             </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Title</label>
+                <input type="text" id="titleInput" placeholder="e.g. Manager, Finance" value="${escapeHtml(currentUser.title)}">
+              </div>
+              <div class="field">
+                <label>Phone</label>
+                <input type="tel" id="phoneInput" placeholder="e.g. (555) 123-4567" value="${escapeHtml(currentUser.phone)}">
+              </div>
+            </div>
             <div class="field">
-              <label>Title</label>
-              <input type="text" id="titleInput" placeholder="e.g. Manager, Finance" value="${escapeHtml(currentUser.title)}">
+              <label>Slack Profile Link</label>
+              <input type="text" id="slackUrlInput" placeholder="e.g. kramer.slack.com/team/U0123ABC" value="${escapeHtml(currentUser.slack_url)}">
             </div>
 
             <div class="form-footer">
@@ -487,6 +503,8 @@
             display_name: document.getElementById('displayNameInput').value.trim(),
             title: document.getElementById('titleInput').value.trim(),
             default_category: document.getElementById('defaultCategory').value,
+            phone: document.getElementById('phoneInput').value.trim(),
+            slack_url: document.getElementById('slackUrlInput').value.trim(),
           }),
         });
         if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
