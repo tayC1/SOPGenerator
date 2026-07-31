@@ -63,6 +63,13 @@
       keywords: ['decision', 'branch', 'if', 'else', 'condition'],
       template: '**If {{condition}}:**\n- {{then}}\n\n**Else:**\n- {{otherwise}}',
     },
+    {
+      id: 'email',
+      label: 'Email block',
+      icon: '✉️',
+      keywords: ['email', 'mail', 'to', 'subject'],
+      template: '**To:** {{recipient}}\n**Subject:** {{subject}}\n\n{{body}}',
+    },
   ];
 
   function getBlocks() {

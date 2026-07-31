@@ -4,7 +4,7 @@ const { getBlocks, filterBlocks } = require('../../public/block-registry.js');
 
 test('getBlocks returns the full seeded list', () => {
   const blocks = getBlocks();
-  assert.equal(blocks.length, 7);
+  assert.equal(blocks.length, 8);
   assert.ok(blocks.every((b) => b.id && b.label && b.icon && b.template));
 });
 
@@ -25,4 +25,9 @@ test('filterBlocks matches by keyword even when the label differs', () => {
 
 test('filterBlocks returns no results for a query nothing matches', () => {
   assert.deepEqual(filterBlocks('zzzznotarealblock'), []);
+});
+
+test('filterBlocks matches the email block', () => {
+  const results = filterBlocks('email');
+  assert.ok(results.some((b) => b.id === 'email'));
 });

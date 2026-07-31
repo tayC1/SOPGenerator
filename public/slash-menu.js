@@ -1,13 +1,13 @@
 // Slash-command block menu for a plain <textarea> (used against
-// contentInput in new-document.html). This first pass covers trigger
-// detection, live filtering, and rendering/dismissing the floating menu.
-// Caret-accurate positioning and actual block insertion land in the next
-// pass - for now the menu opens under the textarea's top-left corner and
-// clicking/selecting an item just closes it without touching the text.
+// contentInput in new-document.html): trigger detection, live filtering,
+// keyboard/click selection, insertion, and Tab-through placeholder fields.
 //
 // Exposes CodexSlashMenu.attach(textarea, options) in the browser, plus the
 // pure helper functions (no DOM) via module.exports under Node for testing.
 (function (global) {
+  const PLACEHOLDER_RE = /\{\{[^{}]*\}\}/;
+  const PLACEHOLDER_RE_G = /\{\{[^{}]*\}\}/g;
+
   // A trigger is a "/" preceded by start-of-text or whitespace - matches
   // Notion's "empty line or after whitespace" rule without needing to know
   // about lines specifically, since a newline is whitespace too.
@@ -34,12 +34,45 @@
     return query;
   }
 
+  // Computes the result of replacing text[startIndex:caretIndex] (the
+  // "/query" the trigger opened on) with a block's template, plus where the
+  // caret/selection should land afterwards - the template's first {{token}}
+  // if it has one, else just past the inserted text.
+  function buildInsertion(text, startIndex, caretIndex, template) {
+    const before = text.slice(0, startIndex);
+    const after = text.slice(caretIndex);
+    const newText = before + template + after;
+    const placeholder = PLACEHOLDER_RE.exec(template);
+    const selectionStart = placeholder ? startIndex + placeholder.index : startIndex + template.length;
+    const selectionEnd = placeholder ? selectionStart + placeholder[0].length : selectionStart;
+    return { newText, selectionStart, selectionEnd };
+  }
+
+  // Finds the next {{token}} at or after fromIndex, wrapping around to the
+  // start of the document if none is found before the end - so Tab cycles
+  // through every remaining placeholder rather than stopping at the last one.
+  function findNextPlaceholder(text, fromIndex) {
+    PLACEHOLDER_RE_G.lastIndex = 0;
+    let match;
+    let firstMatch = null;
+    while ((match = PLACEHOLDER_RE_G.exec(text))) {
+      if (firstMatch === null) firstMatch = match;
+      if (match.index >= fromIndex) {
+        return { start: match.index, end: match.index + match[0].length };
+      }
+    }
+    return firstMatch ? { start: firstMatch.index, end: firstMatch.index + firstMatch[0].length } : null;
+  }
+
   function attach(textarea, options) {
     const getBlocks = (options && options.getBlocks) || global.CodexBlocks.getBlocks;
     const filterBlocks = (options && options.filterBlocks) || global.CodexBlocks.filterBlocks;
+    const getCaretCoords = (options && options.getCaretCoords) || (global.CodexCaretPosition && global.CodexCaretPosition.getCaretCoords);
 
     let session = null; // { startIndex } while the menu is open
     let items = [];
+    let activeIndex = 0;
+    let placeholderModeActive = false;
 
     const menu = document.createElement('div');
     menu.className = 'slash-menu';
@@ -53,12 +86,12 @@
     function close() {
       session = null;
       items = [];
+      activeIndex = 0;
       menu.style.display = 'none';
       menu.innerHTML = '';
     }
 
-    function render(query) {
-      items = filterBlocks(query, getBlocks());
+    function renderItems() {
       if (items.length === 0) {
         menu.innerHTML = '<div class="slash-menu-empty">No matching blocks</div>';
         return;
@@ -66,7 +99,7 @@
       menu.innerHTML = items
         .map(
           (block, i) => `
-            <div class="slash-menu-item${i === 0 ? ' is-active' : ''}" data-index="${i}">
+            <div class="slash-menu-item${i === activeIndex ? ' is-active' : ''}" data-index="${i}">
               <span class="slash-menu-item-icon">${block.icon}</span>
               <span class="slash-menu-item-label">${block.label}</span>
             </div>`
@@ -74,13 +107,48 @@
         .join('');
     }
 
+    function render(query) {
+      items = filterBlocks(query);
+      activeIndex = 0;
+      renderItems();
+    }
+
+    function setActiveIndex(index) {
+      if (items.length === 0) return;
+      activeIndex = (index + items.length) % items.length;
+      renderItems();
+    }
+
     function open(startIndex) {
       session = { startIndex };
-      const rect = textarea.getBoundingClientRect();
-      menu.style.left = `${rect.left + window.scrollX}px`;
-      menu.style.top = `${rect.top + window.scrollY}px`;
+      const coords = getCaretCoords ? getCaretCoords(textarea) : null;
+      if (coords) {
+        menu.style.left = `${coords.left}px`;
+        menu.style.top = `${coords.top + coords.lineHeight}px`;
+      } else {
+        const rect = textarea.getBoundingClientRect();
+        menu.style.left = `${rect.left + window.scrollX}px`;
+        menu.style.top = `${rect.top + window.scrollY}px`;
+      }
       menu.style.display = 'block';
       render('');
+    }
+
+    function insertBlock(block) {
+      const text = textarea.value;
+      const caret = textarea.selectionStart;
+      const startIndex = session.startIndex;
+      const { selectionStart, selectionEnd } = buildInsertion(text, startIndex, caret, block.template);
+
+      textarea.focus();
+      textarea.setSelectionRange(startIndex, caret);
+      // execCommand keeps the browser's native undo/redo stack intact,
+      // unlike assigning textarea.value directly which would wipe it.
+      document.execCommand('insertText', false, block.template);
+      textarea.setSelectionRange(selectionStart, selectionEnd);
+
+      close();
+      placeholderModeActive = PLACEHOLDER_RE.test(block.template);
     }
 
     textarea.addEventListener('input', () => {
@@ -103,10 +171,39 @@
     });
 
     textarea.addEventListener('keydown', (e) => {
-      if (!session) return;
-      if (e.key === 'Escape') {
-        close();
+      if (session) {
+        if (e.key === 'Escape') {
+          close();
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setActiveIndex(activeIndex + 1);
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setActiveIndex(activeIndex - 1);
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+          if (items.length > 0) {
+            e.preventDefault();
+            insertBlock(items[activeIndex]);
+          }
+        }
+        return;
       }
+
+      if (placeholderModeActive && e.key === 'Tab' && !e.shiftKey) {
+        const next = findNextPlaceholder(textarea.value, textarea.selectionEnd);
+        if (next) {
+          e.preventDefault();
+          textarea.setSelectionRange(next.start, next.end);
+        } else {
+          placeholderModeActive = false;
+        }
+      }
+    });
+
+    // A manual click means the user is navigating on their own - stop
+    // treating Tab as "jump to the next placeholder" from that point on.
+    textarea.addEventListener('mousedown', () => {
+      placeholderModeActive = false;
     });
 
     textarea.addEventListener('blur', close);
@@ -114,8 +211,8 @@
     menu.addEventListener('click', (e) => {
       const el = e.target.closest('.slash-menu-item');
       if (!el) return;
-      close();
-      textarea.focus();
+      const index = Number(el.dataset.index);
+      insertBlock(items[index]);
     });
 
     document.addEventListener('mousedown', (e) => {
@@ -127,7 +224,7 @@
     return { close };
   }
 
-  const api = { attach, isTriggerPosition, isInsideFencedCode, extractQuery };
+  const api = { attach, isTriggerPosition, isInsideFencedCode, extractQuery, buildInsertion, findNextPlaceholder };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = api;
   } else {

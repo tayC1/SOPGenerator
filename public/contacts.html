@@ -406,14 +406,14 @@
           </div>
           ${depts.length > 0 ? `<div class="contact-depts">${depts.map((d) => `<span class="tag">${escapeHtml(d)}</span>`).join('')}</div>` : ''}
           <div class="contact-fields">
-            <a class="contact-field" href="mailto:${encodeURIComponent(person.email)}">${ICONS.mail}<span>${escapeHtml(person.email)}</span></a>
-            ${person.phone ? `<a class="contact-field" href="tel:${encodeURIComponent(person.phone)}">${ICONS.phone}<span>${escapeHtml(person.phone)}</span></a>` : ''}
-            ${person.extension ? `<a class="contact-field" href="tel:${encodeURIComponent(person.extension)}">${ICONS.extension}<span>Ext. ${escapeHtml(person.extension)}</span></a>` : ''}
+            <a class="contact-field" href="mailto:${escapeHtml(person.email)}">${ICONS.mail}<span>${escapeHtml(person.email)}</span></a>
+            ${person.phone ? `<a class="contact-field" href="tel:${escapeHtml(person.phone)}">${ICONS.phone}<span>${escapeHtml(person.phone)}</span></a>` : ''}
+            ${person.extension ? `<a class="contact-field" href="tel:${escapeHtml(person.extension)}">${ICONS.extension}<span>Ext. ${escapeHtml(person.extension)}</span></a>` : ''}
           </div>
           <div class="contact-actions">
             ${person.slack_url
               ? `<a class="action-btn action-btn-slack" href="${escapeHtml(normalizeUrl(person.slack_url))}" target="_blank" rel="noopener">${ICONS.slack} MESSAGE IN SLACK</a>`
-              : `<a class="action-btn" href="mailto:${encodeURIComponent(person.email)}">${ICONS.mail} EMAIL</a>`}
+              : `<a class="action-btn" href="mailto:${escapeHtml(person.email)}">${ICONS.mail} EMAIL</a>`}
           </div>
         </article>
       `;
