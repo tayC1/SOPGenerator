@@ -332,6 +332,11 @@
 
   .signout-row { text-align: center; margin-top: 8px; }
   .signout-row a { color: #e08080; font-size: 13.5px; text-decoration: underline; }
+
+  .ext-card { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .ext-card-title { font-size: 14px; font-weight: 600; }
+  .ext-card-desc { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
+  .ext-card .btn-save { text-decoration: none; display: inline-flex; align-items: center; white-space: nowrap; }
   .signout-row a:hover { color: #ff9a9a; }
 
   .denied { margin: 60px auto; text-align: center; color: var(--text-faint); font-size: 14px; }
@@ -496,6 +501,17 @@
             <button type="button" id="inviteSubmit">Send</button>
           </div>
           <p class="save-state" id="inviteState" style="margin-top: 8px;"></p>
+        </div>
+
+        <div class="section">
+          <div class="section-heading">Browser Extension</div>
+          <div class="card ext-card">
+            <div>
+              <div class="ext-card-title">CODEX for Chrome</div>
+              <div class="ext-card-desc">Capture and save SOPs as you browse.</div>
+            </div>
+            <a class="btn-save" href="https://chromewebstore.google.com/detail/codex/capicbafpiflgbopfcklobgdebodigmb" target="_blank" rel="noopener">Install Extension</a>
+          </div>
         </div>
 
         <div class="signout-row">

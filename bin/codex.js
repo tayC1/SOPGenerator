@@ -16,6 +16,7 @@
 //   codex deactivate <email>
 //   codex reactivate <email>
 //   codex add-category
+//   codex delete-category <name>
 
 const { Command } = require('commander');
 const readline = require('readline/promises');
@@ -132,6 +133,44 @@ async function addCategory() {
   }
 }
 
+async function deleteCategory(name) {
+  const dept = await db.query('SELECT id, name FROM departments WHERE lower(name) = lower($1)', [name]);
+  if (dept.rows.length === 0) {
+    console.error(`No category found named "${name}".`);
+    process.exitCode = 1;
+    return;
+  }
+  const { id, name: actualName } = dept.rows[0];
+
+  // department_name/category are plain text, not FKs, so deleting the row
+  // wouldn't fail loudly - it'd just silently orphan any SOPs/members still
+  // tagged with this name. Block instead, so those get reassigned first.
+  const [sopCount, memberCount] = await Promise.all([
+    db.query('SELECT COUNT(*)::int AS count FROM sops WHERE category = $1', [actualName]),
+    db.query('SELECT COUNT(*)::int AS count FROM user_departments WHERE department_name = $1', [actualName]),
+  ]);
+  const sops = sopCount.rows[0].count;
+  const members = memberCount.rows[0].count;
+  if (sops > 0 || members > 0) {
+    console.error(
+      `Cannot delete "${actualName}": still used by ${sops} SOP${sops === 1 ? '' : 's'} and ${members} member${members === 1 ? '' : 's'}. Reassign them first.`
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const rl = readline.createInterface({ input, output });
+  const answer = await rl.question(`Delete category "${actualName}"? This cannot be undone. (y/N) `);
+  rl.close();
+  if (answer.trim().toLowerCase() !== 'y') {
+    console.log('Cancelled.');
+    return;
+  }
+
+  await db.query('DELETE FROM departments WHERE id = $1', [id]);
+  console.log(`Deleted category "${actualName}".`);
+}
+
 async function listUsers({ department, role }) {
   const result = await db.query(
     `SELECT u.id, u.name, u.email, u.role, u.is_active,
@@ -240,6 +279,10 @@ async function main() {
   program.command('add-category')
     .description('interactively add a new category (department)')
     .action(addCategory);
+
+  program.command('delete-category <name>')
+    .description('delete a category (department), if not currently in use')
+    .action(deleteCategory);
 
   await program.parseAsync(process.argv);
 }

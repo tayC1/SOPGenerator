@@ -372,6 +372,20 @@
   }
   .btn-save:hover { opacity: 0.88; }
 
+  .btn-delete-dept {
+    background: rgba(224, 128, 128, 0.18);
+    color: #e08080;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  .btn-delete-dept:hover { background: rgba(224, 128, 128, 0.3); }
+  .btn-delete-dept:disabled { opacity: 0.6; cursor: default; }
+
   .empty-state, .denied {
     margin: 60px auto;
     text-align: center;
@@ -730,6 +744,7 @@
 
           <div class="dept-footer">
             <button type="button" class="btn-save">Save</button>
+            <button type="button" class="btn-delete-dept">Delete</button>
             <span class="save-state" id="dept-save-state-${dept.id}"></span>
           </div>
         </div>
@@ -747,6 +762,7 @@
         });
         wireRemoveButtons(card);
         card.querySelector('.btn-save').addEventListener('click', () => saveDepartment(card));
+        card.querySelector('.btn-delete-dept').addEventListener('click', () => deleteDepartment(card));
       });
     }
 
@@ -791,6 +807,28 @@
         stateEl.textContent = 'Saved ✓';
         stateEl.className = 'save-state ok';
       } catch (err) {
+        stateEl.textContent = err.message;
+        stateEl.className = 'save-state err';
+      }
+    }
+
+    async function deleteDepartment(card) {
+      const deptId = card.dataset.deptId;
+      const dept = departments.find((d) => String(d.id) === String(deptId));
+      const stateEl = document.getElementById(`dept-save-state-${deptId}`);
+      if (!confirm(`Delete "${dept?.name || 'this category'}"? This cannot be undone.`)) return;
+
+      const deleteBtn = card.querySelector('.btn-delete-dept');
+      deleteBtn.disabled = true;
+      stateEl.textContent = 'Deleting…';
+      stateEl.className = 'save-state';
+      try {
+        const res = await fetch(`/departments/${deptId}`, { method: 'DELETE', credentials: 'include' });
+        if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
+        departments = departments.filter((d) => String(d.id) !== String(deptId));
+        renderDepartments();
+      } catch (err) {
+        deleteBtn.disabled = false;
         stateEl.textContent = err.message;
         stateEl.className = 'save-state err';
       }

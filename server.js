@@ -286,6 +286,38 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
   }
 });
 
+app.delete('/departments/:id', requireAdmin, async (req, res) => {
+  try {
+    const deptCheck = await db.query('SELECT name FROM departments WHERE id = $1', [req.params.id]);
+    if (deptCheck.rows.length === 0) return res.status(404).json({ error: 'Department not found' });
+    const name = deptCheck.rows[0].name;
+    if (!(await isScopedOverDepartments(req.user, [name]))) {
+      return res.status(403).json({ error: 'You are not an admin over this department' });
+    }
+
+    // department_name/category are plain text, not FKs, so deleting the row
+    // wouldn't fail loudly - it'd just silently orphan any SOPs/members still
+    // tagged with this name. Block instead, so those get reassigned first.
+    const [sopCount, memberCount] = await Promise.all([
+      db.query('SELECT COUNT(*)::int AS count FROM sops WHERE category = $1', [name]),
+      db.query('SELECT COUNT(*)::int AS count FROM user_departments WHERE department_name = $1', [name]),
+    ]);
+    const sops = sopCount.rows[0].count;
+    const members = memberCount.rows[0].count;
+    if (sops > 0 || members > 0) {
+      return res.status(409).json({
+        error: `Cannot delete "${name}": still used by ${sops} SOP${sops === 1 ? '' : 's'} and ${members} member${members === 1 ? '' : 's'}. Reassign them first.`,
+      });
+    }
+
+    await db.query('DELETE FROM departments WHERE id = $1', [req.params.id]);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[departments] failed to delete department:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Admin-portal-only, scoped listings. Distinct from the public GET
 // /departments and GET /users below (unauthenticated team pages and the
 // settings page's teammate lookup need the full unscoped data) - the admin
