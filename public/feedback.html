@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback — CODEX</title>
+<link rel="icon" type="image/png" href="/icons/CODEX Favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #2d2b2e;
+    --sidebar-bg: rgba(0, 0, 0, 0.24);
+    --border: rgba(255, 255, 255, 0.12);
+    --text-dim: rgba(255, 255, 255, 0.55);
+    --text-faint: rgba(255, 255, 255, 0.35);
+    --accent: #2e5266;
+    --tag: #e96d2d;
+    --card-bg: #cac8bc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { background: var(--bg); }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: #ffffff;
+    min-height: 100vh;
+  }
+
+  a { color: inherit; }
+  button, input, textarea, select { font-family: inherit; }
+
+  .icon { width: 18px; height: 18px; flex-shrink: 0; }
+  .icon svg { width: 100%; height: 100%; }
+
+  /* ---------- layout ---------- */
+  .app-shell {
+    display: flex;
+    min-height: 100vh;
+  }
+
+  /* ---------- sidebar ---------- */
+  .sidebar {
+    width: 252px;
+    flex-shrink: 0;
+    background: var(--sidebar-bg);
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px 20px 20px;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .sidebar-brand img { width: 32px; height: 32px; object-fit: contain; }
+  .sidebar-brand span { font-size: 22px; font-weight: 500; letter-spacing: 0.02em; }
+
+  .sidebar-divider { height: 1px; background: var(--border); margin: 0 20px; }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 16px 12px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.85);
+    background: none;
+    border: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .nav-item:hover { background: rgba(255, 255, 255, 0.06); }
+  .nav-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; }
+  .nav-item[aria-disabled="true"] {
+    cursor: not-allowed;
+    color: var(--text-faint);
+  }
+  .nav-item[aria-disabled="true"]:hover { background: none; }
+
+  .sidebar-section-label {
+    padding: 18px 20px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .category-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 0 12px;
+  }
+
+  .category-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.75);
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .category-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; }
+  .category-item.active { background: rgba(255, 255, 255, 0.1); color: #fff; font-weight: 500; }
+
+  .sidebar-footer {
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .sidebar-footer:hover { background: rgba(255, 255, 255, 0.05); }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .user-name { font-size: 14px; font-weight: 500; }
+
+  /* ---------- main ---------- */
+  .main {
+    flex: 1;
+    min-width: 0;
+    padding: 36px 40px 56px;
+    max-width: 640px;
+  }
+
+  .page-title { font-size: 26px; font-weight: 600; margin-bottom: 6px; }
+  .page-subtitle { font-size: 14px; color: var(--text-dim); margin-bottom: 28px; }
+
+  .card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+
+  .field { margin-bottom: 18px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field label {
+    display: block;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 6px;
+    padding: 9px 11px;
+    font-size: 14px;
+  }
+
+  .field textarea {
+    resize: vertical;
+    min-height: 130px;
+    line-height: 1.5;
+  }
+
+  .field input:focus, .field select:focus, .field textarea:focus { outline: 1.5px solid var(--accent); }
+  .field select { cursor: pointer; }
+
+  .field.has-error textarea, .field.has-error select { outline: 1.5px solid #e08080; }
+  .field-error {
+    font-size: 12px;
+    color: #e08080;
+    margin-top: 6px;
+    display: none;
+  }
+  .field.has-error .field-error { display: block; }
+
+  .form-footer { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+
+  .btn-save {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 22px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-save:hover { opacity: 0.88; }
+  .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .save-state { font-size: 12.5px; color: var(--text-faint); }
+  .save-state.err { color: #e08080; }
+
+  .success-card {
+    text-align: center;
+    padding: 40px 24px;
+  }
+
+  .success-icon {
+    width: 48px;
+    height: 48px;
+    margin: 0 auto 18px;
+    border-radius: 50%;
+    background: rgba(127, 201, 143, 0.15);
+    color: #7fc98f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .success-icon .icon { width: 24px; height: 24px; }
+
+  .success-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
+  .success-desc { font-size: 13.5px; color: var(--text-dim); margin-bottom: 24px; }
+
+  .btn-outline {
+    background: none;
+    border: 1px solid var(--border);
+    color: #fff;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-outline:hover { border-color: rgba(255, 255, 255, 0.3); }
+
+  .error-banner {
+    display: none;
+    background: rgba(224, 128, 128, 0.1);
+    border: 1px solid rgba(224, 128, 128, 0.35);
+    color: #ffb3b3;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 13px;
+    margin-top: 16px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .error-banner.visible { display: flex; }
+  .error-banner button {
+    background: none;
+    border: none;
+    color: inherit;
+    text-decoration: underline;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .denied { margin: 60px auto; text-align: center; color: var(--text-faint); font-size: 14px; }
+  .denied a { color: #7eb8d4; text-decoration: underline; }
+
+  @media (max-width: 860px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .main { padding: 28px 20px 48px; }
+  }
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="sidebar-brand" href="/">
+        <img src="/icons/CODEX - 48PX.png" alt="">
+        <span>CODEX</span>
+      </a>
+
+      <div class="sidebar-divider"></div>
+
+      <nav class="sidebar-nav" aria-label="Primary">
+        <a class="nav-item" href="/dashboard">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </span>
+          Dashboard
+        </a>
+        <a class="nav-item" href="/saved">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>
+          </span>
+          Saved
+        </a>
+        <a class="nav-item" href="/contacts">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+          </span>
+          Contacts
+        </a>
+        <a class="nav-item active" href="/feedback">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+          </span>
+          Feedback
+        </a>
+      </nav>
+
+      <div class="sidebar-section-label">Categories</div>
+      <nav class="category-list" id="categoryList" aria-label="Categories"></nav>
+
+      <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
+
+      <a class="sidebar-footer" href="/settings" id="sidebarFooter">
+        <div class="avatar" id="userAvatar">?</div>
+        <span class="user-name" id="userName">Loading…</span>
+      </a>
+    </aside>
+
+    <main class="main" id="main">
+      <p class="save-state">Loading…</p>
+    </main>
+  </div>
+
+  <script>
+    // ---------------------------------------------------------------------
+    // Google Form submission target. This is a plain cross-origin POST to
+    // the form's public formResponse endpoint (mode: 'no-cors') - NOT the
+    // Google Forms API, so no OAuth/API key/manifest changes are involved.
+    //
+    // NOTE: these entry.* IDs are tied to this specific Google Form's
+    // current questions. If a question is ever deleted and recreated
+    // (rather than edited in place), Google assigns the recreated question
+    // a brand-new entry ID, and these constants must be updated to match -
+    // otherwise submissions for that field will silently stop recording.
+    // To find a fresh entry ID: open the live form's ⋮ menu -> "Get
+    // pre-filled link", type a recognizable value into each question, and
+    // read the entry.<id>=<value> pairs off the generated URL.
+    // ---------------------------------------------------------------------
+    const FEEDBACK_FORM_ID = '1FAIpQLSfSWVZ12Dz8_lzEHcdGiV_wgP3Q3e7Eza0_wHJ5EKvPX8x0jg';
+    const FEEDBACK_FORM_ACTION = `https://docs.google.com/forms/d/e/${FEEDBACK_FORM_ID}/formResponse`;
+    const FEEDBACK_ENTRY_IDS = {
+      message: 'entry.10109107',
+      category: 'entry.317058991',
+      name: 'entry.926468195',
+    };
+
+    const FEEDBACK_CATEGORIES = ['Bug Report', 'Feature Request', 'General Feedback', 'Other'];
+
+    function escapeHtml(str) {
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function initials(name) {
+      const parts = String(name ?? '').trim().split(/\s+/).filter(Boolean);
+      if (parts.length === 0) return '?';
+      return (parts[0][0] + (parts[1]?.[0] ?? '')).toUpperCase();
+    }
+
+    let currentUser = null;
+
+    function displayName(user) {
+      return user.display_name || user.name || user.email;
+    }
+
+    function renderForm() {
+      const main = document.getElementById('main');
+      main.innerHTML = `
+        <h1 class="page-title">Feedback</h1>
+        <p class="page-subtitle">Spot a bug or have an idea? Let us know below.</p>
+
+        <div class="card" id="feedbackCard">
+          <div class="field">
+            <label for="feedbackCategory">Category (optional)</label>
+            <select id="feedbackCategory">
+              <option value="">Select a category</option>
+              ${FEEDBACK_CATEGORIES.map((c) => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field" id="messageField">
+            <label for="feedbackMessage">Message</label>
+            <textarea id="feedbackMessage" placeholder="Tell us what's on your mind..." rows="6"></textarea>
+            <p class="field-error">Please enter a message before submitting.</p>
+          </div>
+
+          <div class="form-footer">
+            <button class="btn-save" id="submitBtn" type="button">Send Feedback</button>
+            <span class="save-state" id="submitState"></span>
+          </div>
+
+          <div class="error-banner" id="errorBanner">
+            <span>Something went wrong sending your feedback. Please try again.</span>
+            <button type="button" id="retryBtn">Retry</button>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('submitBtn').addEventListener('click', submitFeedback);
+      document.getElementById('retryBtn').addEventListener('click', submitFeedback);
+      document.getElementById('feedbackMessage').addEventListener('input', () => {
+        document.getElementById('messageField').classList.remove('has-error');
+      });
+    }
+
+    function renderSuccess() {
+      const main = document.getElementById('main');
+      main.innerHTML = `
+        <h1 class="page-title">Feedback</h1>
+        <p class="page-subtitle">Spot a bug or have an idea? Let us know below.</p>
+
+        <div class="card success-card">
+          <div class="success-icon">
+            <span class="icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            </span>
+          </div>
+          <div class="success-title">Thanks for the feedback!</div>
+          <div class="success-desc">We read every submission and use it to help shape what we build next.</div>
+          <button class="btn-outline" id="submitAnotherBtn" type="button">Submit another response</button>
+        </div>
+      `;
+
+      document.getElementById('submitAnotherBtn').addEventListener('click', renderForm);
+    }
+
+    async function submitFeedback() {
+      const messageField = document.getElementById('messageField');
+      const messageInput = document.getElementById('feedbackMessage');
+      const categoryInput = document.getElementById('feedbackCategory');
+      const submitBtn = document.getElementById('submitBtn');
+      const stateEl = document.getElementById('submitState');
+      const errorBanner = document.getElementById('errorBanner');
+
+      const message = messageInput.value.trim();
+      if (!message) {
+        messageField.classList.add('has-error');
+        return;
+      }
+      messageField.classList.remove('has-error');
+      errorBanner.classList.remove('visible');
+
+      submitBtn.disabled = true;
+      stateEl.textContent = 'Sending…';
+      stateEl.className = 'save-state';
+
+      const body = new URLSearchParams();
+      body.set(FEEDBACK_ENTRY_IDS.message, message);
+      if (categoryInput.value) body.set(FEEDBACK_ENTRY_IDS.category, categoryInput.value);
+      body.set(FEEDBACK_ENTRY_IDS.name, displayName(currentUser || {}));
+
+      try {
+        // no-cors: the response is opaque (status/body are unreadable from
+        // script), so a resolved promise is the only success signal
+        // available - treat it as "submitted" and show the branded
+        // confirmation state. A thrown/rejected fetch means the request
+        // itself never went out (offline, DNS failure, etc.).
+        await fetch(FEEDBACK_FORM_ACTION, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body,
+        });
+        renderSuccess();
+      } catch (err) {
+        console.error('[feedback] submission failed:', err);
+        submitBtn.disabled = false;
+        stateEl.textContent = '';
+        errorBanner.classList.add('visible');
+      }
+    }
+
+    async function init() {
+      const main = document.getElementById('main');
+      try {
+        const res = await fetch('/auth/me', { credentials: 'include' });
+        const data = await res.json();
+        currentUser = data.user;
+      } catch {
+        currentUser = null;
+      }
+
+      const footer = document.getElementById('sidebarFooter');
+
+      if (!currentUser) {
+        document.getElementById('userName').textContent = 'Sign In';
+        footer.href = '/auth/google';
+        main.innerHTML = `
+          <div class="denied">
+            <p>You need to be signed in to leave feedback.</p>
+            <p style="margin-top: 8px;"><a href="/">Go home to sign in</a></p>
+          </div>
+        `;
+        return;
+      }
+
+      document.getElementById('adminLink').style.display = currentUser.is_admin ? 'block' : 'none';
+      document.getElementById('userName').textContent = displayName(currentUser);
+      document.getElementById('userAvatar').textContent = initials(displayName(currentUser));
+      footer.href = '/settings';
+
+      renderForm();
+    }
+
+    async function loadSidebarCategories() {
+      const categoryList = document.getElementById('categoryList');
+      if (!categoryList) return;
+      try {
+        const res = await fetch('/departments');
+        if (!res.ok) throw new Error('Failed to load departments');
+        const departments = await res.json();
+        categoryList.innerHTML = departments.map((d) => `<a class="category-item" href="/team/${encodeURIComponent(d.name)}">${escapeHtml(d.name)}</a>`).join('');
+      } catch (err) {
+        console.error('[sidebar] failed to load categories:', err);
+      }
+    }
+
+    init();
+    loadSidebarCategories();
+  </script>
+</body>
+</html>

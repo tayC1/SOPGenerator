@@ -38,7 +38,10 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
       imgSrc: ["'self'", 'data:'],
-      connectSrc: ["'self'"],
+      // feedback.html POSTs (mode: 'no-cors') to a public Google Form's
+      // formResponse endpoint - plain cross-origin form submission, not the
+      // Google Forms API, so no other CSP directives need to change for it.
+      connectSrc: ["'self'", 'https://docs.google.com'],
       objectSrc: ["'none'"],
       baseUri: ["'self'"],
       frameAncestors: ["'none'"],
@@ -226,6 +229,10 @@ app.get('/team/:category', (req, res) => {
 
 app.get('/contacts', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'contacts.html'));
+});
+
+app.get('/feedback', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'feedback.html'));
 });
 
 // Self-hosted extension distribution: `npm run build` (wired into the
