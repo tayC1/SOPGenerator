@@ -127,7 +127,6 @@ async function addCategory() {
       [name, lead, description]
     );
     console.log(`\nAdded category "${result.rows[0].name}".`);
-    console.log('Note: the sidebar "Categories" list in the web app is hardcoded per page, so add it there too if it should show up in nav.');
   } finally {
     rl.close();
   }
