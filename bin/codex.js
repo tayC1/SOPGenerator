@@ -15,6 +15,7 @@
 //   codex set-role <email> <member|department_admin|super_admin>
 //   codex deactivate <email>
 //   codex reactivate <email>
+//   codex add-category
 
 const { Command } = require('commander');
 const readline = require('readline/promises');
@@ -102,6 +103,31 @@ async function addUser() {
     } finally {
       client.release();
     }
+  } finally {
+    rl.close();
+  }
+}
+
+async function addCategory() {
+  const rl = readline.createInterface({ input, output });
+  try {
+    let name;
+    for (;;) {
+      name = await promptRequired(rl, 'Category name: ');
+      const exists = await db.query('SELECT 1 FROM departments WHERE lower(name) = lower($1)', [name]);
+      if (exists.rows.length === 0) break;
+      console.log(`"${name}" already exists.`);
+    }
+
+    const lead = (await rl.question('Lead (optional, press enter to skip): ')).trim() || null;
+    const description = (await rl.question('Description (optional, press enter to skip): ')).trim() || null;
+
+    const result = await db.query(
+      `INSERT INTO departments (name, lead, description) VALUES ($1, $2, $3) RETURNING name`,
+      [name, lead, description]
+    );
+    console.log(`\nAdded category "${result.rows[0].name}".`);
+    console.log('Note: the sidebar "Categories" list in the web app is hardcoded per page, so add it there too if it should show up in nav.');
   } finally {
     rl.close();
   }
@@ -211,6 +237,10 @@ async function main() {
   program.command('reactivate <email>')
     .description('reactivate a previously deactivated user')
     .action(reactivate);
+
+  program.command('add-category')
+    .description('interactively add a new category (department)')
+    .action(addCategory);
 
   await program.parseAsync(process.argv);
 }

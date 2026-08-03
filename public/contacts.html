@@ -337,14 +337,7 @@
       </nav>
 
       <div class="sidebar-section-label">Categories</div>
-      <nav class="category-list" id="categoryList" aria-label="Categories">
-        <a class="category-item" href="/team/Finance">Finance</a>
-        <a class="category-item" href="/team/HR">HR</a>
-        <a class="category-item" href="/team/Internal%20Ops">Internal Ops</a>
-        <a class="category-item" href="/team/Logistics%2FPurchasing">Logistics/Purchasing</a>
-        <a class="category-item" href="/team/Live%20Events%2FRentals">Live Events/Rentals</a>
-        <a class="category-item" href="/team/Integrations%2FSales">Integrations/Sales</a>
-      </nav>
+      <nav class="category-list" id="categoryList" aria-label="Categories"></nav>
 
       <a class="category-item" href="/admin" id="adminLink" style="display: none;">Admin Portal</a>
 
@@ -416,6 +409,19 @@
         document.getElementById('userAvatar').textContent = '?';
         footer.href = '/auth/google';
         return false;
+      }
+    }
+
+    async function loadSidebarCategories() {
+      const categoryList = document.getElementById('categoryList');
+      if (!categoryList) return;
+      try {
+        const res = await fetch('/departments');
+        if (!res.ok) throw new Error('Failed to load departments');
+        const departments = await res.json();
+        categoryList.innerHTML = departments.map((d) => `<a class="category-item" href="/team/${encodeURIComponent(d.name)}">${escapeHtml(d.name)}</a>`).join('');
+      } catch (err) {
+        console.error('[sidebar] failed to load categories:', err);
       }
     }
 
@@ -540,6 +546,7 @@
     }
 
     init();
+    loadSidebarCategories();
   </script>
 </body>
 </html>
