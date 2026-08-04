@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "CODEX",
-  "version": "3.2.0",
-  "version_name": "3.2.0",
+  "version": "3.2.1",
+  "version_name": "3.2.1",
   "description": "Record clicks and screenshots to generate SOP documents",
   "permissions": [
     "storage",
+    "unlimitedStorage",
     "activeTab",
     "scripting",
     "tabs",

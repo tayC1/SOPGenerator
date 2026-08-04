@@ -101,7 +101,7 @@ document.addEventListener('DOMContentLoaded', function () {
         stepNum++;
         md += '## Step ' + stepNum + ': ' + (step.content || step.description || 'Untitled Step') + '\n\n';
         if (step.screenshot) {
-          md += '![Step ' + stepNum + '](data:image/png;base64,' + step.screenshot + ')\n\n';
+          md += '![Step ' + stepNum + '](data:image/jpeg;base64,' + step.screenshot + ')\n\n';
         }
       }
     });
@@ -861,7 +861,7 @@ document.addEventListener('DOMContentLoaded', function () {
         var screenshotWrap = document.createElement('div');
         screenshotWrap.style.cssText = 'position:relative;display:block;margin-bottom:10px;';
         var img = document.createElement('img');
-        img.src = 'data:image/png;base64,' + step.screenshot;
+        img.src = 'data:image/jpeg;base64,' + step.screenshot;
         img.alt = 'Step ' + num;
         img.style.cssText = 'width:100%;height:auto;display:block;border-radius:3px;';
         screenshotWrap.appendChild(img);
@@ -1093,7 +1093,7 @@ document.addEventListener('DOMContentLoaded', function () {
         committedData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       });
     };
-    img.src = 'data:image/png;base64,' + step.screenshot;
+    img.src = 'data:image/jpeg;base64,' + step.screenshot;
 
     function close() {
       document.body.removeChild(modal);
@@ -1101,8 +1101,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     saveBtn.addEventListener('click', function () {
-      var dataUrl = canvas.toDataURL('image/png');
-      var base64 = dataUrl.replace('data:image/png;base64,', '');
+      var dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      var base64 = dataUrl.replace('data:image/jpeg;base64,', '');
 
       steps[index].screenshot = base64;
       steps[index].clickX = markerX;

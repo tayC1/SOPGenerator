@@ -795,6 +795,16 @@
         .replace(/"/g, '&quot;');
     }
 
+    // Screenshots may be PNG (extension captures before the JPEG switch, or
+    // arbitrary manual uploads) or JPEG - sniff the base64 signature rather
+    // than assuming one format.
+    function screenshotMime(b64) {
+      if (b64 && b64.startsWith('/9j/')) return 'image/jpeg';
+      if (b64 && b64.startsWith('R0lGOD')) return 'image/gif';
+      if (b64 && b64.startsWith('UklGR')) return 'image/webp';
+      return 'image/png';
+    }
+
     function showError(message) {
       errorBanner.textContent = message;
       errorBanner.style.display = 'block';
@@ -872,7 +882,7 @@
           </div>
           <textarea data-step-text="${i}" placeholder="What happens in this step?">${escapeHtml(step.description || step.title || '')}</textarea>
           <div class="step-image-row">
-            ${step.screenshot ? `<img class="step-thumb" src="data:image/png;base64,${step.screenshot}" alt="Step ${i + 1} screenshot">` : ''}
+            ${step.screenshot ? `<img class="step-thumb" src="data:${screenshotMime(step.screenshot)};base64,${step.screenshot}" alt="Step ${i + 1} screenshot">` : ''}
             <input type="file" accept="image/*" data-step-file="${i}">
             ${step.screenshot ? `<button type="button" class="icon-btn" data-remove-image="${i}" title="Remove image">✕</button>` : ''}
           </div>

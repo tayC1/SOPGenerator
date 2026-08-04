@@ -77,7 +77,7 @@ function createStepCard(step, index) {
     </div>
 
     <div class="screenshot-container">
-      <img src="data:image/png;base64,${step.screenshot}" alt="Step ${index + 1}" class="screenshot">
+      <img src="data:image/jpeg;base64,${step.screenshot}" alt="Step ${index + 1}" class="screenshot">
     </div>
 
     <div class="metadata">

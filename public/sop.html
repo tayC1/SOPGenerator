@@ -483,6 +483,16 @@
         .replace(/"/g, '&quot;');
     }
 
+    // Screenshots may be PNG (captured before the extension switched to
+    // JPEG) or JPEG (captured after) - sniff the base64 signature rather
+    // than assuming one format, since both exist in saved SOPs.
+    function screenshotMime(b64) {
+      if (b64 && b64.startsWith('/9j/')) return 'image/jpeg';
+      if (b64 && b64.startsWith('R0lGOD')) return 'image/gif';
+      if (b64 && b64.startsWith('UklGR')) return 'image/webp';
+      return 'image/png';
+    }
+
     let currentSop = null;
     let currentUserId = null;
 
@@ -562,7 +572,7 @@
                 </div>
                 ${step.screenshot || step.screenshot_base64
                   ? `<div class="step-screenshot-wrap">
-                      <img class="step-screenshot" src="data:image/png;base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">
+                      <img class="step-screenshot" src="data:${screenshotMime(step.screenshot || step.screenshot_base64)};base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">
                       ${step.clickX != null && step.clickY != null
                         ? `<div class="step-click-marker" style="left:${step.clickX * 100}%;top:${step.clickY * 100}%;"></div>`
                         : ''}

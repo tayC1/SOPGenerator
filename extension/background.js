@@ -99,13 +99,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         return;
       }
 
-      chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'png' }, (screenshot) => {
+      chrome.tabs.captureVisibleTab(sender.tab.windowId, { format: 'jpeg', quality: 80 }, (screenshot) => {
         if (chrome.runtime.lastError) {
           console.error('Screenshot error:', chrome.runtime.lastError);
           sendResponse({ error: chrome.runtime.lastError.message });
         } else {
           // Convert to base64
-          const base64Screenshot = screenshot.replace('data:image/png;base64,', '');
+          const base64Screenshot = screenshot.replace('data:image/jpeg;base64,', '');
 
           // Get existing steps
           chrome.storage.local.get('steps', (result) => {
@@ -139,6 +139,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
             stepsArray.push(step);
             chrome.storage.local.set({ steps: stepsArray }, () => {
+              if (chrome.runtime.lastError) {
+                console.error('Failed to save step:', chrome.runtime.lastError.message);
+                sendResponse({ error: chrome.runtime.lastError.message });
+                return;
+              }
               sendResponse({ status: 'screenshot captured', stepId: step.id });
             });
           });
@@ -159,6 +164,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
   if (request.action === 'updateSteps') {
     chrome.storage.local.set({ steps: request.steps }, () => {
+      if (chrome.runtime.lastError) {
+        console.error('Failed to update steps:', chrome.runtime.lastError.message);
+        sendResponse({ error: chrome.runtime.lastError.message });
+        return;
+      }
       sendResponse({ status: 'steps updated' });
     });
     return true;
