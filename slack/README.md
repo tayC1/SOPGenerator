@@ -12,6 +12,10 @@ top of the existing CODEX backend. Does not touch the Chrome extension.
   `title`, `description`, `content`, `tag` → responds with an **ephemeral**
   Block Kit message (only the invoking user sees it) showing up to 8
   results, each with **Share to channel** and **Open in CODEX** buttons.
+- `/codex share` (no search term) → same flow, but lists the 8 most recent
+  SOPs to browse instead of searching — a quick way to share something
+  without knowing search terms for it. `/codex share <query>` behaves the
+  same as a plain search (the `share` prefix is just a synonym there).
 - **Share to channel** → `POST /slack/interactions` → verifies the request →
   re-fetches that SOP → posts a public message to the channel via the
   interaction's `response_url` (`response_type: in_channel`).

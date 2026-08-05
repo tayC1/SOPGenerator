@@ -42,14 +42,19 @@ function resultBlocks(sop, codexBaseUrl) {
   ];
 }
 
-function buildSearchResultBlocks(query, results, codexBaseUrl) {
-  const header = {
-    type: 'section',
-    text: { type: 'mrkdwn', text: `Results for *"${query}"* (only visible to you):` },
-  };
+function resultListBlocks(headerText, results, codexBaseUrl) {
+  const header = { type: 'section', text: { type: 'mrkdwn', text: headerText } };
   // Slack caps messages at 50 blocks; each result is 3 blocks (section +
   // actions + divider) plus the header, so this also keeps us well under it.
   return [header, ...results.flatMap((sop) => resultBlocks(sop, codexBaseUrl))].slice(0, 50);
+}
+
+function buildSearchResultBlocks(query, results, codexBaseUrl) {
+  return resultListBlocks(`Results for *"${query}"* (only visible to you):`, results, codexBaseUrl);
+}
+
+function buildBrowseBlocks(results, codexBaseUrl) {
+  return resultListBlocks('Pick a SOP to share (most recent first, only visible to you):', results, codexBaseUrl);
 }
 
 function buildNoResultsBlocks(query) {
@@ -72,7 +77,13 @@ function buildSignInRequiredBlocks(codexBaseUrl) {
 
 function buildUsageBlocks() {
   return [
-    { type: 'section', text: { type: 'mrkdwn', text: 'Usage: `/codex <search terms>`' } },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: 'Usage:\n• `/codex <search terms>` — search SOPs\n• `/codex share` — pick from recent SOPs to share\n• `/codex share <search terms>` — same as a plain search',
+      },
+    },
   ];
 }
 
@@ -91,6 +102,7 @@ function buildSharedSopBlocks(sop, codexBaseUrl, sharerName) {
 
 module.exports = {
   buildSearchResultBlocks,
+  buildBrowseBlocks,
   buildNoResultsBlocks,
   buildSignInRequiredBlocks,
   buildUsageBlocks,

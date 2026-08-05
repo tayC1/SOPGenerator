@@ -1,7 +1,8 @@
 const db = require('../db');
-const { searchSops } = require('../lib/sopSearch');
+const { searchSops, listRecentSops } = require('../lib/sopSearch');
 const {
   buildSearchResultBlocks,
+  buildBrowseBlocks,
   buildNoResultsBlocks,
   buildSignInRequiredBlocks,
   buildUsageBlocks,
@@ -9,6 +10,12 @@ const {
 
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const CODEX_BASE_URL = process.env.CODEX_BASE_URL || process.env.BASE_URL;
+
+// `/codex share` (bare) browses recent SOPs to pick one to share, instead of
+// searching for the literal word "share". `/codex share <terms>` still
+// searches - the "share" prefix there is just a synonym for a plain search,
+// since every result already carries a Share to channel button.
+const SHARE_PREFIX = /^share(\s+|$)/i;
 
 // Slack slash commands only give us the invoking user's ID, not their email
 // - users:read.email lets us resolve it so we can map to a CODEX account.
@@ -32,10 +39,13 @@ async function lookupSlackUserEmail(slackUserId) {
 // the real blocks to req.slackParams.get('response_url') once ready.
 async function handleSlashCommand(req, res) {
   const params = req.slackParams;
-  const text = (params.get('text') || '').trim();
+  const rawText = (params.get('text') || '').trim();
   const slackUserId = params.get('user_id');
 
-  if (!text) {
+  const browseMode = SHARE_PREFIX.test(rawText);
+  const query = browseMode ? rawText.replace(SHARE_PREFIX, '').trim() : rawText;
+
+  if (!query && !browseMode) {
     return res.json({ response_type: 'ephemeral', blocks: buildUsageBlocks() });
   }
 
@@ -50,14 +60,25 @@ async function handleSlashCommand(req, res) {
       return res.json({ response_type: 'ephemeral', blocks: buildSignInRequiredBlocks(CODEX_BASE_URL) });
     }
 
-    const results = await searchSops(text, { limit: 8 });
+    // Bare "/codex share" browses recent SOPs to pick from; "/codex share
+    // <terms>" and plain "/codex <terms>" both search - every result already
+    // has its own Share to channel button either way.
+    if (browseMode && !query) {
+      const results = await listRecentSops({ limit: 8 });
+      if (results.length === 0) {
+        return res.json({ response_type: 'ephemeral', text: 'No SOPs in CODEX yet.' });
+      }
+      return res.json({ response_type: 'ephemeral', blocks: buildBrowseBlocks(results, CODEX_BASE_URL) });
+    }
+
+    const results = await searchSops(query, { limit: 8 });
     if (results.length === 0) {
-      return res.json({ response_type: 'ephemeral', blocks: buildNoResultsBlocks(text) });
+      return res.json({ response_type: 'ephemeral', blocks: buildNoResultsBlocks(query) });
     }
 
     return res.json({
       response_type: 'ephemeral',
-      blocks: buildSearchResultBlocks(text, results, CODEX_BASE_URL),
+      blocks: buildSearchResultBlocks(query, results, CODEX_BASE_URL),
     });
   } catch (err) {
     console.error('[slack] /codex command failed:', err.message);

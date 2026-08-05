@@ -10,7 +10,7 @@ features:
     - command: /codex
       url: https://codex.kramer.pro/slack/commands
       description: Search CODEX SOPs
-      usage_hint: "[search terms]"
+      usage_hint: "[search terms] or share"
       should_escape: false
 oauth_config:
   scopes:
