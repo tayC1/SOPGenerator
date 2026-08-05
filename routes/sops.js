@@ -7,24 +7,6 @@ const router = Router();
 const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, tag, created_at';
 const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, tag, created_at';
 
-async function getCallerDepartments(userId) {
-  const result = await db.query('SELECT department_name FROM user_departments WHERE user_id = $1', [userId]);
-  return result.rows.map((r) => r.department_name);
-}
-
-// A caller may read a SOP if they own it, it's flagged public, or it belongs
-// to a department (category) they're a member of - this mirrors the
-// visibility GET / already grants via its category-scoped branch.
-async function canRead(user, sop) {
-  if (sop.user_id === user.id) return true;
-  if (sop.is_public) return true;
-  if (sop.category) {
-    const departments = await getCallerDepartments(user.id);
-    if (departments.includes(sop.category)) return true;
-  }
-  return false;
-}
-
 // GET /sops/public - no auth required. Only rows explicitly marked public,
 // with a reduced field set (no user_id/owner metadata) for anonymous/marketing
 // browsing (browse.html, and teamlanding.html for visitors without a session).
@@ -96,8 +78,13 @@ router.get('/', async (req, res) => {
   const { category } = req.query;
   try {
     // A category filter means "show this team's SOPs" (everyone's, not just
-    // the caller's own) - matches teamlanding.html's team-wide browsing.
-    // With no category, callers get only what they own or what's public.
+    // the caller's own) - matches teamlanding.html's team-wide browsing, and
+    // (like every other SOP a caller can view - see GET /:id) isn't limited
+    // to the caller's own department anymore. With no category, this powers
+    // dashboard.html's "My SOPs" view specifically, so it stays scoped to
+    // what the caller owns or has made public - a personal workspace list,
+    // not an access restriction (any SOP is still viewable via GET /:id,
+    // a team page, or Slack regardless of this filter).
     const result = category
       ? await db.query(
           `SELECT ${LIST_FIELDS} FROM sops WHERE category = $1 ORDER BY created_at DESC`,
@@ -125,23 +112,16 @@ router.get('/saved-ids', async (req, res) => {
   }
 });
 
-// GET /sops/saved - full records for the caller's pinned SOPs. Filtered
-// through the same visibility rule as canRead() (owner / public / caller's
-// department) so a SOP that's since gone private or left the caller's
-// department quietly drops out of the list instead of erroring - the pin
-// itself (the saved_sops row) is left alone and the SOP reappears here if
-// visibility is restored later.
+// GET /sops/saved - full records for the caller's pinned SOPs.
 router.get('/saved', async (req, res) => {
   try {
-    const departments = await getCallerDepartments(req.user.id);
     const result = await db.query(
       `SELECT s.id, s.user_id, s.title, s.url, s.description, s.category, s.author, s.steps, s.doc_type, s.tag, s.created_at
        FROM saved_sops ss
        JOIN sops s ON s.id = ss.sop_id
        WHERE ss.user_id = $1
-         AND (s.user_id = $1 OR s.is_public = true OR s.category = ANY($2))
        ORDER BY ss.created_at DESC`,
-      [req.user.id, departments]
+      [req.user.id]
     );
     res.json(result.rows);
   } catch (err) {
@@ -149,16 +129,11 @@ router.get('/saved', async (req, res) => {
   }
 });
 
-// POST /sops/:id/save - pin a SOP. Requires the same read access as
-// actually viewing it, so a caller can't pin (and thus enumerate/track) a
-// SOP they can't otherwise see.
+// POST /sops/:id/save - pin a SOP.
 router.post('/:id/save', async (req, res) => {
   try {
-    const existing = await db.query('SELECT * FROM sops WHERE id = $1', [req.params.id]);
+    const existing = await db.query('SELECT id FROM sops WHERE id = $1', [req.params.id]);
     if (existing.rows.length === 0) return res.status(404).json({ error: 'SOP not found' });
-    if (!(await canRead(req.user, existing.rows[0]))) {
-      return res.status(403).json({ error: 'You do not have access to this SOP' });
-    }
     await db.query(
       'INSERT INTO saved_sops (user_id, sop_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
       [req.user.id, req.params.id]
@@ -184,11 +159,7 @@ router.get('/:id', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM sops WHERE id = $1', [req.params.id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'SOP not found' });
-    const sop = result.rows[0];
-    if (!(await canRead(req.user, sop))) {
-      return res.status(403).json({ error: 'You do not have access to this SOP' });
-    }
-    res.json(sop);
+    res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
