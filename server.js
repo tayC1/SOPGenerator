@@ -12,6 +12,9 @@ const { pool } = db;
 const passport = require('./auth');
 const sopsRouter = require('./routes/sops');
 const { resolveUser, requireAuth, requireAdmin, isAdminRole, departmentsForUser, isScopedOverDepartments } = require('./middleware/auth');
+const { verifySlackSignature } = require('./slack/verify');
+const { handleSlashCommand } = require('./slack/commands');
+const { handleInteraction } = require('./slack/interactions');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -82,6 +85,18 @@ const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHead
 // login. /auth/extension-token already has its own dedicated limiter.
 app.use('/auth/google', authLimiter);
 app.use('/sops', apiLimiter);
+// Signature verification already gates these two, but a modest per-minute
+// cap limits blast radius if a signing secret ever leaks.
+const slackLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
+app.use('/slack', slackLimiter);
+
+// Raw body only for the Slack routes, registered before the global
+// json/urlencoded parsers below - Slack's signature is computed over the
+// exact request bytes, and body-parser skips re-parsing a request whose
+// body has already been consumed, so this must run first and only for
+// these two paths.
+app.use('/slack/commands', express.raw({ type: '*/*' }));
+app.use('/slack/interactions', express.raw({ type: '*/*' }));
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
@@ -660,6 +675,11 @@ app.post('/users/:id/reactivate', requireAdmin, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// Slack app: slash command + interactivity (button clicks). Both verify
+// Slack's request signature themselves - no CODEX session/token involved.
+app.post('/slack/commands', verifySlackSignature, handleSlashCommand);
+app.post('/slack/interactions', verifySlackSignature, handleInteraction);
 
 // API routes
 app.use('/sops', sopsRouter);

@@ -1,0 +1,27 @@
+display_information:
+  name: CODEX
+  description: Search and share Kramer Pro SOPs from Slack
+  background_color: "#1a1a2e"
+features:
+  bot_user:
+    display_name: CODEX
+    always_online: true
+  slash_commands:
+    - command: /codex
+      url: https://codex.kramer.pro/slack/commands
+      description: Search CODEX SOPs
+      usage_hint: "[search terms]"
+      should_escape: false
+oauth_config:
+  scopes:
+    bot:
+      - commands
+      - chat:write
+      - users:read.email
+settings:
+  interactivity:
+    is_enabled: true
+    request_url: https://codex.kramer.pro/slack/interactions
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
