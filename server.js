@@ -198,6 +198,23 @@ app.post('/auth/extension-token', extensionTokenLimiter, async (req, res) => {
   }
 });
 
+// Marks the first-run "Get Started" tour as seen for the signed-in user so
+// onboarding.js stops auto-showing it on future page loads. Re-opening the
+// tour manually (the sidebar "Get Started" link) calls this again too -
+// harmless, since it's just re-setting the same timestamp.
+app.post('/auth/onboarding-seen', async (req, res) => {
+  if (!req.user) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  try {
+    await db.query('UPDATE users SET onboarding_seen_at = now() WHERE id = $1', [req.user.id]);
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('[onboarding] /auth/onboarding-seen failed:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Page routes
 app.get('/', (req, res) => {
   // Signed-in visitors (including anyone clicking a logo/"Home" link, which
