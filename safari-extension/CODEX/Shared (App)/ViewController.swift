@@ -28,18 +28,20 @@ class ViewController: PlatformViewController, WKNavigationDelegate, WKScriptMess
         self.webView.navigationDelegate = self
 
 #if os(iOS)
-        self.webView.scrollView.isScrollEnabled = false
-#endif
-
+        // The app icon is a dedicated capture/create shortcut, not general
+        // browsing - that stays in Safari. Lands straight on the new
+        // document/SOP flow (camera-capable file inputs) instead of the
+        // marketing homepage. Scrolling needs to stay on for this page,
+        // unlike the single-screen static Main.html this replaced.
+        self.webView.load(URLRequest(url: URL(string: "https://codex.kramer.pro/documents/new")!))
+#elseif os(macOS)
         self.webView.configuration.userContentController.add(self, name: "controller")
-
         self.webView.loadFileURL(Bundle.main.url(forResource: "Main", withExtension: "html")!, allowingReadAccessTo: Bundle.main.resourceURL!)
+#endif
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-#if os(iOS)
-        webView.evaluateJavaScript("show('ios')")
-#elseif os(macOS)
+#if os(macOS)
         webView.evaluateJavaScript("show('mac')")
 
         SFSafariExtensionManager.getStateOfSafariExtension(withIdentifier: extensionBundleIdentifier) { (state, error) in

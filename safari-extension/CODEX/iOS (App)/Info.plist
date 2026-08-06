@@ -4,6 +4,10 @@
 <dict>
 	<key>SFSafariWebExtensionConverterVersion</key>
 	<string>26.6</string>
+	<key>NSCameraUsageDescription</key>
+	<string>CODEX uses your camera to capture photos for SOPs and documents.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>CODEX uses your photo library to attach existing photos to SOPs and documents.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
