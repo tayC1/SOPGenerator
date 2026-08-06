@@ -61,6 +61,14 @@ app.use(cors({
     // No Origin header (curl, server-to-server, same-origin page fetches) - allow.
     if (!origin) return callback(null, true);
     if (WEB_ORIGINS.includes(origin) || origin === EXTENSION_ORIGIN) return callback(null, true);
+    // Safari Web Extensions run under safari-web-extension://<uuid>, where
+    // the UUID is generated per install (unlike Chrome's key-derived,
+    // fixed extension ID) - a single hardcoded origin can't cover every
+    // install, so this matches the scheme instead. The Origin header isn't
+    // script-settable, so this can't be spoofed by an arbitrary web page;
+    // review.html/popup.js also always authenticate with a Bearer token
+    // regardless, same as the Chrome extension origin above.
+    if (origin.startsWith('safari-web-extension://')) return callback(null, true);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true,

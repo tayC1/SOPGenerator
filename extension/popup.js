@@ -51,10 +51,18 @@ async function startRecording() {
 
   chrome.storage.local.set({ steps: [], isRecording: true, editingSopId: null });
   chrome.runtime.sendMessage({ action: 'startRecording' }, () => {
-    chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' }).catch(() => {
+    // Callback form, not .then()/.catch() - chrome.tabs.sendMessage only
+    // returns a Promise when the callback is omitted, and that's a
+    // Chrome-only convenience (added ~Chrome 99). Safari's chrome.*
+    // compatibility shim is callback-only, so relying on the Promise
+    // return silently breaks recording there.
+    chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' }, () => {
+      if (!chrome.runtime.lastError) return;
+      // No content script listening yet (e.g. page loaded before the
+      // extension did) - inject it now, then retry.
       chrome.scripting.executeScript(
         { target: { tabId: activeTab.id }, files: ['content.js'] },
-        () => chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' })
+        () => chrome.tabs.sendMessage(activeTab.id, { action: 'startRecording' }, () => void chrome.runtime.lastError)
       );
     });
   });
@@ -67,7 +75,7 @@ async function stopAndReview() {
   if (tabs.length) {
     const activeTab = tabs[0];
     chrome.runtime.sendMessage({ action: 'stopRecording' }, () => {
-      chrome.tabs.sendMessage(activeTab.id, { action: 'stopRecording' }).catch(() => {});
+      chrome.tabs.sendMessage(activeTab.id, { action: 'stopRecording' }, () => void chrome.runtime.lastError);
     });
   }
 
@@ -110,7 +118,7 @@ clearBtn.addEventListener('click', () => {
   chrome.storage.local.set({ steps: [], isRecording: false });
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     if (tabs.length) {
-      chrome.tabs.sendMessage(tabs[0].id, { action: 'stopRecording' }).catch(() => {});
+      chrome.tabs.sendMessage(tabs[0].id, { action: 'stopRecording' }, () => void chrome.runtime.lastError);
     }
   });
   updateUI(false, 0);
