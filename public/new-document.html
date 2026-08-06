@@ -466,6 +466,70 @@
   }
   .add-step-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.4); }
 
+  /* ---------- photo annotation editor ---------- */
+  .annotate-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: rgba(10, 10, 10, 0.94);
+    display: flex; flex-direction: column;
+    font-family: inherit;
+  }
+  .annotate-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px; border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+  .annotate-title { font-size: 15px; font-weight: 700; color: #fff; }
+  .annotate-close-btn {
+    background: none; border: none; color: rgba(255, 255, 255, 0.6); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 8px;
+  }
+  .annotate-close-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.08); }
+  .annotate-canvas-wrap {
+    flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
+    padding: 14px; overflow: hidden;
+  }
+  .annotate-canvas-wrap canvas {
+    max-width: 100%; max-height: 100%; touch-action: none;
+    border-radius: 8px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+    background: #000; cursor: crosshair;
+  }
+  .annotate-toolbar {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    padding: 10px 14px; border-top: 1px solid rgba(255, 255, 255, 0.1);
+    flex-shrink: 0;
+  }
+  .annotate-tool-group { display: flex; gap: 6px; }
+  .annotate-tool-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 8px;
+    background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.7); cursor: pointer;
+  }
+  .annotate-tool-btn:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+  .annotate-tool-btn.active { background: rgba(233, 109, 45, 0.18); border-color: #e96d2d; color: #e96d2d; }
+  .annotate-color-btn {
+    width: 26px; height: 26px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.25);
+    cursor: pointer; padding: 0;
+  }
+  .annotate-color-btn.active { border-color: #fff; box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.25); }
+  .annotate-spacer { flex: 1; }
+  .annotate-footer-actions { display: flex; gap: 10px; }
+  .annotate-btn {
+    border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600;
+    border: none; cursor: pointer; font-family: inherit;
+  }
+  .annotate-btn-ghost { background: none; border: 1px solid rgba(255, 255, 255, 0.15); color: #fff; }
+  .annotate-btn-ghost:hover { border-color: rgba(255, 255, 255, 0.35); }
+  .annotate-btn-primary { background: #e96d2d; color: #1e1e1e; }
+  .annotate-btn-primary:hover { opacity: 0.88; }
+
+  @media (max-width: 640px) {
+    .annotate-toolbar { justify-content: center; }
+    .annotate-spacer { flex-basis: 100%; height: 0; }
+    .annotate-footer-actions { width: 100%; justify-content: center; }
+  }
+
   .error-banner {
     background: rgba(255, 100, 100, 0.12);
     border: 1px solid rgba(255, 100, 100, 0.3);
@@ -896,6 +960,9 @@
           <div class="step-image-row">
             ${step.screenshot ? `<img class="step-thumb" src="data:${screenshotMime(step.screenshot)};base64,${step.screenshot}" alt="Step ${i + 1} screenshot">` : ''}
             <input type="file" accept="image/*" data-step-file="${i}">
+            ${step.screenshot ? `<button type="button" class="icon-btn" data-annotate="${i}" title="Add markers, arrows, or text">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+            </button>` : ''}
             ${step.screenshot ? `<button type="button" class="icon-btn" data-remove-image="${i}" title="Remove image">✕</button>` : ''}
           </div>
         </div>
@@ -932,6 +999,9 @@
           renderSteps();
         });
       });
+      stepList.querySelectorAll('[data-annotate]').forEach((el) => {
+        el.addEventListener('click', () => openAnnotationEditor(Number(el.dataset.annotate)));
+      });
       stepList.querySelectorAll('[data-step-file]').forEach((el) => {
         el.addEventListener('change', () => {
           const file = el.files[0];
@@ -945,6 +1015,281 @@
           reader.readAsDataURL(file);
         });
       });
+    }
+
+    // ---------------------------------------------------------------------
+    // Photo annotation editor - lets a step's photo get numbered markers,
+    // arrows, freehand drawing, and text labels before saving. Annotations
+    // are kept as a list of shape descriptors (not just flattened pixels)
+    // while the editor is open, so Undo/Clear can redraw from scratch;
+    // only on Save does it flatten to a single JPEG that replaces the
+    // step's screenshot, matching the plain-base64-string shape every
+    // other screenshot in this app already uses.
+    // ---------------------------------------------------------------------
+    let annotatingIndex = null;
+    let annotateImage = null;
+    let annotateCanvas = null;
+    let annotateCtx = null;
+    let annotations = [];
+    let annotateDragState = null;
+    let annotateTool = 'marker';
+    let annotateColor = '#ff3b30';
+
+    function annotateCanvasPoint(evt) {
+      const rect = annotateCanvas.getBoundingClientRect();
+      const scaleX = annotateCanvas.width / rect.width;
+      const scaleY = annotateCanvas.height / rect.height;
+      return {
+        x: (evt.clientX - rect.left) * scaleX,
+        y: (evt.clientY - rect.top) * scaleY,
+      };
+    }
+
+    function annotateRoundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    function annotateDrawArrow(ctx, x1, y1, x2, y2, color) {
+      const lineWidth = Math.max(4, annotateCanvas.width * 0.006);
+      const headLen = Math.max(16, annotateCanvas.width * 0.025);
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = lineWidth;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x2, y2);
+      ctx.lineTo(x2 - headLen * Math.cos(angle - Math.PI / 6), y2 - headLen * Math.sin(angle - Math.PI / 6));
+      ctx.lineTo(x2 - headLen * Math.cos(angle + Math.PI / 6), y2 - headLen * Math.sin(angle + Math.PI / 6));
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
+    }
+
+    function annotateDrawShape(a) {
+      const ctx = annotateCtx;
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      if (a.type === 'pen') {
+        ctx.strokeStyle = a.color;
+        ctx.lineWidth = Math.max(4, annotateCanvas.width * 0.006);
+        ctx.beginPath();
+        a.points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+        ctx.stroke();
+      } else if (a.type === 'arrow') {
+        annotateDrawArrow(ctx, a.x1, a.y1, a.x2, a.y2, a.color);
+      } else if (a.type === 'marker') {
+        const r = Math.max(14, annotateCanvas.width * 0.02);
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = a.color;
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.fillStyle = '#fff';
+        ctx.font = `700 ${Math.round(r * 1.1)}px -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(String(a.n), a.x, a.y + 1);
+      } else if (a.type === 'text') {
+        const fontSize = Math.max(18, annotateCanvas.width * 0.028);
+        ctx.font = `700 ${fontSize}px -apple-system, sans-serif`;
+        ctx.textBaseline = 'top';
+        const paddingX = fontSize * 0.4;
+        const paddingY = fontSize * 0.25;
+        const w = ctx.measureText(a.text).width;
+        ctx.fillStyle = 'rgba(0,0,0,0.55)';
+        annotateRoundRect(ctx, a.x - paddingX, a.y - paddingY, w + paddingX * 2, fontSize + paddingY * 2, 6);
+        ctx.fill();
+        ctx.fillStyle = a.color;
+        ctx.fillText(a.text, a.x, a.y);
+      }
+      ctx.restore();
+    }
+
+    function annotateRedraw() {
+      const ctx = annotateCtx;
+      ctx.clearRect(0, 0, annotateCanvas.width, annotateCanvas.height);
+      ctx.drawImage(annotateImage, 0, 0, annotateCanvas.width, annotateCanvas.height);
+      annotations.forEach(annotateDrawShape);
+      if (annotateDragState) annotateDrawShape(annotateDragState);
+    }
+
+    function annotateOnPointerDown(e) {
+      e.preventDefault();
+      annotateCanvas.setPointerCapture(e.pointerId);
+      const pt = annotateCanvasPoint(e);
+      if (annotateTool === 'marker') {
+        const n = annotations.filter((a) => a.type === 'marker').length + 1;
+        annotations.push({ type: 'marker', x: pt.x, y: pt.y, n, color: annotateColor });
+        annotateRedraw();
+      } else if (annotateTool === 'arrow') {
+        annotateDragState = { type: 'arrow', x1: pt.x, y1: pt.y, x2: pt.x, y2: pt.y, color: annotateColor };
+      } else if (annotateTool === 'pen') {
+        annotateDragState = { type: 'pen', points: [pt], color: annotateColor };
+      } else if (annotateTool === 'text') {
+        const text = window.prompt('Label text:');
+        if (text && text.trim()) {
+          annotations.push({ type: 'text', x: pt.x, y: pt.y, text: text.trim(), color: annotateColor });
+          annotateRedraw();
+        }
+      }
+    }
+
+    function annotateOnPointerMove(e) {
+      if (!annotateDragState) return;
+      const pt = annotateCanvasPoint(e);
+      if (annotateDragState.type === 'arrow') {
+        annotateDragState.x2 = pt.x;
+        annotateDragState.y2 = pt.y;
+      } else if (annotateDragState.type === 'pen') {
+        annotateDragState.points.push(pt);
+      }
+      annotateRedraw();
+    }
+
+    function annotateOnPointerUp() {
+      if (!annotateDragState) return;
+      annotations.push(annotateDragState);
+      annotateDragState = null;
+      annotateRedraw();
+    }
+
+    function annotateUndo() {
+      annotations.pop();
+      annotateRedraw();
+    }
+
+    function annotateClear() {
+      annotations = [];
+      annotateRedraw();
+    }
+
+    function annotateSave() {
+      const dataUrl = annotateCanvas.toDataURL('image/jpeg', 0.9);
+      sopSteps[annotatingIndex].screenshot = dataUrl.replace(/^data:image\/\w+;base64,/, '');
+      closeAnnotationEditor();
+      renderSteps();
+    }
+
+    function closeAnnotationEditor() {
+      const overlay = document.getElementById('annotateOverlay');
+      if (overlay) overlay.remove();
+      annotateCanvas = null;
+      annotateCtx = null;
+      annotateImage = null;
+      annotatingIndex = null;
+      annotateDragState = null;
+    }
+
+    function openAnnotationEditor(index) {
+      const step = sopSteps[index];
+      if (!step || !step.screenshot) return;
+      annotatingIndex = index;
+      annotations = [];
+      annotateDragState = null;
+      annotateTool = 'marker';
+      annotateColor = '#ff3b30';
+
+      const overlay = document.createElement('div');
+      overlay.className = 'annotate-overlay';
+      overlay.id = 'annotateOverlay';
+      overlay.innerHTML = `
+        <div class="annotate-header">
+          <div class="annotate-title">Annotate Photo — Step ${index + 1}</div>
+          <button type="button" class="annotate-close-btn" id="annotateCloseBtn" aria-label="Close">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div class="annotate-canvas-wrap"><canvas id="annotateCanvas"></canvas></div>
+        <div class="annotate-toolbar">
+          <div class="annotate-tool-group" id="annotateToolGroup">
+            <button type="button" class="annotate-tool-btn active" data-tool="marker" title="Numbered marker">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle></svg>
+            </button>
+            <button type="button" class="annotate-tool-btn" data-tool="arrow" title="Arrow">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="19" x2="19" y2="5"></line><polyline points="9 5 19 5 19 15"></polyline></svg>
+            </button>
+            <button type="button" class="annotate-tool-btn" data-tool="pen" title="Freehand">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"></path><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"></path></svg>
+            </button>
+            <button type="button" class="annotate-tool-btn" data-tool="text" title="Text label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 7 4 4 20 4 20 7"></polyline><line x1="9" y1="20" x2="15" y2="20"></line><line x1="12" y1="4" x2="12" y2="20"></line></svg>
+            </button>
+          </div>
+          <div class="annotate-tool-group" id="annotateColorGroup">
+            <button type="button" class="annotate-color-btn active" data-color="#ff3b30" style="background:#ff3b30" title="Red"></button>
+            <button type="button" class="annotate-color-btn" data-color="#ffd60a" style="background:#ffd60a" title="Yellow"></button>
+            <button type="button" class="annotate-color-btn" data-color="#ffffff" style="background:#ffffff" title="White"></button>
+          </div>
+          <div class="annotate-tool-group">
+            <button type="button" class="annotate-tool-btn" id="annotateUndoBtn" title="Undo">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 14 4 9 9 4"></polyline><path d="M20 20v-7a4 4 0 0 0-4-4H4"></path></svg>
+            </button>
+            <button type="button" class="annotate-tool-btn" id="annotateClearBtn" title="Clear all">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+          <div class="annotate-spacer"></div>
+          <div class="annotate-footer-actions">
+            <button type="button" class="annotate-btn annotate-btn-ghost" id="annotateCancelBtn">Cancel</button>
+            <button type="button" class="annotate-btn annotate-btn-primary" id="annotateSaveBtn">Save</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+
+      annotateCanvas = document.getElementById('annotateCanvas');
+      annotateCtx = annotateCanvas.getContext('2d');
+      annotateCanvas.addEventListener('pointerdown', annotateOnPointerDown);
+      annotateCanvas.addEventListener('pointermove', annotateOnPointerMove);
+      annotateCanvas.addEventListener('pointerup', annotateOnPointerUp);
+      annotateCanvas.addEventListener('pointercancel', annotateOnPointerUp);
+
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1600;
+        let w = img.naturalWidth;
+        let h = img.naturalHeight;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        annotateCanvas.width = w;
+        annotateCanvas.height = h;
+        annotateImage = img;
+        annotateRedraw();
+      };
+      img.src = `data:${screenshotMime(step.screenshot)};base64,${step.screenshot}`;
+
+      overlay.querySelectorAll('[data-tool]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          annotateTool = btn.dataset.tool;
+          overlay.querySelectorAll('[data-tool]').forEach((b) => b.classList.toggle('active', b === btn));
+        });
+      });
+      overlay.querySelectorAll('[data-color]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          annotateColor = btn.dataset.color;
+          overlay.querySelectorAll('[data-color]').forEach((b) => b.classList.toggle('active', b === btn));
+        });
+      });
+      document.getElementById('annotateUndoBtn').addEventListener('click', annotateUndo);
+      document.getElementById('annotateClearBtn').addEventListener('click', annotateClear);
+      document.getElementById('annotateCancelBtn').addEventListener('click', closeAnnotationEditor);
+      document.getElementById('annotateCloseBtn').addEventListener('click', closeAnnotationEditor);
+      document.getElementById('annotateSaveBtn').addEventListener('click', annotateSave);
     }
 
     addStepBtn.addEventListener('click', () => {
