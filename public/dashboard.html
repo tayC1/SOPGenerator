@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>My SOPs — CODEX</title>
 <link rel="icon" type="image/png" href="/icons/CODEX Favicon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CODEX">
+<meta name="theme-color" content="#2d2b2e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="/saved.js"></script>
@@ -281,10 +286,10 @@
 
   .pin-corner {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
+    top: 6px;
+    right: 6px;
+    width: 40px;
+    height: 40px;
     border-radius: 8px;
     border: none;
     background: rgba(45, 43, 46, 0.45);
@@ -298,7 +303,7 @@
   .pin-corner.is-saved { color: var(--tag); }
   .pin-corner .icon { width: 14px; height: 14px; }
 
-  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 34px; }
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 50px; }
 
   .tag {
     font-size: 11px;
@@ -350,7 +355,7 @@
     color: #fff;
     border: none;
     border-radius: 6px;
-    padding: 8px 0;
+    padding: 12px 0;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.03em;
@@ -538,8 +543,18 @@
     // first one that actually responds. A user may have the Web Store
     // build, the self-hosted build, or a local dev build installed, and
     // chrome.runtime.sendMessage only targets one extension ID per call.
-    function sendToExtension(message) {
+    //
+    // Chrome-only: window.chrome (and externally_connectable, which is what
+    // makes this callable at all) is a Chrome-specific browser surface -
+    // Safari never exposes chrome.runtime to page scripts, so this resolves
+    // {ok:false} immediately there and callers fall through to the
+    // postMessage path below.
+    function sendToExtensionDirect(message) {
       return new Promise((resolve) => {
+        if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
+          resolve({ ok: false });
+          return;
+        }
         let i = 0;
         function tryNext() {
           if (i >= EXTENSION_IDS.length) {
@@ -556,6 +571,44 @@
         }
         tryNext();
       });
+    }
+
+    // Fallback path (and Safari's only path): content.js listens on window
+    // for a message carrying this envelope, relays it into its own
+    // background script, and posts the response back the same way - see the
+    // matching listener in extension/content.js. Resolves {ok:false} if
+    // nothing answers within the timeout, i.e. no CODEX extension is
+    // installed/reachable in this browser.
+    let bridgeRequestCounter = 0;
+    function sendToExtensionViaPostMessage(message) {
+      return new Promise((resolve) => {
+        const requestId = `codex-${Date.now()}-${bridgeRequestCounter++}`;
+        const timeout = setTimeout(() => {
+          window.removeEventListener('message', onMessage);
+          resolve({ ok: false });
+        }, 1500);
+
+        function onMessage(event) {
+          if (event.source !== window) return;
+          const data = event.data;
+          if (!data || data.source !== 'codex-extension' || data.requestId !== requestId) return;
+          clearTimeout(timeout);
+          window.removeEventListener('message', onMessage);
+          if (data.error || !data.response) {
+            resolve({ ok: false });
+            return;
+          }
+          resolve({ ok: true, response: data.response });
+        }
+        window.addEventListener('message', onMessage);
+        window.postMessage({ ...message, source: 'codex-web', requestId }, window.location.origin);
+      });
+    }
+
+    async function sendToExtension(message) {
+      const direct = await sendToExtensionDirect(message);
+      if (direct.ok) return direct;
+      return sendToExtensionViaPostMessage(message);
     }
 
     async function loadUser() {
@@ -591,11 +644,6 @@
         console.log('[auth-bridge] no active session, skipping extension bridge');
         return;
       }
-      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-        console.log('[auth-bridge] CODEX extension not installed/reachable, skipping');
-        return;
-      }
-
       try {
         const res = await fetch('/auth/extension-token', { method: 'POST', credentials: 'include' });
         if (!res.ok) throw new Error(`extension-token request failed: ${res.status}`);
@@ -738,20 +786,15 @@
     }
 
     async function editSop(id) {
-      // No extension reachable (not installed, or a non-Chrome browser) -
-      // fall back to the web-based manual step editor instead of dead-ending.
-      if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.sendMessage) {
-        location.href = `/documents/new?id=${id}`;
-        return;
-      }
       try {
         const res = await fetch(`/sops/${id}`, { credentials: 'include' });
         if (!res.ok) throw new Error('Not found');
         const sop = await res.json();
         const { ok, response } = await sendToExtension({ type: 'EDIT_SOP', sop });
         if (!ok) {
-          // No CODEX extension actually installed/reachable in this browser -
-          // same fallback as the "no chrome.runtime" branch above.
+          // No CODEX extension installed/reachable in this browser (neither
+          // the direct nor postMessage path got a response) - fall back to
+          // the web-based manual step editor instead of dead-ending.
           console.log('[edit] no CODEX extension reachable, falling back to web editor');
           location.href = `/documents/new?id=${id}`;
           return;

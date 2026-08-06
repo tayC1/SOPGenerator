@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Saved — CODEX</title>
 <link rel="icon" type="image/png" href="/icons/CODEX Favicon.png">
+<link rel="manifest" href="/site.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="CODEX">
+<meta name="theme-color" content="#2d2b2e">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="/saved.js"></script>
@@ -223,10 +228,10 @@
 
   .pin-corner {
     position: absolute;
-    top: 12px;
-    right: 12px;
-    width: 28px;
-    height: 28px;
+    top: 6px;
+    right: 6px;
+    width: 40px;
+    height: 40px;
     border-radius: 8px;
     border: none;
     background: rgba(45, 43, 46, 0.45);
@@ -240,7 +245,7 @@
   .pin-corner.is-saved { color: var(--tag); }
   .pin-corner .icon { width: 14px; height: 14px; }
 
-  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 34px; }
+  .sop-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; padding-right: 50px; }
 
   .tag {
     font-size: 11px;
@@ -292,7 +297,7 @@
     color: #fff;
     border: none;
     border-radius: 6px;
-    padding: 8px 0;
+    padding: 12px 0;
     font-size: 11px;
     font-weight: 600;
     letter-spacing: 0.03em;
