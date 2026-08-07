@@ -1,8 +1,15 @@
 const { Router } = require('express');
 const db = require('../db');
 const { requireAuth, isScopedOverDepartments } = require('../middleware/auth');
+const { pdfToSteps, PdfImportError } = require('../lib/pdfImport');
 
 const router = Router();
+
+// A base64-encoded PDF is ~33% larger than the source file, and server.js's
+// express.json limit (50mb) has to cover the whole request body - cap the
+// decoded file size well under that so a large-but-legitimate upload still
+// leaves room for the encoding overhead.
+const MAX_PDF_BYTES = 30 * 1024 * 1024;
 
 const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, tag, created_at';
 const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, tag, created_at';
@@ -43,6 +50,39 @@ router.get('/public/:id', async (req, res) => {
 // Everything below requires either a web session or an extension bearer
 // token - no anonymous fall-through past this point.
 router.use(requireAuth);
+
+// POST /sops/import-pdf - turns an uploaded PDF into a draft set of steps
+// (one per page: extracted text + a rendered screenshot of that page, same
+// shape as an extension-captured SOP step) for public/new-document.html's
+// manual step builder to load and let the user review/edit before saving.
+// Deliberately does NOT write to the database itself - this only parses.
+router.post('/import-pdf', async (req, res) => {
+  const { data, filename } = req.body;
+  if (!data || typeof data !== 'string') {
+    return res.status(400).json({ error: 'No PDF data provided' });
+  }
+  const base64 = data.replace(/^data:application\/pdf;base64,/, '');
+  let buffer;
+  try {
+    buffer = Buffer.from(base64, 'base64');
+  } catch (err) {
+    return res.status(400).json({ error: 'Could not decode that file' });
+  }
+  if (buffer.length === 0) {
+    return res.status(400).json({ error: 'That file appears to be empty' });
+  }
+  if (buffer.length > MAX_PDF_BYTES) {
+    return res.status(413).json({ error: `PDF is too large (max ${MAX_PDF_BYTES / (1024 * 1024)}MB)` });
+  }
+  try {
+    const result = await pdfToSteps(buffer, { filename });
+    res.json(result);
+  } catch (err) {
+    if (err instanceof PdfImportError) return res.status(400).json({ error: err.message });
+    console.error('[sops] PDF import failed:', err);
+    res.status(500).json({ error: 'Failed to parse that PDF' });
+  }
+});
 
 router.post('/', async (req, res) => {
   const author = req.user.name ?? null;

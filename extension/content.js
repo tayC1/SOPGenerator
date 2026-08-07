@@ -215,18 +215,90 @@ function removeKeyListeners() {
   document.removeEventListener('blur', onBlur, true);
 }
 
-// A click/keystroke often triggers a re-render, navigation, or animation
-// that hasn't finished by a fixed short delay - the screenshot would then
-// capture a half-updated or stale page. Waiting for two animation frames
-// guarantees at least one full paint has happened before the extra delay
-// starts counting, and the delay itself is long enough to cover typical
-// UI transitions (~200-300ms) instead of the old flat 60ms, which was
-// only ever enough for instant, non-animated DOM updates.
-function afterRender(callback) {
+// A click/keystroke often triggers a re-render, navigation, or animation -
+// screenshotting on a fixed delay either cuts that short (half-updated page)
+// or wastes time waiting past when the page already settled. Instead, watch
+// the page and only fire once it actually looks done:
+//   - MutationObserver: keep pushing the wait out while the DOM is still
+//     changing, so an animation or a slow-rendering framework doesn't get
+//     cut short. Settles once mutations stop for SETTLE_QUIET_MS.
+//   - <img> completeness: an <img> tag can exist (no further mutations)
+//     while its pixels are still streaming in, so mutations alone would
+//     miss a half-loaded image.
+//   - SETTLE_MAX_MS hard cap: some pages never fully go quiet (live
+//     tickers, polling widgets), so waiting forever isn't an option.
+const SETTLE_QUIET_MS = 200;
+const SETTLE_MAX_MS = 3000;
+
+function waitForStableCapture(callback) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      setTimeout(callback, 400);
+      const start = Date.now();
+      let settleTimer = null;
+      let done = false;
+
+      const imagesStillLoading = () =>
+        Array.from(document.images).some((img) => img.src && !img.complete);
+
+      const finish = () => {
+        if (done) return;
+        done = true;
+        observer.disconnect();
+        clearTimeout(settleTimer);
+        clearTimeout(hardCap);
+        callback();
+      };
+
+      const armSettleTimer = () => {
+        clearTimeout(settleTimer);
+        settleTimer = setTimeout(() => {
+          if (imagesStillLoading() && Date.now() - start < SETTLE_MAX_MS) {
+            armSettleTimer();
+            return;
+          }
+          finish();
+        }, SETTLE_QUIET_MS);
+      };
+
+      const observer = new MutationObserver(armSettleTimer);
+      observer.observe(document.documentElement, {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        characterData: true
+      });
+
+      const hardCap = setTimeout(finish, SETTLE_MAX_MS);
+
+      armSettleTimer();
     });
+  });
+}
+
+function sendCaptureScreenshot(stepData, onDone) {
+  chrome.runtime.sendMessage(Object.assign({ action: 'captureScreenshot' }, stepData), (response) => {
+    if (onDone) onDone(response);
+  });
+}
+
+// If the click/keystroke being captured triggers a full page navigation,
+// this content script is torn down mid-wait and can never send the
+// screenshot itself. Race the settle-detection against `pagehide`: if the
+// page starts unloading first, stash the step in storage so the new page's
+// content script (see resumePendingCaptureIfAny below) can finish the
+// capture once the destination page has loaded and settled.
+function captureAfterSettle(stepData, onDone) {
+  let navigated = false;
+  const onPageHide = () => {
+    navigated = true;
+    chrome.storage.local.set({ codexPendingCapture: { stepData, savedAt: Date.now() } });
+  };
+  window.addEventListener('pagehide', onPageHide);
+
+  waitForStableCapture(() => {
+    window.removeEventListener('pagehide', onPageHide);
+    if (navigated) return; // destination page will finish this capture
+    sendCaptureScreenshot(stepData, onDone);
   });
 }
 
@@ -353,40 +425,34 @@ function captureTypedText(el, value) {
   // blur might trigger has a chance to change or remove this element.
   const label = describeElement(el);
   if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
-  afterRender(() => {
-    chrome.runtime.sendMessage({
-      action: 'captureScreenshot',
-      elementText: label,
-      tagName: el.tagName.toLowerCase(),
-      pageTitle: document.title,
-      pageUrl: window.location.href,
-      clickX: null,
-      clickY: null,
-      stepType: 'type',
-      typedValue: value
-    }, () => {
-      if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
-    });
+  captureAfterSettle({
+    elementText: label,
+    tagName: el.tagName.toLowerCase(),
+    pageTitle: document.title,
+    pageUrl: window.location.href,
+    clickX: null,
+    clickY: null,
+    stepType: 'type',
+    typedValue: value
+  }, () => {
+    if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
   });
 }
 
 function sendKeyStroke(el, keyLabel) {
   const elementText = describeElement(el);
   if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
-  afterRender(() => {
-    chrome.runtime.sendMessage({
-      action: 'captureScreenshot',
-      elementText,
-      tagName: el?.tagName?.toLowerCase() || 'body',
-      pageTitle: document.title,
-      pageUrl: window.location.href,
-      clickX: null,
-      clickY: null,
-      stepType: 'keystroke',
-      keyLabel
-    }, () => {
-      if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
-    });
+  captureAfterSettle({
+    elementText,
+    tagName: el?.tagName?.toLowerCase() || 'body',
+    pageTitle: document.title,
+    pageUrl: window.location.href,
+    clickX: null,
+    clickY: null,
+    stepType: 'keystroke',
+    keyLabel
+  }, () => {
+    if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
   });
 }
 
@@ -413,34 +479,58 @@ function captureClick(e) {
   // Hide overlay so it doesn't appear in the screenshot
   if (recordingOverlay) recordingOverlay.style.visibility = 'hidden';
 
-  // Wait for the click's effects to actually render before capturing -
-  // see afterRender's comment for why this isn't just a short fixed delay.
-  afterRender(function () {
-    chrome.runtime.sendMessage({
-      action: 'captureScreenshot',
-      elementText,
-      tagName,
-      pageTitle,
-      pageUrl,
-      clickX,
-      clickY
-    }, (response) => {
-      if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
-      if (chrome.runtime.lastError) {
-        console.log('Message sent, awaiting background response');
-      } else {
-        console.log('Step captured:', response?.stepId);
-      }
-    });
+  // Wait for the click's effects to actually settle before capturing - see
+  // waitForStableCapture's comment for why this isn't just a fixed delay.
+  // If the click navigates to a new page, captureAfterSettle hands the
+  // capture off to that page instead (see resumePendingCaptureIfAny).
+  captureAfterSettle({
+    elementText,
+    tagName,
+    pageTitle,
+    pageUrl,
+    clickX,
+    clickY
+  }, (response) => {
+    if (recordingOverlay) recordingOverlay.style.visibility = 'visible';
+    if (chrome.runtime.lastError) {
+      console.log('Message sent, awaiting background response');
+    } else {
+      console.log('Step captured:', response?.stepId);
+    }
+  });
+}
+
+// A step whose capture was deferred by captureAfterSettle because its
+// origin page navigated away mid-wait. Finish it here once this (new) page
+// has actually loaded and settled, rather than guessing when that is.
+function resumePendingCaptureIfAny(isRecordingNow) {
+  chrome.storage.local.get('codexPendingCapture', (result) => {
+    const pending = result.codexPendingCapture;
+    if (!pending) return;
+    chrome.storage.local.remove('codexPendingCapture');
+
+    // Stale guard - don't resurrect a capture from an abandoned navigation
+    // (recording stopped mid-flight, or the tab sat unloaded a long time)
+    // onto a page it no longer has anything to do with.
+    if (!isRecordingNow || Date.now() - pending.savedAt > 10000) return;
+
+    const captureNow = () => waitForStableCapture(() => sendCaptureScreenshot(pending.stepData));
+    if (document.readyState === 'complete') {
+      captureNow();
+    } else {
+      window.addEventListener('load', captureNow, { once: true });
+    }
   });
 }
 
 // Check recording status on content load
 chrome.runtime.sendMessage({ action: 'getRecordingStatus' }, (response) => {
-  if (response?.isRecording) {
+  const nowRecording = !!response?.isRecording;
+  if (nowRecording) {
     isRecording = true;
     createRecordingOverlay();
     attachClickListener();
     attachKeyListeners();
   }
+  resumePendingCaptureIfAny(nowRecording);
 });

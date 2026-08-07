@@ -541,6 +541,17 @@
     display: none;
   }
 
+  .info-banner {
+    background: rgba(120, 190, 255, 0.1);
+    border: 1px solid rgba(120, 190, 255, 0.28);
+    color: #a9d6ff;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
+    display: none;
+  }
+
   .doc-content {
     font-size: 14px;
     line-height: 1.7;
@@ -730,6 +741,24 @@
         <div class="type-card-title">Reference Document</div>
         <div class="type-card-desc">A freeform, written document — policies, guides, notes — typed directly here rather than captured as steps.</div>
       </button>
+      <button class="type-card" type="button" data-type="pdf" id="pdfCard">
+        <div class="type-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15v-2a1 1 0 0 1 1-1h1a1 1 0 0 1 0 2H9m5-2v4m1-4h1"></path></svg>
+        </div>
+        <div class="type-card-title">Import a PDF</div>
+        <div class="type-card-desc">Upload an existing PDF — each page becomes a step with its screenshot and text, ready for you to review before saving.</div>
+      </button>
+    </div>
+
+    <div id="pdfPanel" style="display: none;">
+      <div class="panel sop-instructions" id="pdfUploadInfo">
+        <p style="font-size: 14px; color: rgba(255,255,255,0.7); line-height: 1.6; margin-bottom: 18px;">
+          Every page of the PDF becomes a step: the page image is kept as the step's screenshot, and its text is pulled out as the step description. You'll land in the step editor afterward to review, reorder, or edit anything before saving.
+        </p>
+        <label class="btn btn-primary" for="pdfFileInput" id="pdfChooseLabel" style="cursor: pointer;">Choose a PDF…</label>
+        <input type="file" accept="application/pdf" id="pdfFileInput" style="display: none;">
+        <p id="pdfStatus" style="font-size: 13px; color: rgba(255,255,255,0.6); margin-top: 12px;"></p>
+      </div>
     </div>
 
     <div id="sopPanel" style="display: none;">
@@ -764,6 +793,8 @@
           <label for="sopTagInput">Tag (optional)</label>
           <input type="text" id="sopTagInput" placeholder="e.g. Vendor Onboarding">
         </div>
+
+        <p class="info-banner" id="importNotice"></p>
 
         <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: rgba(255,255,255,0.4); margin-bottom: 10px;">Steps</label>
         <div class="step-list" id="stepList"></div>
@@ -824,8 +855,14 @@
     const typeGrid       = document.getElementById('typeGrid');
     const sopCard        = document.getElementById('sopCard');
     const documentCard   = document.getElementById('documentCard');
+    const pdfCard        = document.getElementById('pdfCard');
     const sopPanel       = document.getElementById('sopPanel');
     const documentForm   = document.getElementById('documentForm');
+    const pdfPanel       = document.getElementById('pdfPanel');
+    const pdfFileInput   = document.getElementById('pdfFileInput');
+    const pdfChooseLabel = document.getElementById('pdfChooseLabel');
+    const pdfStatus      = document.getElementById('pdfStatus');
+    const importNotice   = document.getElementById('importNotice');
     const errorBanner    = document.getElementById('errorBanner');
     const pageTitle      = document.getElementById('pageTitle');
     const pageSub        = document.getElementById('pageSub');
@@ -921,8 +958,12 @@
     function selectType(type) {
       sopCard.classList.toggle('selected', type === 'sop');
       documentCard.classList.toggle('selected', type === 'document');
+      pdfCard.classList.toggle('selected', type === 'pdf');
+      importNotice.style.display = 'none';
       sopPanel.style.display = type === 'sop' ? 'block' : 'none';
       documentForm.style.display = type === 'document' ? 'block' : 'none';
+      pdfPanel.style.display = type === 'pdf' ? 'block' : 'none';
+      if (type === 'pdf') return;
       syncSharedFields(type);
 
       // Editing always goes straight to the manual step builder - "record
@@ -1448,6 +1489,53 @@
 
     sopCard.addEventListener('click', () => selectType('sop'));
     documentCard.addEventListener('click', () => selectType('document'));
+    pdfCard.addEventListener('click', () => selectType('pdf'));
+
+    pdfFileInput.addEventListener('change', async () => {
+      const file = pdfFileInput.files[0];
+      if (!file) return;
+
+      pdfChooseLabel.style.pointerEvents = 'none';
+      pdfChooseLabel.style.opacity = '0.6';
+      pdfStatus.textContent = `Reading ${file.name}… this can take a few seconds for longer PDFs.`;
+
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(file);
+        });
+
+        const res = await fetch('/sops/import-pdf', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ data: dataUrl, filename: file.name }),
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.error || 'Failed to import that PDF');
+
+        sopSteps = body.steps;
+        selectType('sop');
+        sopModeToggle.style.display = 'none';
+        setSopMode('manual');
+        if (!sopTitleInput.value.trim() && body.title) sopTitleInput.value = body.title;
+        renderSteps();
+        pdfStatus.textContent = '';
+
+        importNotice.textContent = body.detected === 'headings'
+          ? `Found ${body.steps.length} numbered steps in the PDF — review them below before saving.`
+          : `Couldn't find labeled steps in the PDF, so each page became one step — reorder, split, or edit as needed.`;
+        importNotice.style.display = 'block';
+      } catch (err) {
+        pdfStatus.textContent = err.message || 'Failed to import that PDF';
+      } finally {
+        pdfChooseLabel.style.pointerEvents = '';
+        pdfChooseLabel.style.opacity = '';
+        pdfFileInput.value = '';
+      }
+    });
     modeExtensionBtn.addEventListener('click', () => setSopMode('extension'));
     modeManualBtn.addEventListener('click', () => setSopMode('manual'));
 
