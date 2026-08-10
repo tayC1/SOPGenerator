@@ -40,7 +40,10 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      imgSrc: ["'self'", 'data:'],
+      // Important-Links "Icon" checkbox renders each link's favicon via
+      // Google's public favicon service - CSP must allow that host or the
+      // browser silently drops the image request.
+      imgSrc: ["'self'", 'data:', 'https://www.google.com'],
       // feedback.html POSTs (mode: 'no-cors') to a public Google Form's
       // formResponse endpoint - plain cross-origin form submission, not the
       // Google Forms API, so no other CSP directives need to change for it.
