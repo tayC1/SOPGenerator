@@ -318,7 +318,7 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
     const links = (Array.isArray(req.body.links) ? req.body.links : []).map((link) => {
       const url = String(link?.url ?? '').trim();
       const normalizedUrl = url && !/^[a-z][a-z0-9+.-]*:/i.test(url) ? `https://${url}` : url;
-      return { label: link?.label ?? '', url: normalizedUrl };
+      return { label: link?.label ?? '', url: normalizedUrl, icon: Boolean(link?.icon) };
     });
     const result = await db.query(
       `UPDATE departments SET lead = $1, description = $2, links = $3

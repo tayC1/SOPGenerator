@@ -294,6 +294,9 @@
   .links-row { display: flex; flex-wrap: wrap; gap: 12px; }
 
   .link-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
     background: rgba(202, 200, 188, 0.14);
     border: 1px solid var(--border);
     border-radius: 10px;
@@ -302,6 +305,8 @@
     text-decoration: none;
     color: #fff;
   }
+
+  .link-pill-icon { width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; object-fit: contain; }
 
   .link-pill:hover { background: rgba(202, 200, 188, 0.24); }
   .link-pill-team { color: var(--text-faint); }
@@ -590,6 +595,16 @@
       return `https://${trimmed}`;
     }
 
+    function faviconUrl(url) {
+      try {
+        const parts = new URL(normalizeUrl(url)).hostname.split('.');
+        const host = parts.length >= 2 ? parts.slice(-2).join('.') : parts[0];
+        return host ? `https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=32` : '';
+      } catch (e) {
+        return '';
+      }
+    }
+
     function formatDate(value) {
       if (!value) return '';
       return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -684,7 +699,7 @@
           ? (Array.isArray(current?.links) ? current.links : [])
           : departments.flatMap((d) => (Array.isArray(d.links) ? d.links.map((link) => ({ ...link, team: d.name })) : []));
         linksRow.innerHTML = links.length > 0
-          ? links.map((link) => `<a class="link-pill" href="${escapeHtml(normalizeUrl(link.url))}" target="_blank" rel="noopener">${escapeHtml(link.label)}${link.team ? `<span class="link-pill-team"> · ${escapeHtml(link.team)}</span>` : ''}</a>`).join('')
+          ? links.map((link) => `<a class="link-pill" href="${escapeHtml(normalizeUrl(link.url))}" target="_blank" rel="noopener">${link.icon && faviconUrl(link.url) ? `<img class="link-pill-icon" src="${escapeHtml(faviconUrl(link.url))}" alt="" onerror="this.remove();">` : ''}${escapeHtml(link.label)}${link.team ? `<span class="link-pill-team"> · ${escapeHtml(link.team)}</span>` : ''}</a>`).join('')
           : `<p class="empty-note">No links added for ${escapeHtml(teamName || 'any team')} yet.</p>`;
       } catch (err) {
         console.error('[teamlanding] failed to load teams:', err);

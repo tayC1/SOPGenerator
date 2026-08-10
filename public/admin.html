@@ -338,8 +338,17 @@
 
   .links-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
 
-  .link-row { display: flex; gap: 6px; }
+  .link-row { display: flex; gap: 6px; align-items: center; }
   .link-row input { flex: 1; min-width: 0; }
+  .link-row .link-icon-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
   .link-row .remove-link {
     background: rgba(224, 128, 128, 0.18);
     border: none;
@@ -733,6 +742,7 @@
         <div class="link-row">
           <input type="text" class="link-label" placeholder="Label (e.g. Ramp)" value="${escapeHtml(link?.label)}">
           <input type="text" class="link-url" placeholder="https://…" value="${escapeHtml(link?.url)}">
+          <label class="link-icon-label"><input type="checkbox" class="link-icon" ${link?.icon ? 'checked' : ''}> Icon</label>
           <button type="button" class="remove-link" title="Remove">&times;</button>
         </div>
       `;
@@ -809,6 +819,7 @@
         .map((row) => ({
           label: row.querySelector('.link-label').value.trim(),
           url: normalizeUrl(row.querySelector('.link-url').value),
+          icon: row.querySelector('.link-icon').checked,
         }))
         .filter((link) => link.label && link.url);
 
