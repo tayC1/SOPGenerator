@@ -40,11 +40,12 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com'],
-      // Important-Links "Icon" checkbox renders each link's favicon via
-      // Google's public favicon service, which 301-redirects to a
-      // t1/t2/t3.gstatic.com faviconV2 URL for the actual image bytes - CSP
-      // must allow both hosts or the browser silently drops the request.
-      imgSrc: ["'self'", 'data:', 'https://www.google.com', 'https://*.gstatic.com'],
+      // Important-Links "Icon" checkbox renders each link's favicon via the
+      // same-origin /link-favicon proxy (see that route), which redirects
+      // to DuckDuckGo's icon service when Google has no real favicon for
+      // the site - CSP must allow that host or the browser drops the
+      // redirected image request.
+      imgSrc: ["'self'", 'data:', 'https://icons.duckduckgo.com'],
       // feedback.html POSTs (mode: 'no-cors') to a public Google Form's
       // formResponse endpoint - plain cross-origin form submission, not the
       // Google Forms API, so no other CSP directives need to change for it.
@@ -97,6 +98,7 @@ const apiLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 1000, standardHead
 // login. /auth/extension-token already has its own dedicated limiter.
 app.use('/auth/google', authLimiter);
 app.use('/sops', apiLimiter);
+app.use('/link-favicon', apiLimiter);
 // Signature verification already gates these two, but a modest per-minute
 // cap limits blast radius if a signing secret ever leaks.
 const slackLimiter = rateLimit({ windowMs: 60 * 1000, max: 60, standardHeaders: true, legacyHeaders: false });
@@ -294,6 +296,66 @@ app.get('/extension/codex.crx', (req, res) => {
   const file = path.join(__dirname, 'dist', 'codex.crx');
   if (!fs.existsSync(file)) return res.status(404).send('Run `npm run build` to generate the packed extension.');
   res.type('application/x-chrome-extension').sendFile(file);
+});
+
+// Google's favicon service never 404s for a real request - a site with no
+// discoverable favicon gets a generic globe placeholder instead, served
+// with a 200 same as a real hit... except it isn't: empirically the globe
+// comes back as a final HTTP 404 (still a decodable PNG, so a plain <img
+// onerror> can't tell the difference) while a genuine favicon comes back as
+// 200. That status is the only signal available - Google's endpoint sends
+// no CORS headers, so the browser can't inspect the bytes itself, which is
+// why this check has to happen server-side. A miss falls back to
+// DuckDuckGo's icon service, which found real icons for a few sites (e.g.
+// Paycom) that only expose their favicon via a JS-injected <link> tag that
+// Google's crawler never executes.
+const linkFaviconCache = new Map();
+const LINK_FAVICON_CACHE_TTL_MS = 60 * 60 * 1000;
+
+function faviconHost(rawUrl) {
+  const trimmed = String(rawUrl ?? '').trim();
+  const normalized = trimmed && !/^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? `https://${trimmed}` : trimmed;
+  return new URL(normalized).hostname;
+}
+
+app.get('/link-favicon', async (req, res) => {
+  let host;
+  try {
+    host = faviconHost(req.query.url);
+  } catch (err) {
+    return res.status(400).json({ error: 'Invalid url' });
+  }
+
+  const duckDuckGoUrl = `https://icons.duckduckgo.com/ip3/${encodeURIComponent(host)}.ico`;
+
+  const cached = linkFaviconCache.get(host);
+  if (cached && cached.expiresAt > Date.now()) {
+    if (!cached.buffer) return res.redirect(302, duckDuckGoUrl);
+    res.set('Content-Type', cached.contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    return res.send(cached.buffer);
+  }
+
+  try {
+    const parts = host.split('.');
+    const googleDomain = parts.length >= 2 ? parts.slice(-2).join('.') : parts[0];
+    const googleRes = await fetch(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(googleDomain)}&sz=32`);
+
+    if (!googleRes.ok) {
+      linkFaviconCache.set(host, { buffer: null, expiresAt: Date.now() + LINK_FAVICON_CACHE_TTL_MS });
+      return res.redirect(302, duckDuckGoUrl);
+    }
+
+    const buffer = Buffer.from(await googleRes.arrayBuffer());
+    const contentType = googleRes.headers.get('content-type') || 'image/png';
+    linkFaviconCache.set(host, { buffer, contentType, expiresAt: Date.now() + LINK_FAVICON_CACHE_TTL_MS });
+    res.set('Content-Type', contentType);
+    res.set('Cache-Control', 'public, max-age=86400');
+    res.send(buffer);
+  } catch (err) {
+    console.error('[link-favicon] lookup failed:', err.message);
+    res.redirect(302, duckDuckGoUrl);
+  }
 });
 
 app.get('/departments', async (req, res) => {
