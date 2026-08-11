@@ -28,6 +28,12 @@ Signing in (via Google, restricted to `kramer.pro` Workspace accounts) links the
 - ✅ Settings page: edit your profile, set a default category, see your teammates, invite new people by email
 - ✅ Admin portal: assign users to (multiple) departments, edit each team's lead/description/links
 
+**Slack app**
+- ✅ `/codex <search terms>` — searches SOPs from any channel and returns an ephemeral list only you can see
+- ✅ `/codex share` (or `/codex share <search terms>`) — browse/share without knowing exact search terms, defaulting to the 8 most recent SOPs
+- ✅ **Share to channel** button posts the SOP publicly to the channel; **Open in CODEX** deep-links to the full SOP on the website
+- ✅ Slack identity is mapped to a CODEX account by `@kramer.pro` email — no separate sign-in inside Slack
+
 ## Getting Started (for beta testers)
 
 1. **Confirm you have a `kramer.pro` Google account.** Sign-in is restricted to the Workspace domain — a personal Gmail account will be rejected.
@@ -92,6 +98,47 @@ From your dashboard, click **EDIT** on any SOP you own. It reopens the same rich
 - **Settings** — your profile, default category, teammates, and invites
 - **Admin Portal** (admins only) — assign departments to users, edit team descriptions/leads/links
 
+## Slack app
+
+CODEX also ships as a Slack app (`/codex`), so teammates can search and share
+SOPs without leaving Slack — a `/giphy`-style flow on top of the same backend.
+It's a separate integration from the Chrome extension and website; a Slack
+user is linked to their CODEX account by matching `@kramer.pro` email via
+Slack's `users.info`, not by a signed-in session.
+
+- `/codex <search terms>` searches `title`, `description`, `content`, and
+  `tag` across SOPs and replies with up to 8 results, visible only to you
+- `/codex share` (or `/codex share <search terms>`) lists the most recent
+  SOPs instead of requiring exact search terms
+- Each result has **Share to channel** (posts it publicly to the channel)
+  and **Open in CODEX** (deep-links to the SOP on the website)
+- If your Slack email doesn't match a CODEX account, you're told to sign in
+  at the website first — the slash command does nothing further until you do
+
+Search is workspace-wide rather than scoped to your CODEX departments — see
+[`slack/README.md`](slack/README.md) for that known scope gap, plus the full
+setup guide (Slack app manifest, required env vars, and local testing with
+ngrok).
+
+## Admin CLI
+
+A `codex` command-line tool (`cli/`) is the terminal equivalent of the admin
+pages — add/deactivate users, change roles, manage departments — for
+onboarding someone before they've signed in, or when the web app itself
+isn't reachable. It talks directly to the Postgres database, bypassing
+HTTP/session auth, so whoever runs it has full access.
+
+Install via Homebrew:
+
+```
+brew tap tayC1/codex https://github.com/tayC1/SOPGenerator
+brew install tayC1/codex/codex
+```
+
+Then set `DATABASE_URL` in `~/.codex.env`. See [`cli/README.md`](cli/README.md)
+for the full command list, local dev setup (`npm link`), and the formula
+itself at [`Formula/codex.rb`](Formula/codex.rb).
+
 ## Architecture
 
 ```
@@ -115,6 +162,18 @@ Website (public/)                  Admin tooling
 ├── settings.html     (profile / teammates / invites)
 └── admin.html         (department + team page management)   scripts/import-google-users.js
                                                                 (one-off Workspace directory import)
+
+cli/                                 Formula/
+├── bin/codex.js      (admin CLI - own package.json,           └── codex.rb   (Homebrew formula for the CLI,
+│                       installable standalone)                               points at cli/)
+└── lib/db.js          (Postgres connection, separate from
+                         the server's db.js)
+
+slack/                              slack-manifest.yml
+├── commands.js       (/codex slash command handler)          (Slack app manifest — slash command +
+├── interactions.js   (Share to channel button handler)        interactivity config, used at install time)
+├── blocks.js         (Block Kit message builders)
+└── verify.js         (X-Slack-Signature request verification)
 ```
 
 ### How sign-in reaches the extension

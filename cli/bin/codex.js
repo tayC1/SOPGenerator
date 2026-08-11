@@ -6,8 +6,10 @@
 // entirely, so there's no role-scoping here the way server.js has for
 // department_admins - whoever runs this CLI has full access.
 //
-// Install as a real `codex` command with:
-//   npm link
+// Lives in its own package (cli/) so installing it - via `brew install`,
+// `npm install -g`, or local `npm link` - doesn't drag in the full web
+// server's dependencies (express, passport, googleapis, mupdf, etc). See
+// cli/README.md for install methods.
 //
 // Usage:
 //   codex add-user
@@ -21,7 +23,7 @@
 const { Command } = require('commander');
 const readline = require('readline/promises');
 const { stdin: input, stdout: output } = require('process');
-const db = require('../db');
+const db = require('../lib/db');
 const pkg = require('../package.json');
 
 const WORKSPACE_DOMAIN = process.env.WORKSPACE_DOMAIN || 'kramer.pro';
