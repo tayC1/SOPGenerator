@@ -311,6 +311,63 @@
   .link-pill:hover { background: rgba(202, 200, 188, 0.24); }
   .link-pill-team { color: var(--text-faint); }
 
+  .btn-add-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: 10px;
+    padding: 12px 18px;
+    font-size: 14px;
+    color: var(--text-dim);
+    cursor: pointer;
+  }
+
+  .btn-add-link:hover { color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+
+  .add-link-form {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+
+  .add-link-form.open { display: flex; }
+
+  .add-link-form input {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #fff;
+    font-family: inherit;
+  }
+
+  .add-link-form input::placeholder { color: var(--text-faint); }
+  .add-link-form .link-label { width: 160px; }
+  .add-link-form .link-url { width: 220px; }
+
+  .add-link-form button {
+    border: none;
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+  }
+
+  .add-link-form .btn-save-link { background: var(--accent); color: #fff; }
+  .add-link-form .btn-save-link:hover { opacity: 0.88; }
+  .add-link-form .btn-save-link:disabled { opacity: 0.6; cursor: default; }
+  .add-link-form .btn-cancel-link { background: transparent; color: var(--text-dim); }
+  .add-link-form .btn-cancel-link:hover { color: #fff; }
+
+  .add-link-error { color: #e96d6d; font-size: 12px; width: 100%; }
+
   .member-list { display: flex; flex-direction: column; gap: 10px; }
 
   .member-item {
@@ -553,6 +610,14 @@
         <div class="links-row" id="linksRow">
           <p class="empty-note">No links added for this team yet.</p>
         </div>
+        <button type="button" class="btn-add-link" id="addLinkBtn" style="display: none; margin-top: 12px;">+ Add Link</button>
+        <form class="add-link-form" id="addLinkForm">
+          <input type="text" class="link-label" id="addLinkLabel" placeholder="Label (e.g. Ramp)" maxlength="80">
+          <input type="text" class="link-url" id="addLinkUrl" placeholder="https://…">
+          <button type="submit" class="btn-save-link" id="addLinkSave">Add</button>
+          <button type="button" class="btn-cancel-link" id="addLinkCancel">Cancel</button>
+          <p class="add-link-error" id="addLinkError" style="display: none;"></p>
+        </form>
       </div>
 
       <div class="section">
@@ -617,6 +682,29 @@
 
     let allSops = [];
     let currentUser = null;
+    let currentDept = null;
+
+    // Any member of a team (via user_departments, no admin role required) may
+    // manage that team's links - see PATCH /departments/:id on the server,
+    // which enforces the same rule.
+    function canManageLinks() {
+      if (!currentUser || !teamName || !currentDept) return false;
+      return currentUser.is_admin || (currentUser.departments || []).includes(teamName);
+    }
+
+    function updateAddLinkVisibility() {
+      const show = canManageLinks();
+      document.getElementById('addLinkBtn').style.display = show ? 'inline-flex' : 'none';
+      if (!show) closeAddLinkForm();
+    }
+
+    function closeAddLinkForm() {
+      const form = document.getElementById('addLinkForm');
+      form.classList.remove('open');
+      document.getElementById('addLinkLabel').value = '';
+      document.getElementById('addLinkUrl').value = '';
+      document.getElementById('addLinkError').style.display = 'none';
+    }
 
     // Owners can always delete their own SOPs. An admin may also delete
     // one within their scope: super_admin covers everything, department_admin
@@ -655,6 +743,7 @@
         // known, which would hide delete buttons the caller is actually
         // entitled to - re-render now that permission info is in.
         renderGrid();
+        updateAddLinkVisibility();
       } catch {
         document.getElementById('userName').textContent = 'Sign In';
         document.getElementById('userAvatar').textContent = '?';
@@ -686,6 +775,7 @@
         `).join('');
 
         const current = departments.find((d) => d.name === teamName);
+        currentDept = current || null;
         document.getElementById('leadName').textContent = current?.lead || 'Unassigned';
         document.getElementById('leadAvatar').textContent = initials(current?.lead);
 
@@ -700,6 +790,7 @@
         linksRow.innerHTML = links.length > 0
           ? links.map((link) => `<a class="link-pill" href="${escapeHtml(normalizeUrl(link.url))}" target="_blank" rel="noopener">${link.icon ? `<img class="link-pill-icon" src="${escapeHtml(faviconUrl(link.url))}" alt="" onerror="this.remove();">` : ''}${escapeHtml(link.label)}${link.team ? `<span class="link-pill-team"> · ${escapeHtml(link.team)}</span>` : ''}</a>`).join('')
           : `<p class="empty-note">No links added for ${escapeHtml(teamName || 'any team')} yet.</p>`;
+        updateAddLinkVisibility();
       } catch (err) {
         console.error('[teamlanding] failed to load teams:', err);
       }
@@ -899,6 +990,47 @@
 
     document.getElementById('searchInput').addEventListener('input', renderGrid);
     document.getElementById('allDepartmentsBtn').addEventListener('click', showAllDepartments);
+
+    document.getElementById('addLinkBtn').addEventListener('click', () => {
+      document.getElementById('addLinkForm').classList.add('open');
+      document.getElementById('addLinkLabel').focus();
+    });
+    document.getElementById('addLinkCancel').addEventListener('click', closeAddLinkForm);
+    document.getElementById('addLinkForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentDept) return;
+      const errorEl = document.getElementById('addLinkError');
+      const saveBtn = document.getElementById('addLinkSave');
+      const label = document.getElementById('addLinkLabel').value.trim();
+      const url = document.getElementById('addLinkUrl').value.trim();
+      errorEl.style.display = 'none';
+      if (!label || !url) {
+        errorEl.textContent = 'Both a label and a URL are required.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const links = [...(Array.isArray(currentDept.links) ? currentDept.links : []), { label, url: normalizeUrl(url), icon: true }];
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Adding…';
+      try {
+        const res = await fetch(`/departments/${currentDept.id}`, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ links }),
+        });
+        if (!res.ok) throw new Error((await res.json()).error || 'Failed to add link');
+        closeAddLinkForm();
+        await loadTeams();
+      } catch (err) {
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Add';
+      }
+    });
 
     initTeamHeader();
     loadUser();

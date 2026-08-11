@@ -368,15 +368,24 @@ app.get('/departments', async (req, res) => {
   }
 });
 
-app.patch('/departments/:id', requireAdmin, async (req, res) => {
+app.patch('/departments/:id', requireAuth, async (req, res) => {
   try {
-    const deptCheck = await db.query('SELECT name FROM departments WHERE id = $1', [req.params.id]);
+    const deptCheck = await db.query('SELECT name, lead, description FROM departments WHERE id = $1', [req.params.id]);
     if (deptCheck.rows.length === 0) return res.status(404).json({ error: 'Department not found' });
-    if (!(await isScopedOverDepartments(req.user, [deptCheck.rows[0].name]))) {
-      return res.status(403).json({ error: 'You are not an admin over this department' });
+    const dept = deptCheck.rows[0];
+
+    // Full admin control (lead/description/links) requires admin scope over
+    // this department. A plain member - just belonging via user_departments,
+    // no admin role needed - may still manage the team's links, since those
+    // are the team's own shared bookmarks rather than an admin-owned field.
+    const isDeptAdmin = isAdminRole(req.user.role) && (await isScopedOverDepartments(req.user, [dept.name]));
+    const isMember = (await departmentsForUser(req.user.id)).includes(dept.name);
+    if (!isDeptAdmin && !isMember) {
+      return res.status(403).json({ error: 'You do not belong to this department' });
     }
 
-    const { lead, description } = req.body;
+    const lead = isDeptAdmin ? (req.body.lead ?? null) : dept.lead;
+    const description = isDeptAdmin ? (req.body.description ?? null) : dept.description;
     // A bare "app.ramp.com" has no scheme, so a browser treats it as a path
     // relative to whatever page it's clicked from instead of an external
     // site - assume https:// unless a scheme is already present. Normalized
@@ -390,7 +399,7 @@ app.patch('/departments/:id', requireAdmin, async (req, res) => {
       `UPDATE departments SET lead = $1, description = $2, links = $3
        WHERE id = $4
        RETURNING id, name, lead, description, links`,
-      [lead ?? null, description ?? null, JSON.stringify(links), req.params.id]
+      [lead, description, JSON.stringify(links), req.params.id]
     );
     res.json(result.rows[0]);
   } catch (err) {

@@ -361,6 +361,19 @@
   }
   .link-row .remove-link:hover { background: rgba(224, 128, 128, 0.3); }
 
+  .link-row .move-link {
+    background: rgba(255, 255, 255, 0.06);
+    border: none;
+    color: var(--text-dim);
+    border-radius: 6px;
+    padding: 0 8px;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .link-row .move-link:hover:not(:disabled) { background: rgba(255, 255, 255, 0.14); color: #fff; }
+  .link-row .move-link:disabled { opacity: 0.3; cursor: default; }
+
   .btn-add-link {
     background: none;
     border: 1px dashed var(--border);
@@ -740,6 +753,8 @@
     function linkRowHtml(link) {
       return `
         <div class="link-row">
+          <button type="button" class="move-link move-link-up" title="Move up">&uarr;</button>
+          <button type="button" class="move-link move-link-down" title="Move down">&darr;</button>
           <input type="text" class="link-label" placeholder="Label (e.g. Ramp)" value="${escapeHtml(link?.label)}">
           <input type="text" class="link-url" placeholder="https://…" value="${escapeHtml(link?.url)}">
           <label class="link-icon-label"><input type="checkbox" class="link-icon" ${link?.icon ? 'checked' : ''}> Icon</label>
@@ -786,18 +801,46 @@
       grid.querySelectorAll('.dept-card').forEach((card) => {
         card.querySelector('.btn-add-link').addEventListener('click', () => {
           card.querySelector('.links-list').insertAdjacentHTML('beforeend', linkRowHtml({}));
-          wireRemoveButtons(card);
+          wireLinkRowButtons(card);
         });
-        wireRemoveButtons(card);
+        wireLinkRowButtons(card);
         card.querySelector('.btn-save').addEventListener('click', () => saveDepartment(card));
         card.querySelector('.btn-delete-dept').addEventListener('click', () => deleteDepartment(card));
       });
     }
 
-    function wireRemoveButtons(card) {
-      card.querySelectorAll('.remove-link').forEach((btn) => {
-        btn.onclick = () => btn.closest('.link-row').remove();
+    function updateMoveButtonState(card) {
+      const rows = [...card.querySelectorAll('.link-row')];
+      rows.forEach((row, i) => {
+        row.querySelector('.move-link-up').disabled = i === 0;
+        row.querySelector('.move-link-down').disabled = i === rows.length - 1;
       });
+    }
+
+    function wireLinkRowButtons(card) {
+      card.querySelectorAll('.remove-link').forEach((btn) => {
+        btn.onclick = () => {
+          btn.closest('.link-row').remove();
+          updateMoveButtonState(card);
+        };
+      });
+      card.querySelectorAll('.move-link-up').forEach((btn) => {
+        btn.onclick = () => {
+          const row = btn.closest('.link-row');
+          const prev = row.previousElementSibling;
+          if (prev) row.parentElement.insertBefore(row, prev);
+          updateMoveButtonState(card);
+        };
+      });
+      card.querySelectorAll('.move-link-down').forEach((btn) => {
+        btn.onclick = () => {
+          const row = btn.closest('.link-row');
+          const next = row.nextElementSibling;
+          if (next) row.parentElement.insertBefore(next, row);
+          updateMoveButtonState(card);
+        };
+      });
+      updateMoveButtonState(card);
     }
 
     // A bare "app.ramp.com" has no scheme, so a browser resolves it as a
