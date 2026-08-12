@@ -576,11 +576,17 @@
         : `${steps.length > 0 ? `<div class="steps-heading">${steps.length} step${steps.length === 1 ? '' : 's'}</div>` : ''}
            ${steps.length === 0
              ? '<p class="empty" style="margin-top:24px">No steps recorded.</p>'
-             : steps.map((step, i) => `
+             : steps.map((step, i) => {
+                const isAnnot = step.type === 'flag' || step.type === 'warning' || step.type === 'tip';
+                const label = isAnnot
+                  ? ({ flag: '🚩 Flag', warning: '⚠️ Warning', tip: '💡 Tip' })[step.type]
+                  : `Step ${i + 1}`;
+                const text = isAnnot ? (step.content || '') : (step.description || step.title || '');
+                return `
               <div class="step">
                 <div class="step-info">
-                  <span class="step-number">Step ${i + 1}</span>
-                  <span class="step-description">${escape(step.description || step.title || '')}</span>
+                  <span class="step-number">${label}</span>
+                  <span class="step-description">${escape(text)}</span>
                 </div>
                 ${step.screenshot || step.screenshot_base64
                   ? `<div class="step-screenshot-wrap">
@@ -591,7 +597,7 @@
                      </div>`
                   : ''}
               </div>
-            `).join('')}`;
+            `; }).join('')}`;
 
       main.innerHTML = `
         <div class="sop-header">

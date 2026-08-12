@@ -949,7 +949,7 @@
         fill(descriptionInput, sopDescriptionInput);
         fill(tagInput, sopTagInput);
         if (!contentInput.value.trim()) {
-          const flattened = sopSteps.map((s) => (s.description || '').trim()).filter(Boolean).join('\n\n');
+          const flattened = sopSteps.map((s) => stepText(s).trim()).filter(Boolean).join('\n\n');
           if (flattened) contentInput.value = flattened;
         }
       }
@@ -986,18 +986,26 @@
       }
     }
 
+    const ANNOT_LABELS = { flag: '🚩 Flag', warning: '⚠️ Warning', tip: '💡 Tip' };
+    function isAnnotStep(step) {
+      return step.type === 'flag' || step.type === 'warning' || step.type === 'tip';
+    }
+    function stepText(step) {
+      return isAnnotStep(step) ? (step.content || '') : (step.description || step.title || '');
+    }
+
     function renderSteps() {
       stepList.innerHTML = sopSteps.map((step, i) => `
         <div class="step-card" data-index="${i}">
           <div class="step-card-head">
-            <span class="step-number">Step ${i + 1}</span>
+            <span class="step-number">${isAnnotStep(step) ? ANNOT_LABELS[step.type] : `Step ${i + 1}`}</span>
             <div class="step-card-controls">
               <button type="button" class="icon-btn" data-move-up="${i}" ${i === 0 ? 'disabled' : ''} title="Move up">↑</button>
               <button type="button" class="icon-btn" data-move-down="${i}" ${i === sopSteps.length - 1 ? 'disabled' : ''} title="Move down">↓</button>
               <button type="button" class="icon-btn icon-btn-danger" data-remove-step="${i}" title="Remove step">✕</button>
             </div>
           </div>
-          <textarea data-step-text="${i}" placeholder="What happens in this step?">${escapeHtml(step.description || step.title || '')}</textarea>
+          <textarea data-step-text="${i}" placeholder="What happens in this step?">${escapeHtml(stepText(step))}</textarea>
           <div class="step-image-row">
             ${step.screenshot ? `<img class="step-thumb" src="data:${screenshotMime(step.screenshot)};base64,${step.screenshot}" alt="Step ${i + 1} screenshot">` : ''}
             <input type="file" accept="image/*" data-step-file="${i}">
@@ -1011,7 +1019,9 @@
 
       stepList.querySelectorAll('[data-step-text]').forEach((el) => {
         el.addEventListener('input', () => {
-          sopSteps[Number(el.dataset.stepText)].description = el.value;
+          const step = sopSteps[Number(el.dataset.stepText)];
+          if (isAnnotStep(step)) step.content = el.value;
+          else step.description = el.value;
         });
       });
       stepList.querySelectorAll('[data-move-up]').forEach((el) => {
