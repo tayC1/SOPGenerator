@@ -225,6 +225,13 @@ function removeKeyListeners() {
 //   - <img> completeness: an <img> tag can exist (no further mutations)
 //     while its pixels are still streaming in, so mutations alone would
 //     miss a half-loaded image.
+//   - visualViewport resize: on iPad/iPhone Safari, tapping a link/input
+//     often triggers the compact address bar/tab bar to collapse or expand,
+//     which resizes the visible viewport with no corresponding DOM mutation.
+//     captureVisibleTab can fire mid-animation and grab the strip the bar
+//     just vacated before WebKit has repainted it, producing a solid black
+//     band at the top of the screenshot. Treat viewport resizes as "still
+//     unsettled" the same way DOM mutations are.
 //   - SETTLE_MAX_MS hard cap: some pages never fully go quiet (live
 //     tickers, polling widgets), so waiting forever isn't an option.
 const SETTLE_QUIET_MS = 200;
@@ -244,6 +251,9 @@ function waitForStableCapture(callback) {
         if (done) return;
         done = true;
         observer.disconnect();
+        if (window.visualViewport) {
+          window.visualViewport.removeEventListener('resize', armSettleTimer);
+        }
         clearTimeout(settleTimer);
         clearTimeout(hardCap);
         callback();
@@ -267,6 +277,10 @@ function waitForStableCapture(callback) {
         attributes: true,
         characterData: true
       });
+
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', armSettleTimer);
+      }
 
       const hardCap = setTimeout(finish, SETTLE_MAX_MS);
 
