@@ -291,7 +291,11 @@ async function main() {
 
 main()
   .catch((err) => {
-    console.error('codex: error:', err.message);
+    // Connection failures surface as an AggregateError whose own .message
+    // is empty (the real reason lives on .code / nested .errors), which
+    // otherwise prints a bare, useless "codex: error:".
+    const detail = err.message || err.code || (err.errors && err.errors[0] && err.errors[0].message) || String(err);
+    console.error('codex: error:', detail);
     process.exitCode = 1;
   })
   .finally(() => db.pool.end());
