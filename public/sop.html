@@ -419,6 +419,61 @@
     .doc-content .email-card-body p:last-child { margin-bottom: 0; }
     .doc-content hr { border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 20px 0; }
     .doc-content img { max-width: 100%; border-radius: 8px; margin: 6px 0 14px; display: block; }
+
+    /* ---------- history modal ---------- */
+    .history-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex; align-items: flex-start; justify-content: center;
+      padding: 48px 20px;
+      overflow-y: auto;
+    }
+    .history-modal {
+      width: 100%; max-width: 640px;
+      background: #2d2b2e;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 14px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    .history-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px;
+      padding: 20px 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .history-modal-title { font-size: 17px; font-weight: 700; }
+    .history-close {
+      background: none; border: none; color: rgba(255, 255, 255, 0.5);
+      cursor: pointer; padding: 4px;
+    }
+    .history-close:hover { color: #fff; }
+    .history-close svg { width: 20px; height: 20px; display: block; }
+    .history-modal-body { padding: 8px 12px 20px; max-height: 70vh; overflow-y: auto; }
+    .history-empty { padding: 24px 20px; color: rgba(255, 255, 255, 0.4); font-size: 14px; text-align: center; }
+    .history-row {
+      display: flex; width: 100%; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 12px 16px; border-radius: 10px;
+      background: none; border: none; color: inherit; text-align: left; cursor: pointer;
+      font-family: inherit; font-size: 14px;
+    }
+    .history-row:hover { background: rgba(255, 255, 255, 0.06); }
+    .history-row-who { font-weight: 600; }
+    .history-row-when { color: rgba(255, 255, 255, 0.45); font-size: 12.5px; }
+    .history-row-latest {
+      font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      color: #e96d2d; border: 1px solid rgba(233, 109, 45, 0.4); border-radius: 5px; padding: 2px 7px;
+      margin-left: 8px;
+    }
+    .history-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: none; border: none; color: rgba(255, 255, 255, 0.6);
+      font-family: inherit; font-size: 13px; font-weight: 500;
+      cursor: pointer; padding: 8px 16px 0;
+    }
+    .history-back:hover { color: #fff; }
+    .history-back svg { width: 15px; height: 15px; }
+    .history-snapshot { padding: 12px 16px 0; }
+    .history-snapshot .step, .history-snapshot .doc-content { margin: 0 0 16px; }
   </style>
 </head>
 <body>
@@ -486,6 +541,18 @@
     </main>
   </div>
 
+  <div class="history-overlay" id="historyOverlay" style="display: none;">
+    <div class="history-modal">
+      <div class="history-modal-header">
+        <span class="history-modal-title" id="historyModalTitle">Edit history</span>
+        <button class="history-close" type="button" id="historyCloseBtn" aria-label="Close">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="history-modal-body" id="historyModalBody"></div>
+    </div>
+  </div>
+
   <script>
     function escape(str) {
       return String(str || '')
@@ -507,6 +574,145 @@
 
     let currentSop = null;
     let currentUserId = null;
+
+    function formatDateTime(iso) {
+      if (!iso) return '';
+      return new Date(iso).toLocaleString(undefined, {
+        year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+      });
+    }
+
+    // Shared by the live document and by a history snapshot - a snapshot is
+    // just a sop-shaped object (doc_type/steps/content), so the same
+    // rendering logic works for both.
+    function renderBody(sopLike) {
+      const isDocument = sopLike.doc_type === 'document';
+      const steps = Array.isArray(sopLike.steps) ? sopLike.steps : [];
+
+      if (isDocument) {
+        return `<div class="doc-content">${CodexMarkdown.renderMarkdown(sopLike.content || '')}</div>`;
+      }
+
+      if (steps.length === 0) {
+        return '<p class="empty" style="margin-top:24px">No steps recorded.</p>';
+      }
+
+      return `<div class="steps-heading">${steps.length} step${steps.length === 1 ? '' : 's'}</div>
+        ${steps.map((step, i) => {
+          const isAnnot = step.type === 'flag' || step.type === 'warning' || step.type === 'tip';
+          const label = isAnnot
+            ? ({ flag: '🚩 Flag', warning: '⚠️ Warning', tip: '💡 Tip' })[step.type]
+            : `Step ${i + 1}`;
+          const text = isAnnot ? (step.content || '') : (step.description || step.title || '');
+          return `
+            <div class="step">
+              <div class="step-info">
+                <span class="step-number">${label}</span>
+                <span class="step-description">${escape(text)}</span>
+              </div>
+              ${step.screenshot || step.screenshot_base64
+                ? `<div class="step-screenshot-wrap">
+                    <img class="step-screenshot" src="data:${screenshotMime(step.screenshot || step.screenshot_base64)};base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">
+                    ${step.clickX != null && step.clickY != null
+                      ? `<div class="step-click-marker" style="left:${step.clickX * 100}%;top:${step.clickY * 100}%;"></div>`
+                      : ''}
+                   </div>`
+                : ''}
+            </div>
+          `;
+        }).join('')}`;
+    }
+
+    // ---------- history modal ----------
+    function openHistoryModal() {
+      document.getElementById('historyOverlay').style.display = 'flex';
+      document.addEventListener('keydown', onHistoryKeydown);
+    }
+
+    function closeHistoryModal() {
+      document.getElementById('historyOverlay').style.display = 'none';
+      document.removeEventListener('keydown', onHistoryKeydown);
+    }
+
+    function onHistoryKeydown(e) {
+      if (e.key === 'Escape') closeHistoryModal();
+    }
+
+    async function showHistoryList() {
+      document.getElementById('historyModalTitle').textContent = 'Edit history';
+      const body = document.getElementById('historyModalBody');
+      body.innerHTML = '<p class="history-empty">Loading…</p>';
+      openHistoryModal();
+
+      let revisions;
+      try {
+        const res = await fetch(`/sops/${currentSop.id}/revisions`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to load history');
+        revisions = await res.json();
+      } catch {
+        body.innerHTML = '<p class="history-empty">Could not load history right now.</p>';
+        return;
+      }
+
+      if (revisions.length === 0) {
+        body.innerHTML = '<p class="history-empty">No edit history has been recorded for this document yet.</p>';
+        return;
+      }
+
+      body.innerHTML = revisions.map((rev, i) => `
+        <button class="history-row" type="button" data-rev-id="${rev.id}">
+          <span>
+            <span class="history-row-who">${escape(rev.edited_by_name || 'Unknown')}</span>
+            ${i === 0 ? '<span class="history-row-latest">Latest</span>' : ''}
+          </span>
+          <span class="history-row-when">${formatDateTime(rev.edited_at)}</span>
+        </button>
+      `).join('');
+
+      body.querySelectorAll('[data-rev-id]').forEach((btn) => {
+        btn.addEventListener('click', () => showHistorySnapshot(btn.getAttribute('data-rev-id')));
+      });
+    }
+
+    async function showHistorySnapshot(revId) {
+      const body = document.getElementById('historyModalBody');
+      body.innerHTML = '<p class="history-empty">Loading…</p>';
+
+      let rev;
+      try {
+        const res = await fetch(`/sops/${currentSop.id}/revisions/${revId}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Failed to load revision');
+        rev = await res.json();
+      } catch {
+        body.innerHTML = '<p class="history-empty">Could not load that version right now.</p>';
+        return;
+      }
+
+      document.getElementById('historyModalTitle').textContent = rev.title || 'Edit history';
+      body.innerHTML = `
+        <button class="history-back" type="button" id="historyBackBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+          All versions
+        </button>
+        <p class="history-empty" style="text-align:left;padding-left:16px;">
+          Saved by ${escape(rev.edited_by_name || 'Unknown')} on ${formatDateTime(rev.edited_at)}
+        </p>
+        <div class="history-snapshot">${renderBody(rev)}</div>
+      `;
+      document.getElementById('historyBackBtn').addEventListener('click', showHistoryList);
+    }
+
+    function updateHistoryLink() {
+      const historyLink = document.getElementById('historyLink');
+      // History requires a session (same as the /sops/:id/revisions
+      // endpoints) - anonymous visitors on a public SOP won't see it.
+      if (!historyLink || !currentSop || currentUserId == null) return;
+      historyLink.style.display = 'inline';
+      historyLink.onclick = (e) => {
+        e.preventDefault();
+        showHistoryList();
+      };
+    }
 
     function updateEditLink() {
       const editLink = document.getElementById('editLink');
@@ -569,35 +775,11 @@
         : '';
 
       const isDocument = sop.doc_type === 'document';
-      const steps = Array.isArray(sop.steps) ? sop.steps : [];
+      const bodyHtml = renderBody(sop);
 
-      const bodyHtml = isDocument
-        ? `<div class="doc-content">${CodexMarkdown.renderMarkdown(sop.content || '')}</div>`
-        : `${steps.length > 0 ? `<div class="steps-heading">${steps.length} step${steps.length === 1 ? '' : 's'}</div>` : ''}
-           ${steps.length === 0
-             ? '<p class="empty" style="margin-top:24px">No steps recorded.</p>'
-             : steps.map((step, i) => {
-                const isAnnot = step.type === 'flag' || step.type === 'warning' || step.type === 'tip';
-                const label = isAnnot
-                  ? ({ flag: '🚩 Flag', warning: '⚠️ Warning', tip: '💡 Tip' })[step.type]
-                  : `Step ${i + 1}`;
-                const text = isAnnot ? (step.content || '') : (step.description || step.title || '');
-                return `
-              <div class="step">
-                <div class="step-info">
-                  <span class="step-number">${label}</span>
-                  <span class="step-description">${escape(text)}</span>
-                </div>
-                ${step.screenshot || step.screenshot_base64
-                  ? `<div class="step-screenshot-wrap">
-                      <img class="step-screenshot" src="data:${screenshotMime(step.screenshot || step.screenshot_base64)};base64,${step.screenshot || step.screenshot_base64}" alt="Step ${i + 1} screenshot">
-                      ${step.clickX != null && step.clickY != null
-                        ? `<div class="step-click-marker" style="left:${step.clickX * 100}%;top:${step.clickY * 100}%;"></div>`
-                        : ''}
-                     </div>`
-                  : ''}
-              </div>
-            `; }).join('')}`;
+      const editedDate = sop.updated_by_name && sop.updated_at
+        ? new Date(sop.updated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })
+        : null;
 
       main.innerHTML = `
         <div class="sop-header">
@@ -605,6 +787,7 @@
             <div class="sop-title">${escape(sop.title)}</div>
             <div class="header-actions">
               <button class="pin-btn" type="button" id="pinBtn" style="display: none;" title="Save" aria-label="Save"></button>
+              <a class="back-link" href="#" id="historyLink" style="display: none;">History</a>
               <a class="back-link" href="#" id="editLink" style="display: none;">Edit</a>
             </div>
           </div>
@@ -618,6 +801,7 @@
           <div class="sop-meta">
             <div class="meta-item"><span class="meta-label">Author</span><span class="meta-value">${escape(sop.author || 'Unknown')}</span></div>
             ${date ? `<div class="meta-item"><span class="meta-label">Created</span><span class="meta-value">${date}</span></div>` : ''}
+            ${editedDate ? `<div class="meta-item"><span class="meta-label">Last edited</span><span class="meta-value">${editedDate} by ${escape(sop.updated_by_name)}</span></div>` : ''}
             ${sop.url ? `<div class="meta-item"><span class="meta-label">Source</span><span class="meta-value"><a href="${escape(sop.url)}" target="_blank" rel="noopener">${escape(sop.url)}</a></span></div>` : ''}
           </div>
         </div>
@@ -625,6 +809,7 @@
       `;
       updateEditLink();
       updatePinButton();
+      updateHistoryLink();
     }
 
     function initials(name) {
@@ -648,6 +833,7 @@
         }
         updateEditLink();
         updatePinButton();
+        updateHistoryLink();
       } catch {
         // not signed in / request failed - leave the sidebar in its signed-out state
       }
@@ -685,6 +871,11 @@
         console.error('[sidebar] failed to load categories:', err);
       }
     }
+
+    document.getElementById('historyCloseBtn').addEventListener('click', closeHistoryModal);
+    document.getElementById('historyOverlay').addEventListener('click', (e) => {
+      if (e.target.id === 'historyOverlay') closeHistoryModal();
+    });
 
     initBackLink();
     load();

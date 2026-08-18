@@ -11,8 +11,30 @@ const router = Router();
 // leaves room for the encoding overhead.
 const MAX_PDF_BYTES = 30 * 1024 * 1024;
 
-const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, tag, created_at';
-const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, tag, created_at';
+const LIST_FIELDS = 'id, user_id, title, url, description, category, author, steps, doc_type, tag, created_at, updated_at, updated_by_name';
+const PUBLIC_LIST_FIELDS = 'id, title, description, category, author, doc_type, tag, created_at, updated_at, updated_by_name';
+
+// Snapshots the current state of a sop into sop_revisions - called after
+// every create and edit, so the history view is just "every row ever
+// written" rather than something reconstructed from diffs.
+async function recordRevision(sop, editorId, editorName) {
+  await db.query(
+    `INSERT INTO sop_revisions (sop_id, edited_by, edited_by_name, title, description, steps, content, category, tag, doc_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+    [
+      sop.id,
+      editorId ?? null,
+      editorName ?? null,
+      sop.title,
+      sop.description,
+      JSON.stringify(sop.steps ?? []),
+      sop.content,
+      sop.category,
+      sop.tag,
+      sop.doc_type,
+    ]
+  );
+}
 
 // GET /sops/public - no auth required. Only rows explicitly marked public,
 // with a reduced field set (no user_id/owner metadata) for anonymous/marketing
@@ -108,6 +130,7 @@ router.post('/', async (req, res) => {
         tag ? String(tag).trim() || null : null,
       ]
     );
+    await recordRevision(result.rows[0], user_id, author);
     res.status(201).json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -195,6 +218,37 @@ router.delete('/:id/save', async (req, res) => {
   }
 });
 
+// GET /sops/:id/revisions - lightweight history list (who/when, no
+// content) for populating a "View history" list. Same viewing rules as
+// GET /:id - anyone with a session can see it, not just the owner.
+router.get('/:id/revisions', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT id, edited_by, edited_by_name, edited_at
+       FROM sop_revisions WHERE sop_id = $1 ORDER BY edited_at DESC`,
+      [req.params.id]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /sops/:id/revisions/:revId - full snapshot of one past save, for
+// read-only viewing.
+router.get('/:id/revisions/:revId', async (req, res) => {
+  try {
+    const result = await db.query(
+      `SELECT * FROM sop_revisions WHERE id = $1 AND sop_id = $2`,
+      [req.params.revId, req.params.id]
+    );
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Revision not found' });
+    res.json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   try {
     const result = await db.query('SELECT * FROM sops WHERE id = $1', [req.params.id]);
@@ -241,8 +295,9 @@ router.patch('/:id', async (req, res) => {
     }
 
     const result = await db.query(
-      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7, doc_type = $8, tag = $9
-       WHERE id = $10
+      `UPDATE sops SET title = $1, url = $2, description = $3, steps = $4, category = $5, is_public = $6, content = $7, doc_type = $8, tag = $9,
+              updated_at = NOW(), updated_by = $10, updated_by_name = $11
+       WHERE id = $12
        RETURNING *`,
       [
         title,
@@ -254,9 +309,12 @@ router.patch('/:id', async (req, res) => {
         content ?? existing.rows[0].content,
         nextDocType,
         tag ? String(tag).trim() || null : null,
+        req.user.id,
+        req.user.name ?? null,
         req.params.id,
       ]
     );
+    await recordRevision(result.rows[0], req.user.id, req.user.name ?? null);
     res.json(result.rows[0]);
   } catch (err) {
     res.status(500).json({ error: err.message });
