@@ -187,14 +187,38 @@
     flex: 1;
     min-width: 0;
     padding: 36px 40px 56px;
-    max-width: 1280px;
+    max-width: clamp(1280px, 90vw, 2200px);
   }
 
-  .page-title { margin: 0 0 28px; font-size: 28px; font-weight: 600; }
+  .page-title { margin: 0 0 20px; font-size: 28px; font-weight: 600; }
+
+  .toolbar { margin-bottom: 24px; }
+
+  .search-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 16px;
+    max-width: 420px;
+  }
+
+  .search-input-wrap .icon { color: rgba(0, 0, 0, 0.45); }
+
+  .search-input-wrap input {
+    border: none;
+    outline: none;
+    background: transparent;
+    flex: 1;
+    font-size: 14px;
+    font-family: inherit;
+    color: #1e1e1e;
+  }
 
   .sop-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: 18px;
   }
 
@@ -362,6 +386,15 @@
     <main class="main">
       <h1 class="page-title">Browse SOPs</h1>
 
+      <div class="toolbar">
+        <div class="search-input-wrap">
+          <span class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          </span>
+          <input type="search" id="searchInput" placeholder="Search all SOPs" aria-label="Search all SOPs">
+        </div>
+      </div>
+
       <div id="grid">
         <p class="empty-state">Loading SOPs…</p>
       </div>
@@ -426,7 +459,10 @@
     function renderGrid() {
       const grid = document.getElementById('grid');
       if (allSops.length === 0) {
-        grid.innerHTML = '<p class="empty-state">No SOPs published yet.</p>';
+        const term = document.getElementById('searchInput').value.trim();
+        grid.innerHTML = term
+          ? '<p class="empty-state">No SOPs match your search.</p>'
+          : '<p class="empty-state">No SOPs published yet.</p>';
         return;
       }
       grid.innerHTML = `<div class="sop-grid">${allSops.map(sopCardHtml).join('')}</div>`;
@@ -451,16 +487,33 @@
       }
     }
 
+    function debounce(fn, ms) {
+      let timer = null;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+      };
+    }
+
+    // Real search (title/description/content/tag, server-side) rather than
+    // a client-side filter - content/tag aren't even in the list payload,
+    // so there'd be nothing to filter against locally.
+    let searchRequestId = 0;
     async function load() {
       const grid = document.getElementById('grid');
+      const term = document.getElementById('searchInput').value.trim();
+      const requestId = ++searchRequestId;
       try {
         // Public, unauthenticated view - only SOPs explicitly marked public
         // (see routes/sops.js's GET /public).
-        const res = await fetch('/sops/public', { credentials: 'omit' });
+        const params = term ? `?q=${encodeURIComponent(term)}` : '';
+        const res = await fetch(`/sops/public${params}`, { credentials: 'omit' });
         if (!res.ok) throw new Error('Failed to load');
+        if (requestId !== searchRequestId) return;
         allSops = await res.json();
         renderGrid();
       } catch {
+        if (requestId !== searchRequestId) return;
         grid.innerHTML = '<p class="empty-state">Failed to load SOPs.</p>';
       }
     }
@@ -495,6 +548,8 @@
         // not signed in / request failed - leave the sidebar in its signed-out state
       }
     }
+
+    document.getElementById('searchInput').addEventListener('input', debounce(load, 250));
 
     load();
     loadUser();

@@ -188,7 +188,7 @@
     flex: 1;
     min-width: 0;
     padding: 36px 40px 56px;
-    max-width: 1280px;
+    max-width: clamp(1280px, 90vw, 2200px);
   }
 
   .main-header {
@@ -510,6 +510,11 @@
     }
 
     let allSops = [];
+    // What's actually shown in the grid - equal to allSops with an empty
+    // search box, or the server's search results once a term is typed (see
+    // applySearch). Kept separate from allSops so renderStats() always
+    // reflects the full set, never a filtered subset.
+    let currentResults = [];
     let currentUser = null;
 
     // Owners can always delete their own SOPs. An admin may also delete
@@ -709,18 +714,13 @@
 
     function renderGrid() {
       const grid = document.getElementById('grid');
-      const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-      const filtered = allSops.filter((sop) => !term
-        || sop.title?.toLowerCase().includes(term)
-        || sop.description?.toLowerCase().includes(term));
-
-      if (filtered.length === 0) {
-        grid.innerHTML = '<p class="empty-state">No SOPs match your filters yet.</p>';
+      if (currentResults.length === 0) {
+        grid.innerHTML = '<p class="empty-state">No SOPs match your search yet.</p>';
         return;
       }
 
-      grid.innerHTML = `<div class="sop-grid">${filtered.map(sopCardHtml).join('')}</div>`;
+      grid.innerHTML = `<div class="sop-grid">${currentResults.map(sopCardHtml).join('')}</div>`;
 
       grid.querySelectorAll('[data-export]').forEach((btn) => {
         btn.addEventListener('click', () => exportSop(btn.dataset.export));
@@ -829,6 +829,7 @@
         const res = await fetch(`/sops/${id}`, { method: 'DELETE', credentials: 'include' });
         if (!res.ok) throw new Error((await res.json()).error || 'Delete failed');
         allSops = allSops.filter((sop) => String(sop.id) !== String(id));
+        currentResults = currentResults.filter((sop) => String(sop.id) !== String(id));
         renderStats();
         renderGrid();
       } catch (err) {
@@ -848,10 +849,48 @@
         ]);
         if (!res.ok) throw new Error('Failed to load');
         allSops = await res.json();
+        currentResults = allSops;
         renderStats();
         renderGrid();
       } catch {
         grid.innerHTML = '<p class="empty-state">Failed to load your SOPs.</p>';
+      }
+    }
+
+    function debounce(fn, ms) {
+      let timer = null;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+      };
+    }
+
+    // Real search: hits the backend so title/description/content/tag are
+    // all matched (a client-side filter can't see content/tag - they're not
+    // in the list payload). An empty term just restores the already-loaded
+    // full list with no network round-trip.
+    let searchRequestId = 0;
+    async function applySearch() {
+      const term = document.getElementById('searchInput').value.trim();
+      if (!term) {
+        currentResults = allSops;
+        renderGrid();
+        return;
+      }
+
+      const requestId = ++searchRequestId;
+      try {
+        const res = await fetch(`/sops?q=${encodeURIComponent(term)}`, { credentials: 'include' });
+        if (!res.ok) throw new Error('Search failed');
+        const results = await res.json();
+        // A slower earlier request can resolve after a newer one - ignore
+        // it so the grid always reflects the latest keystroke, not a stale one.
+        if (requestId !== searchRequestId) return;
+        currentResults = results;
+        renderGrid();
+      } catch {
+        if (requestId !== searchRequestId) return;
+        document.getElementById('grid').innerHTML = '<p class="empty-state">Search failed. Try again.</p>';
       }
     }
 
@@ -868,7 +907,7 @@
       }
     }
 
-    document.getElementById('searchInput').addEventListener('input', renderGrid);
+    document.getElementById('searchInput').addEventListener('input', debounce(applySearch, 250));
 
     loadUser().then(bridgeSessionToExtension);
     loadSops();

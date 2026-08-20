@@ -200,7 +200,7 @@
     flex: 1;
     min-width: 0;
     padding: 36px 40px 56px;
-    max-width: 1280px;
+    max-width: clamp(1280px, 90vw, 2200px);
   }
 
   .main-header {
@@ -856,20 +856,15 @@
 
     function renderGrid() {
       const grid = document.getElementById('grid');
-      const term = document.getElementById('searchInput').value.trim().toLowerCase();
 
-      const filtered = allSops.filter((sop) => !term
-        || sop.title?.toLowerCase().includes(term)
-        || sop.description?.toLowerCase().includes(term));
-
-      if (filtered.length === 0) {
+      if (allSops.length === 0) {
         grid.innerHTML = teamName
           ? `<p class="empty-state">No SOPs for ${escapeHtml(teamName)} match your search yet.</p>`
           : '<p class="empty-state">No SOPs match your search yet.</p>';
         return;
       }
 
-      grid.innerHTML = `<div class="sop-grid">${filtered.map(sopCardHtml).join('')}</div>`;
+      grid.innerHTML = `<div class="sop-grid">${allSops.map(sopCardHtml).join('')}</div>`;
 
       grid.querySelectorAll('[data-export]').forEach((btn) => {
         btn.addEventListener('click', () => exportSop(btn.dataset.export));
@@ -947,14 +942,34 @@
       }
     }
 
-    async function loadSops() {
+    function debounce(fn, ms) {
+      let timer = null;
+      return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), ms);
+      };
+    }
+
+    // term defaults to whatever's currently in the search box, so callers
+    // that just want to (re)load the current team - e.g. showAllDepartments()
+    // below - don't need to know or care whether a search is active.
+    // Real search hits the backend (title/description/content/tag) rather
+    // than a client-side filter, which can't see content/tag since they're
+    // not in the list payload.
+    let searchRequestId = 0;
+    async function loadSops(term) {
+      if (term === undefined) term = document.getElementById('searchInput').value.trim();
       const grid = document.getElementById('grid');
+      const requestId = ++searchRequestId;
       try {
+        let res;
         if (!teamName) {
           // "All Departments" - same public, unauthenticated view as
           // browse.html (see routes/sops.js's GET /public).
-          const res = await fetch('/sops/public', { credentials: 'omit' });
+          const params = term ? `?q=${encodeURIComponent(term)}` : '';
+          res = await fetch(`/sops/public${params}`, { credentials: 'omit' });
           if (!res.ok) throw new Error('Failed to load');
+          if (requestId !== searchRequestId) return;
           allSops = await res.json();
           renderGrid();
           return;
@@ -963,18 +978,22 @@
         // A specific team's page: signed-in teammates see every SOP for
         // that department; anonymous visitors fall back to only the ones
         // explicitly marked public.
-        const res = await fetch(`/sops?category=${encodeURIComponent(teamName)}`, { credentials: 'include' });
+        const qParam = term ? `&q=${encodeURIComponent(term)}` : '';
+        res = await fetch(`/sops?category=${encodeURIComponent(teamName)}${qParam}`, { credentials: 'include' });
         if (res.status === 401) {
-          const publicRes = await fetch(`/sops/public?category=${encodeURIComponent(teamName)}`, { credentials: 'omit' });
+          const publicRes = await fetch(`/sops/public?category=${encodeURIComponent(teamName)}${qParam}`, { credentials: 'omit' });
           if (!publicRes.ok) throw new Error('Failed to load');
+          if (requestId !== searchRequestId) return;
           allSops = await publicRes.json();
           renderGrid();
           return;
         }
         if (!res.ok) throw new Error('Failed to load');
+        if (requestId !== searchRequestId) return;
         allSops = await res.json();
         renderGrid();
       } catch {
+        if (requestId !== searchRequestId) return;
         grid.innerHTML = '<p class="empty-state">Failed to load SOPs.</p>';
       }
     }
@@ -988,7 +1007,7 @@
       loadSops();
     }
 
-    document.getElementById('searchInput').addEventListener('input', renderGrid);
+    document.getElementById('searchInput').addEventListener('input', debounce(() => loadSops(), 250));
     document.getElementById('allDepartmentsBtn').addEventListener('click', showAllDepartments);
 
     document.getElementById('addLinkBtn').addEventListener('click', () => {

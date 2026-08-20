@@ -36,20 +36,39 @@ async function recordRevision(sop, editorId, editorName) {
   );
 }
 
+// Appends a `q` search term (title/description/content/tag, case-insensitive
+// substring) to an in-progress WHERE clause - shared by GET / and GET
+// /public so both real search surfaces (signed-in and anonymous) match the
+// same fields, unlike the old title/description-only client-side filter
+// this replaced. Mutates `conditions`/`params` in place; caller supplies
+// both since the base visibility clause (owner/public/category) always
+// comes first and needs to reuse the same $n numbering.
+function addSearchCondition(conditions, params, q) {
+  const term = typeof q === 'string' ? q.trim() : '';
+  if (!term) return;
+  params.push(`%${term}%`);
+  const idx = params.length;
+  conditions.push(`(title ILIKE $${idx} OR description ILIKE $${idx} OR content ILIKE $${idx} OR tag ILIKE $${idx})`);
+}
+
 // GET /sops/public - no auth required. Only rows explicitly marked public,
 // with a reduced field set (no user_id/owner metadata) for anonymous/marketing
 // browsing (browse.html, and teamlanding.html for visitors without a session).
 router.get('/public', async (req, res) => {
-  const { category } = req.query;
+  const { category, q } = req.query;
   try {
-    const result = category
-      ? await db.query(
-          `SELECT ${PUBLIC_LIST_FIELDS} FROM sops WHERE is_public = true AND category = $1 ORDER BY created_at DESC`,
-          [category]
-        )
-      : await db.query(
-          `SELECT ${PUBLIC_LIST_FIELDS} FROM sops WHERE is_public = true ORDER BY created_at DESC`
-        );
+    const conditions = ['is_public = true'];
+    const params = [];
+    if (category) {
+      params.push(category);
+      conditions.push(`category = $${params.length}`);
+    }
+    addSearchCondition(conditions, params, q);
+
+    const result = await db.query(
+      `SELECT ${PUBLIC_LIST_FIELDS} FROM sops WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`,
+      params
+    );
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -138,7 +157,7 @@ router.post('/', async (req, res) => {
 });
 
 router.get('/', async (req, res) => {
-  const { category } = req.query;
+  const { category, q } = req.query;
   try {
     // A category filter means "show this team's SOPs" (everyone's, not just
     // the caller's own) - matches teamlanding.html's team-wide browsing, and
@@ -148,15 +167,21 @@ router.get('/', async (req, res) => {
     // what the caller owns or has made public - a personal workspace list,
     // not an access restriction (any SOP is still viewable via GET /:id,
     // a team page, or Slack regardless of this filter).
-    const result = category
-      ? await db.query(
-          `SELECT ${LIST_FIELDS} FROM sops WHERE category = $1 ORDER BY created_at DESC`,
-          [category]
-        )
-      : await db.query(
-          `SELECT ${LIST_FIELDS} FROM sops WHERE user_id = $1 OR is_public = true ORDER BY created_at DESC`,
-          [req.user.id]
-        );
+    const params = [];
+    const conditions = [];
+    if (category) {
+      params.push(category);
+      conditions.push(`category = $${params.length}`);
+    } else {
+      params.push(req.user.id);
+      conditions.push(`(user_id = $${params.length} OR is_public = true)`);
+    }
+    addSearchCondition(conditions, params, q);
+
+    const result = await db.query(
+      `SELECT ${LIST_FIELDS} FROM sops WHERE ${conditions.join(' AND ')} ORDER BY created_at DESC`,
+      params
+    );
     res.json(result.rows);
   } catch (err) {
     res.status(500).json({ error: err.message });
